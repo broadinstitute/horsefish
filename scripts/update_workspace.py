@@ -3,7 +3,7 @@ import subprocess
 import ast
 import shutil
 import argparse
-from horsefish.scripts.fiss_fns import call_fiss
+from fiss_fns import call_fiss
 from firecloud import api as fapi
 
 
