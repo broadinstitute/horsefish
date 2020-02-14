@@ -178,28 +178,67 @@ def is_gs_path(attr, value, str_match='gs://'):
 
     return False
 
-def list_entity_data_paths(workspace_name, workspace_project):
+def list_entity_data_paths(workspace_name, workspace_project, bucket_list):
     print("Listing all gs:// paths in DATA ENTITIES for " + workspace_name)
 
     # get data attributes
     response = call_fiss(fapi.get_entities_with_type, 200, workspace_project, workspace_name)
     entities = response
+    
+    paths_without_replacements = {} # where we store paths for which we don't have a replacement
 
+    replacements_made = 0
+    
     for ent in entities:
         ent_name = ent['name']
         ent_type = ent['entityType']
         ent_attrs = ent['attributes']
         gs_paths = {}
+        attrs_list = []
         for attr in ent_attrs.keys():
-            if is_gs_path(attr, ent_attrs[attr]):
-                path = ent_attrs[attr]
-                if is_in_bucket_list(path, ['gs://terra-featured-workspaces/']):
-                    gs_paths[attr] = ent_attrs[attr]
-
+            if is_gs_path(attr, ent_attrs[attr]): # this is a gs:// path
+                original_path = ent_attrs[attr]
+                if is_in_bucket_list(original_path, bucket_list): # this is a path we think we want to update
+                    new_path = get_replacement_path(original_path)
+                    gs_paths[attr] = original_path
+                    if new_path:
+                        # format the update
+                        updated_attr = fapi._attr_set(attr, new_path)
+                        attrs_list.append(updated_attr) # what we have replacements for
+                        replacements_made += 1
+                    else:
+                        paths_without_replacements[attr] = original_path # what we don't have replacements for
+        
         if len(gs_paths) > 0:
             print(f'Found the following paths to update in {ent_name}:')
             for item in gs_paths.keys():
-                print('   ', item, gs_paths[item])
+                print('   '+item+' : '+gs_paths[item])
+        
+        if len(attrs_list) > 0:
+            response = fapi.update_entity(workspace_project, workspace_name, ent_type, ent_name, attrs_list)
+            if response.status_code == 200:
+                print(f'\nUpdated entities in {ent_name}:')
+                for attr in attrs_list:
+                    print('   '+attr['attributeName']+' : '+attr['addUpdateAttribute'])
+
+    if replacements_made == 0:
+        print('\nNo paths were updated!')
+        
+    if len(paths_without_replacements) > 0:
+        print('\nWe could not find replacements for the following paths: ')
+        for item in paths_without_replacements.keys():
+            print('   '+item+' : '+paths_without_replacements[item])
+            
+
+def get_replacement_path(original_path):
+    ''' input original path; 
+    get back either a new destination path or None
+    
+    TODO: insert Steve's function here
+    '''
+    if 'fastq' in original_path:
+        return original_path
+    return None
 
 
 if __name__ == '__main__':
@@ -217,6 +256,6 @@ if __name__ == '__main__':
         # update_notebooks(args.workspace_name, args.workspace_project, args.replace_this, args.with_this)
         update_entities(args.workspace_name, args.workspace_project, args.replace_this, args.with_this)
     else:
-        list_entity_data_paths(args.workspace_name, args.workspace_project)
+        list_entity_data_paths(args.workspace_name, args.workspace_project, ['gs://terra-featured-workspaces/'])
 
 
