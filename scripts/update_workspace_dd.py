@@ -188,7 +188,37 @@ def update_entities(workspace_name, workspace_project, replace_this, with_this):
                     print('   '+attr['attributeName']+' : '+attr['addUpdateAttribute'])
 
 
-def is_in_bucket_list(path, bucket_list):
+def is_in_bucket_list(path):
+    bucket_list = ['fc-122c390c-f0b9-4b01-82ae-3e87e858e01a',
+        'fc-12be498d-4812-489b-9b02-023db71a470f',
+        'fc-37557664-acea-408f-a944-027ed65502e5',
+        'fc-38aeaeaf-02c4-493d-a35b-a4f95f2c2fae',
+        'fc-3d22b428-2d11-483e-9d6e-7b13c3546e27',
+        'fc-3e3e2d8c-ff7c-4a5d-a0c4-1b2d8a96cf4b',
+        'fc-4ccb3566-f985-4e68-993c-ec666287c45b',
+        'fc-52fb4dc7-0957-49c6-9851-95951ea5308e',
+        'fc-67ecfd09-da44-465d-8e09-fdf082fc1f8d',
+        'fc-6cff0a0e-16db-47bd-b482-91618628e87d',
+        'fc-75bd7886-4635-4453-83af-76951e9c0f4b',
+        'fc-7e333c4f-dcbf-4c0d-8644-07a1bccde045',
+        'fc-8261513a-5f0c-4be0-ae42-62bcf00dfc52',
+        'fc-9bc3b4e4-f2a1-4ef3-b408-cf74f1916610',
+        'fc-a78c8a3c-890b-4953-a67d-f226685ead99',
+        'fc-a9d8dab3-1c57-4e9e-879a-f9d39441bfb5',
+        'fc-ab3e3ef8-5e90-47c1-8f44-246552248074',
+        'fc-be4e0e22-021e-4edc-a52e-56d9f053119d',
+        'fc-c0f9b627-a631-4f6c-bbfe-5edbe80d7eff',
+        'fc-cd11a278-cda3-4211-9ea4-c964c78e9bb6',
+        'fc-dd9c4e05-3511-4d3e-bc23-92815d14ffa1',
+        'fc-ddea25e3-a077-4f5f-a9d1-9661431186b2',
+        'fc-e02d3247-5469-4a5c-8b66-c4397eeff5d0',
+        'fc-e67c6510-d7f1-4bc3-b55e-2dfad7d56786',
+        'fc-e6c84ae9-9ac9-4b35-ae86-ac9f04824bf8',
+        'fc-e9440d64-3fad-44bc-a2c7-c439a94aff29',
+        'fc-ed48dede-1e5e-41ff-b3a1-0ef4f9797cd4',
+        'fc-effb3f55-962a-4b1f-b41d-63234d7e5735',
+        'fc-fd538f2b-e8bf-478a-8620-2c4c13a3e664']
+
     for bucket in bucket_list:
         if bucket in path:
             return True
@@ -215,7 +245,7 @@ def is_gs_path(attr, value, str_match='gs://'):
 
     return False
 
-def list_entity_data_paths(workspace_name, workspace_project, bucket_list):
+def list_entity_data_paths(workspace_name, workspace_project):
     print("Listing all gs:// paths in DATA ENTITIES for " + workspace_name)
 
     # get data attributes
@@ -235,7 +265,7 @@ def list_entity_data_paths(workspace_name, workspace_project, bucket_list):
         for attr in ent_attrs.keys():
             if is_gs_path(attr, ent_attrs[attr]): # this is a gs:// path
                 original_path = ent_attrs[attr]
-                if is_in_bucket_list(original_path, bucket_list): # this is a path we think we want to update
+                if is_in_bucket_list(original_path): # this is a path we think we want to update
                     new_path = get_replacement_path(original_path)
                     gs_paths[attr] = original_path
                     if new_path:
