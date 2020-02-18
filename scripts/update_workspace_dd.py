@@ -245,7 +245,7 @@ def is_gs_path(attr, value, str_match='gs://'):
 
     return False
 
-def list_entity_data_paths(workspace_name, workspace_project):
+def update_entity_data_paths(workspace_name, workspace_project):
     print("Listing all gs:// paths in DATA ENTITIES for " + workspace_name)
 
     # get data attributes
