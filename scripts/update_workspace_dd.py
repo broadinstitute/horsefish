@@ -435,7 +435,7 @@ def summarize_results(df_paths):
         #     not_found_text += f'\n  Entity name: {ent_name} \n    Path: {path} \n    Key: {key} \n    Failure reason: {fail_reason}\n'
 
     print(f'''
-{n_paths_to_replace} migrated paths were found.
+{n_bam_paths_to_replace} migrated bam paths were found.
 
 {n_paths_updated} of those paths were updated.
 {not_updated_text}
