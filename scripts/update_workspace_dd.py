@@ -302,8 +302,6 @@ def update_entity_data_paths(workspace_name, workspace_project, mapping_tsv, do_
             else:
                 status_code = 0
             
-            # inds_to_update = list(set(df_paths.index[df_paths['entity_name']==ent_name].tolist()) & set(inds))
-            print(inds)
             df_paths.loc[inds, 'update_status'] = status_code
       
     return df_paths
