@@ -3,7 +3,12 @@ import subprocess
 import ast
 import shutil
 import argparse
+import pandas as pd
 from firecloud import api as fapi
+
+import csv
+import sys
+import re
 
 def call_fiss(fapifunc, okcode, *args, specialcodes=None, **kwargs):
     ''' call FISS (firecloud api), check for errors, return json response
@@ -245,16 +250,19 @@ def is_gs_path(attr, value, str_match='gs://'):
 
     return False
 
-def update_entity_data_paths(workspace_name, workspace_project):
+def update_entity_data_paths(workspace_name, workspace_project, do_replacement=False):
     print("Listing all gs:// paths in DATA ENTITIES for " + workspace_name)
 
-    # get data attributes
-    response = call_fiss(fapi.get_entities_with_type, 200, workspace_project, workspace_name)
-    entities = response
+    # load path mapping
+    mapping = load_mapping(mapping_tsv)
     
-    paths_without_replacements = {} # where we store paths for which we don't have a replacement
-
-    replacements_made = 0
+    # set up dataframe to track all paths
+    columns = ['entity_name','entity_type','attribute','original_path','new_path',
+               'map_key','fail_reason','file_type','update_status']
+    df_paths = pd.DataFrame(columns=columns)
+    
+    # get data attributes
+    entities = call_fiss(fapi.get_entities_with_type, 200, workspace_project, workspace_name)
     
     for ent in entities:
         ent_name = ent['name']
@@ -266,46 +274,160 @@ def update_entity_data_paths(workspace_name, workspace_project):
             if is_gs_path(attr, ent_attrs[attr]): # this is a gs:// path
                 original_path = ent_attrs[attr]
                 if is_in_bucket_list(original_path): # this is a path we think we want to update
-                    new_path = get_replacement_path(original_path)
+                    new_path, map_key, fail_reason = get_replacement_path(original_path, mapping)
                     gs_paths[attr] = original_path
-                    if new_path:
-                        # format the update
-                        updated_attr = fapi._attr_set(attr, new_path)
+                    if new_path: 
+                        updated_attr = fapi._attr_set(attr, new_path) # format the update
                         attrs_list.append(updated_attr) # what we have replacements for
-                        replacements_made += 1
-                    else:
-                        paths_without_replacements[attr] = original_path # what we don't have replacements for
-        
-        if len(gs_paths) > 0:
-            print(f'Found the following paths to update in {ent_name}:')
-            for item in gs_paths.keys():
-                print('   '+item+' : '+gs_paths[item])
-        
+                    df_paths = df_paths.append({'entity_name': ent_name,
+                                                'entity_type': ent_type,
+                                                'attribute': attr,
+                                                'original_path': original_path,
+                                                'new_path': new_path,
+                                                'map_key': map_key,
+                                                'fail_reason': fail_reason,
+                                                'file_type': original_path.split('.')[-1]},
+                                               ignore_index=True)
+                        
+                    
         if len(attrs_list) > 0:
-            response = fapi.update_entity(workspace_project, workspace_name, ent_type, ent_name, attrs_list)
-            if response.status_code == 200:
-                print(f'\nUpdated entities in {ent_name}:')
-                for attr in attrs_list:
-                    print('   '+attr['attributeName']+' : '+attr['addUpdateAttribute'])
-
-    if replacements_made == 0:
-        print('\nNo paths were updated!')
-        
-    if len(paths_without_replacements) > 0:
-        print('\nWe could not find replacements for the following paths: ')
-        for item in paths_without_replacements.keys():
-            print('   '+item+' : '+paths_without_replacements[item])
+            if do_replacement:
+                # DO THE REPLACEMENT 
+                response = fapi.update_entity(workspace_project, workspace_name, ent_type, ent_name, attrs_list)
+                status_code = response.status_code
+                if status_code != 200:
+                    print(f'ERROR {status_code} updating {ent_name} with {str(attrs_list)} - {response.text}')
+            else:
+                status_code = 200
             
+            inds_to_update = df_paths.index[df_paths['entity_name']==ent_name].tolist()
+            df_paths.loc[inds_to_update, 'update_status'] = status_code
+      
+    return df_paths
+            
+            
+# globals for regex parsing
+SUFFIX_MUNCHER_REGEX = r"(?:\.reduced|\.duplicates_marked)*"
+BAM_PATH_DATATYPE_REGEX = rf"/seq/(?:fargo_)?picard_aggregation/(?P<project>[^/]+)/(?P<data_type>[^/]+)/(?P<sample>[^/]+)/(?P<version>v(?:[^/]+)|(?:current))/(?P=sample){SUFFIX_MUNCHER_REGEX}\.bam"
+BAM_PATH_LIBRARY_DATATYPE_REGEX = rf"/seq/(?:fargo_)?picard_aggregation/(?P<project>[^/]+)/(?P<data_type>[^/]+)/(?P<sample>[^/]+)/(?P<version>v(?:[^/]+)|(?:current))/(?P<library>[^/]+)/(?P=library){SUFFIX_MUNCHER_REGEX}\.bam"
+BAM_PATH_LIBRARY_NO_DATATYPE_REGEX = rf"/seq/(?:fargo_)?picard_aggregation/(?P<project>[^/]+)/(?P<sample>[^/]+)/(?P<version>v(?:[^/]+)|(?:current))/(?P<library>[^/]+)/(?P=library){SUFFIX_MUNCHER_REGEX}\.bam"
+BAM_PATH_NO_DATATYPE_REGEX = rf"/seq/(?:fargo_)?picard_aggregation/(?P<project>[^/]+)/(?P<sample>[^/]+)/(?P<version>v(?:[^/]+)|(?:current))/(?P=sample){SUFFIX_MUNCHER_REGEX}\.bam"
 
-def get_replacement_path(original_path):
-    ''' input original path; 
-    get back either a new destination path or None
+FORMAT_REGEXES = [
+    BAM_PATH_DATATYPE_REGEX,
+    BAM_PATH_LIBRARY_DATATYPE_REGEX,
+    BAM_PATH_LIBRARY_NO_DATATYPE_REGEX,
+    BAM_PATH_NO_DATATYPE_REGEX,
+]
+
+MAPPING_HEADERS = ['project', 'sample', 'version', 'data_type', 'new_path']
+
+def normalize_alias(sample_alias):
+    return re.sub(r'[ ()/,]', '_', sample_alias)
+
+
+def sample_key(project, sample, data_type):
+    return '|'.join([project, normalize_alias(sample), data_type])
+
+
+def parse_path_into_fields(path):
+    for regex in FORMAT_REGEXES:
+        result = re.search(regex, path)
+        if result:
+            fields_dict = {
+                'project': result.group('project'),
+                'sample': result.group('sample'),
+                'version': result.group('version'),
+            }
+
+            try:
+                fields_dict['data_type'] = result.group('data_type')
+            except IndexError:
+                # some paths won't have a data type
+                fields_dict['data_type'] = 'N/A'
+
+            return fields_dict
+
+    return None # if no result of regexes
+
+
+def load_mapping(path):  
+    mapping = {}
+
+    with open(path, 'r') as mapping_tsv:
+        reader = csv.DictReader(mapping_tsv, fieldnames=MAPPING_HEADERS, delimiter='\t')
+        for row in reader:
+            mapping[sample_key(row['project'], row['sample'], row['data_type'])] = row['new_path']
     
-    TODO: insert Steve's function here
+    return mapping
+
+def get_replacement_path(original_path, mapping):
+    ''' input original path; 
+    outputs:
+        new_path: either a new destination path or None
+        key: parsed key from original_path, or None
+        fail_reason: if no new_path, more information about failure
     '''
-    if 'fastq' in original_path:
-        return original_path
-    return None
+
+    fields = parse_path_into_fields(original_path)
+    if not fields:
+        new_path = None
+        key = None
+        fail_reason = 'regex fail: fields not parsable from path'
+        return new_path, key, fail_reason
+    
+    key = sample_key(fields['project'], fields['sample'], fields['data_type'])
+
+    if key:
+        try:
+            new_path = mapping[str(key)]
+            fail_reason = None
+        except KeyError:
+            new_path = None
+            fail_reason = 'key not found in map'
+    else:
+        new_path = None
+        fail_reason = 'key not formulated from fields'
+
+    return new_path, key, fail_reason
+
+def summarize_results(df_paths):
+    # get some summary stats
+    n_paths_to_replace = len(df_paths)
+    n_unique_paths_to_replace = len(df_paths['original_path'].unique())
+    n_paths_updated = len(df_paths[df_paths['update_status'] == 200])
+    n_unique_paths_updated = len(df_paths[df_paths['update_status'] == 200]['original_path'].unique())
+    n_nonbam_paths = len(df_paths[df_paths['file_type'] != 'bam'])
+    file_types = df_paths['file_type'].unique()
+    n_paths_not_updated = n_paths_to_replace - n_paths_updated
+    
+    if n_paths_not_updated > 0:
+        if len(file_types) > 1: 
+            file_types_text = 'Note that we only have replacement paths for bam files; '
+            file_types_text += 'your data references the following file types: '+', '.join(file_types)
+        else:
+            file_types_text = ''
+        
+        not_found_text = '\nWe could not find replacements for the following .bam file paths:\n'
+        inds_not_found = df_paths.index[df_paths['new_path'].isnull()].tolist()
+        inds_bam = df_paths.index[df_paths['file_type']=='bam'].tolist()
+        inds_bam_not_found = list(set(inds_not_found) & set(inds_bam)) 
+        for i in inds_bam_not_found:
+            ent_name = df_paths.loc[i,'entity_name']
+            path = df_paths.loc[i,'original_path']
+            key = df_paths.loc[i,'map_key']
+            fail_reason = df_paths.loc[i, 'fail_reason']
+            not_found_text += f'\n  Entity name: {ent_name} \n    Path: {path} \n    Key: {key} \n    Failure reason: {fail_reason}\n'
+
+    print(f'''
+{n_paths_to_replace} problematic entity paths were found. ({n_unique_paths_to_replace} unique)
+
+{n_paths_updated} problematic entity paths were updated. ({n_unique_paths_updated} unique)
+
+{file_types_text}
+
+{not_found_text}
+    ''')
 
 
 if __name__ == '__main__':
