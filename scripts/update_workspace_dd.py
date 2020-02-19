@@ -250,7 +250,7 @@ def is_gs_path(attr, value, str_match='gs://'):
 
     return False
 
-def update_entity_data_paths(workspace_name, workspace_project, mapping_tsv, do_replacement=False):
+def update_entity_data_paths(workspace_name, workspace_project, mapping_tsv, do_replacement=True):
     print("Listing all gs:// paths in DATA ENTITIES for " + workspace_name)
 
     # load path mapping
@@ -392,7 +392,7 @@ def get_replacement_path(original_path, mapping):
 
     return new_path, key, fail_reason
 
-def summarize_results(df_paths):
+def summarize_results(df_paths, do_replacement=True):
     # get some summary stats
     n_bam_paths_to_replace = len(df_paths[df_paths['file_type'] == 'bam'])
     n_paths_updated = len(df_paths[df_paths['update_status'] == 200])
@@ -409,8 +409,12 @@ def summarize_results(df_paths):
         n_file_types_fixed[ext] = len(inds_ext_failed)
     n_paths_not_updated = n_bam_paths_to_replace - n_paths_updated
     
-    if n_paths_not_updated > 0:
+    if not do_replacement:
+        not_updated_text = '\nNo paths were updated. Set `do_replacement` to True to update the paths.'
+    elif n_paths_not_updated > 0:
         not_updated_text = f'\n{n_paths_not_updated} paths could not be updated. See more information below.\n'
+    else:
+        not_updated_text = ''
 
     if len(file_types) > 1: 
         file_types_text = 'Note that we only have replacement paths for bam files, '
