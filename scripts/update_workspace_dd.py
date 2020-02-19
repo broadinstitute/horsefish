@@ -250,7 +250,7 @@ def is_gs_path(attr, value, str_match='gs://'):
 
     return False
 
-def update_entity_data_paths(workspace_name, workspace_project, do_replacement=False):
+def update_entity_data_paths(workspace_name, workspace_project, mapping_tsv, do_replacement=False):
     print("Listing all gs:// paths in DATA ENTITIES for " + workspace_name)
 
     # load path mapping
