@@ -416,13 +416,11 @@ def summarize_results(df_paths):
 
     if len(file_types) > 1: 
         file_types_text = 'Note that we only have replacement paths for bam files, '
-        file_types_text += 'but your data references the following non-bam file types: '+', '.join(file_types_non_bam)
+        file_types_text += '\nbut your data references the following non-bam file types: '+', '.join(file_types_non_bam)
         file_types_text += '\nThese file types were not migrated, so those paths were not updated.'
     else:
         file_types_text = ''
     
-        
-        
         # not_found_text = '\nWe could not find replacements for the following .bam file paths:\n'
         # inds_not_found = df_paths.index[df_paths['new_path'].isnull()].tolist()
         # inds_bam = df_paths.index[df_paths['file_type']=='bam'].tolist()
