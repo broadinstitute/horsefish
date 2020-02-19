@@ -415,11 +415,11 @@ def summarize_results(df_paths):
         not_updated_text = f'{n_paths_not_updated} paths could not be updated. See more information below.'
 
     if len(file_types) > 1: 
-            file_types_text = 'Note that we only have replacement paths for bam files; '
-            file_types_text += 'your data references the following non-bam file types: '+', '.join(file_types_non_bam)
-            file_types_text += '\nThese file types were not migrated, so those paths were not updated.'
-        else:
-            file_types_text = ''
+        file_types_text = 'Note that we only have replacement paths for bam files; '
+        file_types_text += 'your data references the following non-bam file types: '+', '.join(file_types_non_bam)
+        file_types_text += '\nThese file types were not migrated, so those paths were not updated.'
+    else:
+        file_types_text = ''
     
         
         
