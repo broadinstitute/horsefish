@@ -302,9 +302,9 @@ def update_entity_data_paths(workspace_name, workspace_project, mapping_tsv, do_
             else:
                 status_code = 0
             
-            inds_to_update = list(set(df_paths.index[df_paths['entity_name']==ent_name].tolist()) & set(inds))
-            
-            df_paths.loc[inds_to_update, 'update_status'] = status_code
+            # inds_to_update = list(set(df_paths.index[df_paths['entity_name']==ent_name].tolist()) & set(inds))
+            print(inds)
+            df_paths.loc[inds, 'update_status'] = status_code
       
     return df_paths
             
@@ -412,11 +412,11 @@ def summarize_results(df_paths):
     n_paths_not_updated = n_bam_paths_to_replace - n_paths_updated
     
     if n_paths_not_updated > 0:
-        not_updated_text = f'{n_paths_not_updated} paths could not be updated. See more information below.'
+        not_updated_text = f'\n{n_paths_not_updated} paths could not be updated. See more information below.\n'
 
     if len(file_types) > 1: 
-        file_types_text = 'Note that we only have replacement paths for bam files; '
-        file_types_text += 'your data references the following non-bam file types: '+', '.join(file_types_non_bam)
+        file_types_text = 'Note that we only have replacement paths for bam files, '
+        file_types_text += 'but your data references the following non-bam file types: '+', '.join(file_types_non_bam)
         file_types_text += '\nThese file types were not migrated, so those paths were not updated.'
     else:
         file_types_text = ''
