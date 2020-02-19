@@ -434,13 +434,11 @@ def summarize_results(df_paths):
             not_found_text += f'\n  Entity name: {ent_name} \n    Path: {path} \n    Key: {key} \n    Failure reason: {fail_reason}\n'
 
     print(f'''
-{n_paths_to_replace} problematic entity paths were found. ({n_unique_paths_to_replace} unique)
+{n_paths_to_replace} migrated paths were found. ({n_unique_paths_to_replace} unique)
 
-{n_paths_updated} problematic entity paths were updated. ({n_unique_paths_updated} unique)
+{n_paths_updated} of those paths were updated. ({n_unique_paths_updated} unique)
 
 {file_types_text}
-
-{not_found_text}
     ''')
 
 
