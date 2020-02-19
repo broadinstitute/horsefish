@@ -413,8 +413,9 @@ def summarize_results(df_paths):
         if len(file_types) > 1: 
             file_types_text = 'Note that we only have replacement paths for bam files; '
             file_types_text += 'your data references the following file types: '+', '.join(file_types)
+            file_types_text += '\nfile type\ttotal files\tupdated\t\tnot updated'
             for ext in file_types:
-                file_types_text += f'\n  {ext}: {n_file_types[ext]} files, {n_file_types_fixed[ext]} updated successfully'
+                file_types_text += f'\n{ext}\t\t{n_file_types[ext]}\t\t{n_file_types_fixed[ext]}\t\t{n_file_types[ext]-n_file_types_fixed[ext]}'
         else:
             file_types_text = ''
         
