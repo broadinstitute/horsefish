@@ -399,12 +399,17 @@ def summarize_results(df_paths):
     n_unique_paths_updated = len(df_paths[df_paths['update_status'] == 200]['original_path'].unique())
     n_nonbam_paths = len(df_paths[df_paths['file_type'] != 'bam'])
     file_types = df_paths['file_type'].unique()
+    n_file_types = {}
+    for ext in file_types:
+        n_file_types[ext] = len(df_paths[df_paths['file_type'] == ext])
     n_paths_not_updated = n_paths_to_replace - n_paths_updated
     
     if n_paths_not_updated > 0:
         if len(file_types) > 1: 
             file_types_text = 'Note that we only have replacement paths for bam files; '
             file_types_text += 'your data references the following file types: '+', '.join(file_types)
+            for ext in file_types:
+                file_types_text += f'\n  {ext}: {n_file_types[ext]}'
         else:
             file_types_text = ''
         
