@@ -300,7 +300,7 @@ def update_entity_data_paths(workspace_name, workspace_project, mapping_tsv, do_
                 if status_code != 200:
                     print(f'ERROR {status_code} updating {ent_name} with {str(attrs_list)} - {response.text}')
             else:
-                status_code = 200
+                status_code = 0
             
             inds_to_update = list(set(df_paths.index[df_paths['entity_name']==ent_name].tolist()) & set(inds))
             
@@ -396,12 +396,11 @@ def get_replacement_path(original_path, mapping):
 
 def summarize_results(df_paths):
     # get some summary stats
-    n_paths_to_replace = len(df_paths)
-    n_unique_paths_to_replace = len(df_paths['original_path'].unique())
+    n_bam_paths_to_replace = len(df_paths[df_paths['file_type'] == 'bam'])
     n_paths_updated = len(df_paths[df_paths['update_status'] == 200])
-    n_unique_paths_updated = len(df_paths[df_paths['update_status'] == 200]['original_path'].unique())
     n_nonbam_paths = len(df_paths[df_paths['file_type'] != 'bam'])
     file_types = df_paths['file_type'].unique()
+    file_types_non_bam = [x for x in file_types if x != 'bam']
     n_file_types = {}
     n_file_types_fixed = {}
     for ext in file_types:
@@ -410,34 +409,36 @@ def summarize_results(df_paths):
         inds_ext_failed = list(set(inds_ext) & set(inds_failed)) 
         n_file_types[ext] = len(inds_ext)
         n_file_types_fixed[ext] = len(inds_ext_failed)
-    n_paths_not_updated = n_paths_to_replace - n_paths_updated
+    n_paths_not_updated = n_bam_paths_to_replace - n_paths_updated
     
     if n_paths_not_updated > 0:
-        if len(file_types) > 1: 
+        not_updated_text = f'{n_paths_not_updated} paths could not be updated. See more information below.'
+
+    if len(file_types) > 1: 
             file_types_text = 'Note that we only have replacement paths for bam files; '
-            file_types_text += 'your data references the following file types: '+', '.join(file_types)
-            file_types_text += '\nfile type\ttotal files\tupdated\t\tnot updated'
-            for ext in file_types:
-                file_types_text += f'\n{ext}\t\t{n_file_types[ext]}\t\t{n_file_types_fixed[ext]}\t\t{n_file_types[ext]-n_file_types_fixed[ext]}'
+            file_types_text += 'your data references the following non-bam file types: '+', '.join(file_types_non_bam)
+            file_types_text += '\nThese file types were not migrated, so those paths were not updated.'
         else:
             file_types_text = ''
+    
         
-        not_found_text = '\nWe could not find replacements for the following .bam file paths:\n'
-        inds_not_found = df_paths.index[df_paths['new_path'].isnull()].tolist()
-        inds_bam = df_paths.index[df_paths['file_type']=='bam'].tolist()
-        inds_bam_not_found = list(set(inds_not_found) & set(inds_bam)) 
-        for i in inds_bam_not_found:
-            ent_name = df_paths.loc[i,'entity_name']
-            path = df_paths.loc[i,'original_path']
-            key = df_paths.loc[i,'map_key']
-            fail_reason = df_paths.loc[i, 'fail_reason']
-            not_found_text += f'\n  Entity name: {ent_name} \n    Path: {path} \n    Key: {key} \n    Failure reason: {fail_reason}\n'
+        
+        # not_found_text = '\nWe could not find replacements for the following .bam file paths:\n'
+        # inds_not_found = df_paths.index[df_paths['new_path'].isnull()].tolist()
+        # inds_bam = df_paths.index[df_paths['file_type']=='bam'].tolist()
+        # inds_bam_not_found = list(set(inds_not_found) & set(inds_bam)) 
+        # for i in inds_bam_not_found:
+        #     ent_name = df_paths.loc[i,'entity_name']
+        #     path = df_paths.loc[i,'original_path']
+        #     key = df_paths.loc[i,'map_key']
+        #     fail_reason = df_paths.loc[i, 'fail_reason']
+        #     not_found_text += f'\n  Entity name: {ent_name} \n    Path: {path} \n    Key: {key} \n    Failure reason: {fail_reason}\n'
 
     print(f'''
-{n_paths_to_replace} migrated paths were found. ({n_unique_paths_to_replace} unique)
+{n_paths_to_replace} migrated paths were found.
 
-{n_paths_updated} of those paths were updated. ({n_unique_paths_updated} unique)
-
+{n_paths_updated} of those paths were updated.
+{not_updated_text}
 {file_types_text}
     ''')
 
