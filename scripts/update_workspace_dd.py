@@ -5,7 +5,7 @@ import shutil
 import argparse
 import pandas as pd
 from firecloud import api as fapi
-
+from datetime import datetime
 import csv
 import sys
 import re
@@ -461,6 +461,21 @@ def print_permissions_information(df_paths, pm_tsv):
     display(df_pm_display)
 
     return df_pm_display
+
+
+def prepare_outputs(df_paths, df_pm_display):
+    # save log
+    timestamp = datetime.now().strftime('%Y-%m-%d-%H-%M')
+    save_name_log = 'log_path_updates_'+timestamp+'.csv'
+    print('Will save log as '+save_name_log)
+    df_paths.to_csv(save_name_log)
+    
+    # save a file to your bucket that documents contact information in case you need access to new workspaces
+    save_name_contact = 'workspace_permissions_contacts_'+timestamp+'.csv'
+    print('Will save permissions contact information as '+save_name_contact)
+    df_pm_display.to_csv(save_name_contact)
+    
+    return save_name_log, save_name_contact
 
 
 if __name__ == '__main__':
