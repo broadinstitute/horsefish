@@ -468,9 +468,8 @@ def summarize_results(df_paths, do_replacement=True):
 
 
 def print_permissions_information(df_paths, pm_tsv):
-    df_pms = pd.read_csv(pm_tsv,delimiter=' ',names=['Workspace name','bucket','PM_firstname','PM_lastname','PM email'])
+    df_pms = pd.read_csv(pm_tsv,header=0)
     
-    df_pms['PM name']=df_pms['PM_firstname']+' '+df_pms['PM_lastname']
     # find destination buckets in new paths
     paths = df_paths.loc[df_paths.index[df_paths.new_path.notnull()].tolist()]['new_path']
     
@@ -486,9 +485,8 @@ def print_permissions_information(df_paths, pm_tsv):
     
     print(pm_contact_text)
     
-    df_pm_display = df_pms[['Workspace name','bucket','PM name','PM email']].loc[inds].set_index('Workspace name')
+    df_pm_display = df_pms.loc[inds].set_index('Workspace name')
     display(df_pm_display)
-#     display(df_pms[['Workspace name','bucket','PM name','PM email']].loc[inds].reset_index(drop=True))
 
     return df_pm_display
 
