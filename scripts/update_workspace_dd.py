@@ -415,14 +415,15 @@ def summarize_results(df_paths, do_replacement=True):
     if not do_replacement:
         not_updated_text = '\nSet `do_replacement` to True to update the paths.\n'
     elif n_bam_paths_not_updated > 0:
-        not_updated_text = f'\n{n_bam_paths_not_updated} bam paths could not be updated. See more information below.\n'
+        not_updated_text = f'\n{n_bam_paths_not_updated} bam paths could not be updated. \n'
+        not_updated_text += 'For more information, email pipeline-help@broadinstitute.org, attaching the output files in your bucket (see below).\n'
     else:
         not_updated_text = ''
 
     if len(file_types) > 1: 
         file_types_text = 'Note that we only have replacement paths for bam files, '
         file_types_text += '\nbut your data references the following non-bam file types: '+', '.join(file_types_non_bam)
-        file_types_text += '\nThese file types were not migrated, so those paths were not updated.'
+        file_types_text += '\nThese file types were not migrated, so those paths cannot be updated.'
     else:
         file_types_text = ''
     
@@ -455,7 +456,9 @@ def print_permissions_information(df_paths, pm_tsv):
     
     buckets = set([item.split('/')[2] for item in paths])
 
-    pm_contact_text = 'If you do not have access to the following workspaces/buckets, \nplease email the corresponding PM for appropriate permissions.'
+    pm_contact_text = 'If you do not have access to the following workspaces/buckets, \n'
+    pm_contact_text += 'please email the corresponding PM for appropriate permissions.\n\n'
+    pm_contact_text += 'To save this information to your workspace bucket (highly recommended), run the following notebook cell.'
 
     inds = []
     for bucket in buckets:
