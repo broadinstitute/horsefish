@@ -250,6 +250,26 @@ def is_gs_path(attr, value, str_match='gs://'):
 
     return False
 
+def is_bam(attr, value, str_match='.bam'):
+
+    if isinstance(value, str): # if value is just a string
+        if str_match in value:
+            return True
+    elif isinstance(value, dict):
+        if str_match in str(value):
+            return True
+    elif isinstance(value, bool):
+        pass
+    elif value is None:
+        pass
+    else: # some other type, hopefully this doesn't exist
+        if str_match in value:
+            print('unknown type of attribute')
+            print('attr: '+attr)
+            print('value: '+value)
+
+    return False
+
 def update_entity_data_paths(workspace_name, workspace_project, mapping_tsv, do_replacement=True):
     if do_replacement:
         print(f'Updating paths in {workspace_name} - this may take a couple minutes.')
@@ -275,7 +295,7 @@ def update_entity_data_paths(workspace_name, workspace_project, mapping_tsv, do_
         attrs_list = []
         inds = [] # to keep track of rows to update with API call status
         for attr in ent_attrs.keys():
-            if is_gs_path(attr, ent_attrs[attr]): # this is a gs:// path
+            if is_gs_path(attr, ent_attrs[attr]) and is_bam(attr,ent_attrs[attr]): # this is a gs:// path
                 original_path = ent_attrs[attr]
                 if is_in_bucket_list(original_path): # this is a path we think we want to update
                     new_path, map_key, fail_reason = get_replacement_path(original_path, mapping)
@@ -400,32 +420,33 @@ def summarize_results(df_paths, do_replacement=True):
     n_bam_paths_to_replace = len(df_paths[df_paths['file_type'] == 'bam'])
     n_paths_updated = len(df_paths[df_paths['update_status'] == 200])
     n_nonbam_paths = len(df_paths[df_paths['file_type'] != 'bam'])
-    file_types = df_paths['file_type'].unique()
-    file_types_non_bam = [x for x in file_types if x != 'bam']
-    n_file_types = {}
-    n_file_types_fixed = {}
-    for ext in file_types:
-        inds_ext = df_paths.index[df_paths['file_type'] == ext].tolist()
-        inds_failed = df_paths.index[df_paths['update_status'] == 200].tolist()
-        inds_ext_failed = list(set(inds_ext) & set(inds_failed)) 
-        n_file_types[ext] = len(inds_ext)
-        n_file_types_fixed[ext] = len(inds_ext_failed)
+    # file_types = df_paths['file_type'].unique()
+    # file_types_non_bam = [x for x in file_types if x != 'bam']
+    # n_file_types = {}
+    # n_file_types_fixed = {}
+    # for ext in file_types:
+    #     inds_ext = df_paths.index[df_paths['file_type'] == ext].tolist()
+    #     inds_failed = df_paths.index[df_paths['update_status'] == 200].tolist()
+    #     inds_ext_failed = list(set(inds_ext) & set(inds_failed)) 
+    #     n_file_types[ext] = len(inds_ext)
+    #     n_file_types_fixed[ext] = len(inds_ext_failed)
     n_bam_paths_not_updated = n_bam_paths_to_replace - n_paths_updated
     
     if not do_replacement:
         not_updated_text = '\nSet `do_replacement` to True to update the paths.\n'
     elif n_bam_paths_not_updated > 0:
-        not_updated_text = f'\n{n_bam_paths_not_updated} bam paths could not be updated. \n'
-        not_updated_text += 'For more information, email pipeline-help@broadinstitute.org, attaching the output files in your bucket (see below).\n'
+        not_updated_text = f'\n{n_bam_paths_not_updated} bam paths could not be updated. \n\n'
+        not_updated_text += 'For more information, email pipeline-help@broadinstitute.org, \n'
+        not_updated_text += 'attaching the output files in your bucket (see below).\n'
     else:
         not_updated_text = ''
 
-    if len(file_types) > 1: 
-        file_types_text = 'Note that we only have replacement paths for bam files, '
-        file_types_text += '\nbut your data references the following non-bam file types: '+', '.join(file_types_non_bam)
-        file_types_text += '\nThese file types were not migrated, so those paths cannot be updated.'
-    else:
-        file_types_text = ''
+    # if len(file_types) > 1: 
+    #     file_types_text = 'Note that we only have replacement paths for bam files, '
+    #     file_types_text += '\nbut your data references the following non-bam file types: '+', '.join(file_types_non_bam)
+    #     file_types_text += '\nThese file types were not migrated, so those paths cannot be updated.'
+    # else:
+    #     file_types_text = ''
     
         # not_found_text = '\nWe could not find replacements for the following .bam file paths:\n'
         # inds_not_found = df_paths.index[df_paths['new_path'].isnull()].tolist()
@@ -443,7 +464,6 @@ def summarize_results(df_paths, do_replacement=True):
 
 {n_paths_updated} of those paths were updated.
 {not_updated_text}
-{file_types_text}
     ''')
 
 
