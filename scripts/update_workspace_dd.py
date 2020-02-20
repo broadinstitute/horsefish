@@ -446,6 +446,30 @@ def summarize_results(df_paths, do_replacement=True):
     ''')
 
 
+def print_permissions_information(df_paths, pm_tsv):
+    df_pms = pd.read_csv(pm_tsv,delimiter=' ',names=['Workspace name','bucket','PM_firstname','PM_lastname','PM email'])
+    
+    df_pms['PM name']=df_pms['PM_firstname']+' '+df_pms['PM_lastname']
+    # find destination buckets in new paths
+    paths = df_paths.loc[df_paths.index[df_paths.new_path.notnull()].tolist()]['new_path']
+    
+    buckets = set([item.split('/')[2] for item in paths])
+
+    pm_contact_text = 'If you do not have access to the following workspaces/buckets, \nplease email the corresponding PM for appropriate permissions.'
+
+    inds = []
+    for bucket in buckets:
+        inds.append(df_pms.index[df_pms['bucket']==bucket].tolist()[0])
+    
+    print(pm_contact_text)
+    
+    df_pm_display = df_pms[['Workspace name','bucket','PM name','PM email']].loc[inds].set_index('Workspace name')
+    display(df_pm_display)
+#     display(df_pms[['Workspace name','bucket','PM name','PM email']].loc[inds].reset_index(drop=True))
+
+    return df_pm_display
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('--workspace_name', help='name of workspace in which to make changes')
