@@ -251,7 +251,10 @@ def is_gs_path(attr, value, str_match='gs://'):
     return False
 
 def update_entity_data_paths(workspace_name, workspace_project, mapping_tsv, do_replacement=True):
-    print("Listing all gs:// paths in DATA ENTITIES for " + workspace_name)
+    if do_replacement:
+        print(f'Updating paths in {workspace_name} - this may take a couple minutes.')
+    else:
+        print(f'Listing paths to update in {workspace_name}')
 
     # load path mapping
     mapping = load_mapping(mapping_tsv)
@@ -407,12 +410,12 @@ def summarize_results(df_paths, do_replacement=True):
         inds_ext_failed = list(set(inds_ext) & set(inds_failed)) 
         n_file_types[ext] = len(inds_ext)
         n_file_types_fixed[ext] = len(inds_ext_failed)
-    n_paths_not_updated = n_bam_paths_to_replace - n_paths_updated
+    n_bam_paths_not_updated = n_bam_paths_to_replace - n_paths_updated
     
     if not do_replacement:
-        not_updated_text = '\nNo paths were updated. Set `do_replacement` to True to update the paths.'
+        not_updated_text = '\nSet `do_replacement` to True to update the paths.\n'
     elif n_paths_not_updated > 0:
-        not_updated_text = f'\n{n_paths_not_updated} paths could not be updated. See more information below.\n'
+        not_updated_text = f'\n{n_bam_paths_not_updated} bam paths could not be updated. See more information below.\n'
     else:
         not_updated_text = ''
 
