@@ -414,7 +414,7 @@ def summarize_results(df_paths, do_replacement=True):
     
     if not do_replacement:
         not_updated_text = '\nSet `do_replacement` to True to update the paths.\n'
-    elif n_paths_not_updated > 0:
+    elif n_bam_paths_not_updated > 0:
         not_updated_text = f'\n{n_bam_paths_not_updated} bam paths could not be updated. See more information below.\n'
     else:
         not_updated_text = ''
