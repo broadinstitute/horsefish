@@ -441,7 +441,7 @@ def summarize_results(df_paths, do_replacement=True):
     ''')
 
 
-def print_permissions_information(df_paths, pm_tsv):
+def get_permissions_information(df_paths, pm_tsv):
     df_pms = pd.read_csv(pm_tsv,header=0)
     
     # find destination buckets in new paths
