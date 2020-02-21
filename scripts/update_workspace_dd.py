@@ -272,7 +272,7 @@ def is_bam(attr, value, str_match='.bam'):
 
 def update_entity_data_paths(workspace_name, workspace_project, mapping_tsv, do_replacement=True):
     if do_replacement:
-        print(f'Updating paths in {workspace_name}\n\nNOTE: THIS STEP MAY TAKE A FEW MINUTES. As long as you see `In: [*]:` to the left of this cell, it\'s still working!')
+        print(f'Updating paths in {workspace_name}\n\nNOTE: THIS STEP MAY TAKE A FEW MINUTES. As long as you see `In [*]:` to the left of this cell, it\'s still working!')
     else:
         print(f'Listing paths to update in {workspace_name}')
 
