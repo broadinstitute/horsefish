@@ -238,7 +238,7 @@ def is_gs_path(attr, value, str_match='gs://'):
     elif isinstance(value, dict):
         if str_match in str(value):
             return True
-    elif isinstance(value, bool):
+    elif isinstance(value, (bool, int, float, complex)):
         pass
     elif value is None:
         pass
@@ -258,7 +258,7 @@ def is_bam(attr, value, str_match='.bam'):
     elif isinstance(value, dict):
         if str_match in str(value):
             return True
-    elif isinstance(value, bool):
+    elif isinstance(value, (bool, int, float, complex)):
         pass
     elif value is None:
         pass
