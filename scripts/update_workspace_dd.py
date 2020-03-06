@@ -130,12 +130,12 @@ def find_and_replace(attr, value, replace_this, with_this):
             value_str_new = value_str.replace(replace_this, with_this)
             value_new = ast.literal_eval(value_str_new)
             updated_attr = fapi._attr_set(attr, value_new)
-    elif isinstance(value, bool):
+    elif isinstance(value, (bool, int, float, complex)):
         pass
     elif value is None:
         pass
     else: # some other type, hopefully this doesn't exist
-        if replace_this in value:
+        if replace_this in str(value):
             print('unknown type of attribute')
             print('attr: '+attr)
             print('value: '+value)
