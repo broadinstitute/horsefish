@@ -135,15 +135,14 @@ def find_and_replace(attr, value, replace_this, with_this):
     elif value is None:
         pass
     else: # some other type, hopefully this doesn't exist
-        if replace_this in str(value):
-            print('unknown type of attribute')
-            print('attr: '+attr)
-            print('value: '+value)
+        print('unknown type of attribute')
+        print('attr: '+attr)
+        print('value: '+value)
 
     return updated_attr
 
 
-def update_attributes(workspace_name, workspace_project, replace_this, with_this):
+def update_attributes(workspacåe_name, workspace_project, replace_this, with_this):
     ## update workspace data attributes
     print("Updating ATTRIBUTES for " + workspace_name)
 
@@ -229,46 +228,34 @@ def is_in_bucket_list(path):
             return True
     return False
 
+def contains_str(attr, value, str_match):
+    """ return True if str_match is in 'value' of a given attribute, else False
+    """
+
+    if isinstance(value, str): # if value is just a string
+        if str_match in value:
+            return True
+    elif isinstance(value, dict):
+        if str_match in str(value):
+            return True
+    elif isinstance(value, (bool, int, float, complex)):
+        pass
+    elif value is None:
+        pass
+    else: # some other type, hopefully this doesn't exist
+        print('unknown type of attribute')
+        print('attr: '+attr)
+        print('value: '+value)
+
+    return False
 
 def is_gs_path(attr, value, str_match='gs://'):
+    return contains_str(attr, value, str_match)
 
-    if isinstance(value, str): # if value is just a string
-        if str_match in value:
-            return True
-    elif isinstance(value, dict):
-        if str_match in str(value):
-            return True
-    elif isinstance(value, (bool, int, float, complex)):
-        pass
-    elif value is None:
-        pass
-    else: # some other type, hopefully this doesn't exist
-        if str_match in value:
-            print('unknown type of attribute')
-            print('attr: '+attr)
-            print('value: '+value)
-
-    return False
 
 def is_bam(attr, value, str_match='.bam'):
+    return contains_str(attr, value, str_match)
 
-    if isinstance(value, str): # if value is just a string
-        if str_match in value:
-            return True
-    elif isinstance(value, dict):
-        if str_match in str(value):
-            return True
-    elif isinstance(value, (bool, int, float, complex)):
-        pass
-    elif value is None:
-        pass
-    else: # some other type, hopefully this doesn't exist
-        if str_match in value:
-            print('unknown type of attribute')
-            print('attr: '+attr)
-            print('value: '+value)
-
-    return False
 
 def update_entity_data_paths(workspace_name, workspace_project, mapping_tsv, do_replacement=True):
     if do_replacement:
@@ -442,12 +429,31 @@ def summarize_results(df_paths, do_replacement=True):
 
 
 def get_permissions_information(df_paths, pm_tsv):
+    # note: changing this to get all current paths in workspace, NOT using df_paths
     df_pms = pd.read_csv(pm_tsv,header=0)
+
+    buckets_to_check = df_pms['bucket']
     
     # find destination buckets in new paths
-    paths = df_paths.loc[df_paths.index[df_paths.new_path.notnull()].tolist()]['new_path']
+    # paths = df_paths.loc[df_paths.index[df_paths.new_path.notnull()].tolist()]['new_path']
+    # get data attributes
+    paths = [] # collect paths in relevant buckets
+
+    # get all entities (now of updated paths)
+    entities = call_fiss(fapi.get_entities_with_type, 200, workspace_project, workspace_name)
     
-    buckets = set([item.split('/')[2] for item in paths])
+    for ent in entities:
+        ent_name = ent['name']
+        ent_type = ent['entityType']
+        ent_attrs = ent['attributes']
+        for attr in ent_attrs.keys():
+            if is_gs_path(attr, ent_attrs[attr]) and is_bam(attr,ent_attrs[attr]): # this is a gs:// path
+                gs_path = ent_attrs[attr]
+                for bucket in buckets_to_check:
+                    if contains_str(attr, gs_path, str_match=bucket):
+                        paths.append(bucket)
+    
+    buckets = set([item.split('/')[2] for item in paths]) # pulls out bucket name, i.e. 'gs://bucket-name/stuff' -> 'bucket-name'
 
     pm_contact_text = 'If you do not have access to the following workspaces/buckets, \n'
     pm_contact_text += 'please email the corresponding PM for appropriate permissions.\n\n'
