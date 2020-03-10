@@ -439,6 +439,9 @@ def get_permissions_information(df_paths, pm_tsv):
     # get data attributes
     paths = [] # collect paths in relevant buckets
 
+    workspace_name = os.getenv('WORKSPACE_NAME')
+    workspace_project = os.getenv('WORKSPACE_NAMESPACE')
+
     # get all entities (now of updated paths)
     entities = call_fiss(fapi.get_entities_with_type, 200, workspace_project, workspace_name)
     
