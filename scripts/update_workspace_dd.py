@@ -432,12 +432,7 @@ def get_permissions_information(df_paths, pm_tsv):
     # note: changing this to get all current paths in workspace, NOT using df_paths
     df_pms = pd.read_csv(pm_tsv,header=0)
 
-
-    buckets_to_check = df_pms['bucket'].notnull()
-    print(buckets_to_check)
-
-
-    print(df_pms.loc[df_pms['bucket'].isnull()])
+    buckets_to_check = df_pms['bucket']
     
     # find destination buckets in new paths
     # paths = df_paths.loc[df_paths.index[df_paths.new_path.notnull()].tolist()]['new_path']
@@ -458,18 +453,12 @@ def get_permissions_information(df_paths, pm_tsv):
             if is_gs_path(attr, ent_attrs[attr]) and is_bam(attr,ent_attrs[attr]): # this is a gs:// path
                 gs_path = ent_attrs[attr]
                 for bucket in buckets_to_check:
-                    print(bucket)
-                    if contains_str(attr, gs_path, str_match=bucket):
-                        paths.append(bucket)
+                    if isinstance(bucket, str): # filter out nan buckets
+                        if contains_str(attr, gs_path, str_match=bucket):
+                            paths.append(bucket)
     
 
-
     buckets = set([item.split('/')[2] for item in paths]) # pulls out bucket name, i.e. 'gs://bucket-name/stuff' -> 'bucket-name'
-
-    print('\n\nPATHS:')
-    print(paths)
-    print('\n\nBUCKETS:')
-    print(buckets)
 
     pm_contact_text = 'If you do not have access to the following workspaces/buckets, \n'
     pm_contact_text += 'please email the corresponding PM for appropriate permissions.\n\n'
