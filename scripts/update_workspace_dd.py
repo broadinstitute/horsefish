@@ -455,7 +455,7 @@ def get_permissions_information(df_paths, pm_tsv):
                 for bucket in buckets_to_check:
                     if isinstance(bucket, str): # filter out nan buckets
                         if contains_str(attr, gs_path, str_match=bucket):
-                            paths.append(bucket)
+                            paths.append(gs_path)
     
 
     buckets = set([item.split('/')[2] for item in paths]) # pulls out bucket name, i.e. 'gs://bucket-name/stuff' -> 'bucket-name'
