@@ -65,10 +65,8 @@ def update_notebooks(workspace_name, workspace_project, replace_this, with_this)
     print("Updating NOTEBOOKS for " + workspace_name)
 
     ## update notebooks
-    # Getting the workspace bucket
-    r = fapi.get_workspace(workspace_project, workspace_name)
-    fapi._check_response_code(r, 200)
-    workspace = r.json()
+    # get the workspace bucket
+    workspace = call_fiss(fapi.get_workspace, 200, workspace_project, workspace_name)
     bucket = workspace['workspace']['bucketName']
 
     # check if bucket is empty
