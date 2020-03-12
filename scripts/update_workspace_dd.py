@@ -10,6 +10,18 @@ import csv
 import sys
 import re
 
+def run_subprocess(cmd, errorMessage):
+    if isinstance(cmd, list):
+        cmd = ' '.join(cmd)
+    try:
+        # print("running command: " + cmd)
+        return subprocess.check_output(
+            cmd, shell=True, universal_newlines=True)
+    except subprocess.CalledProcessError as e:
+        print(errorMessage)
+        print("Exited with " + str(e.returncode) + "-" + e.output)
+        exit(1)
+
 def call_fiss(fapifunc, okcode, *args, specialcodes=None, **kwargs):
     ''' call FISS (firecloud api), check for errors, return json response
 
@@ -142,7 +154,7 @@ def find_and_replace(attr, value, replace_this, with_this):
     return updated_attr
 
 
-def update_attributes(workspacåe_name, workspace_project, replace_this, with_this):
+def update_attributes(workspace_name, workspace_project, replace_this, with_this):
     ## update workspace data attributes
     print("Updating ATTRIBUTES for " + workspace_name)
 
