@@ -18,6 +18,9 @@ def copy_multiple(df, set_auth_domain=None):
     if 'new_workspace' not in list(df.columns):
         df['new_workspace'] = df['original_workspace']
 
+    copy_status = [] 
+    copy_status_text = []
+
     for i in range(n_workspaces_to_copy):
         original_workspace = df.loc[i]['original_workspace']
         original_project = df.loc[i]['original_project']
@@ -25,50 +28,66 @@ def copy_multiple(df, set_auth_domain=None):
         new_project = df.loc[i]['new_project']
 
         print(f'\nPreparing to copy {original_project}/{original_workspace} to {new_project}/{new_workspace} ...')
-        hard_copy(original_workspace, original_project, new_workspace, new_project, set_auth_domain)
+        result = hard_copy(original_workspace, original_project, new_workspace, new_project, set_auth_domain)
+        copy_status.append(result)
+        copy_status_text.append(f'{result} : {original_project}/{original_workspace} to {new_project}/{new_workspace}')
+    
+    # todo: save this?
+    df['copy_status']=copy_status
+
+    print('\n'.join(copy_status_text))
 
 
 def hard_copy(original_workspace, original_project, new_workspace, new_project, set_auth_domain=None):
-    # check for auth_domain info
-    if set_auth_domain is None:
-        response = fapi.get_workspace(namespace=original_project, workspace=original_workspace)
-        if response.status_code not in [200]:
+    try:
+        # check for auth_domain info
+        if set_auth_domain is None:
+            response = fapi.get_workspace(namespace=original_project, workspace=original_workspace)
+            if response.status_code not in [200]:
+                raise ferrors.FireCloudServerError(response.status_code, response.content)
+            authorization_domain = response.json()['workspace']['authorizationDomain']
+            if len(authorization_domain) > 0:
+                authorization_domain = authorization_domain[0]['membersGroupName']
+        else:
+            authorization_domain = set_auth_domain
+        
+        print(f'Setting authorization domain to {authorization_domain}')
+        
+        # clone the workspace
+        response = fapi.clone_workspace(from_namespace=original_project, 
+                                        from_workspace=original_workspace, 
+                                        to_namespace=new_project, 
+                                        to_workspace=new_workspace,
+                                        authorizationDomain=authorization_domain)
+        if response.status_code in [409]:
+            print(f'\nNOTE: {new_project}/{new_workspace} already exists!')
+            return 'already exists'
+        elif response.status_code not in [201]:
             raise ferrors.FireCloudServerError(response.status_code, response.content)
-        authorization_domain = response.json()['workspace']['authorizationDomain']
-        if len(authorization_domain) > 0:
-            authorization_domain = authorization_domain[0]['membersGroupName']
-    else:
-        authorization_domain = set_auth_domain
-    
-    print(f'Setting authorization domain to {authorization_domain}')
-    
-    # clone the workspace
-    response = fapi.clone_workspace(from_namespace=original_project, 
-                                    from_workspace=original_workspace, 
-                                    to_namespace=new_project, 
-                                    to_workspace=new_workspace,
-                                    authorizationDomain=authorization_domain)
-    if response.status_code not in [201]:
-        raise ferrors.FireCloudServerError(response.status_code, response.content)
 
-    # get bucket info for original and new workspace
-    original_bucket = fapi.get_workspace(original_project, original_workspace).json()['workspace']['bucketName']
-    new_bucket = fapi.get_workspace(new_project, new_workspace).json()['workspace']['bucketName']
-    
-    # copy bucket over
-    bucket_files = run_subprocess(['gsutil', 'ls', 'gs://' + original_bucket + '/'], 'Error listing bucket contents')
-    if len(bucket_files)>0:
-        gsutil_args = ['gsutil', '-m', 'rsync', '-r', 'gs://' + original_bucket, 'gs://' + new_bucket]
-        bucket_files = run_subprocess(gsutil_args, 'Error copying over original bucket to clone bucket')
-    
-    # update data references
-    update_attributes(new_workspace, new_project, replace_this=original_bucket, with_this=new_bucket)
-    update_entities(new_workspace, new_project, replace_this=original_bucket, with_this=new_bucket)
-    update_notebooks(new_workspace, new_project, replace_this=original_bucket, with_this=new_bucket)
+        # get bucket info for original and new workspace
+        original_bucket = fapi.get_workspace(original_project, original_workspace).json()['workspace']['bucketName']
+        new_bucket = fapi.get_workspace(new_project, new_workspace).json()['workspace']['bucketName']
+        
+        # copy bucket over
+        bucket_files = run_subprocess(['gsutil', 'ls', 'gs://' + original_bucket + '/'], 'Error listing bucket contents')
+        if len(bucket_files)>0:
+            gsutil_args = ['gsutil', '-m', 'rsync', '-r', 'gs://' + original_bucket, 'gs://' + new_bucket]
+            bucket_files = run_subprocess(gsutil_args, 'Error copying over original bucket to clone bucket')
+        
+        # update data references
+        update_attributes(new_workspace, new_project, replace_this=original_bucket, with_this=new_bucket)
+        update_entities(new_workspace, new_project, replace_this=original_bucket, with_this=new_bucket)
+        update_notebooks(new_workspace, new_project, replace_this=original_bucket, with_this=new_bucket)
 
-    # done
-    print(f'\nFinished copying {original_project}/{original_workspace} to {new_project}/{new_workspace}.\nCheck it out at https://app.terra.bio/#workspaces/{new_project}/{new_workspace}')
+        # done
+        print(f'\nFinished copying {original_project}/{original_workspace} to {new_project}/{new_workspace}.\nCheck it out at https://app.terra.bio/#workspaces/{new_project}/{new_workspace}')
 
+        return 'copy successful'
+
+    except Exception as e:
+        print("Exited with " + str(e.returncode) + "-" + e.output)
+        return e.output
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='')
