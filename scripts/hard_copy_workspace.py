@@ -86,7 +86,7 @@ def hard_copy(original_workspace, original_project, new_workspace, new_project, 
         return 'copy successful'
 
     except Exception as e:
-        print("Exited with " + str(e.returncode) + "-" + e.output)
+        print("Exited with " + str(e))
         return e.output
 
 if __name__ == "__main__":
