@@ -10,6 +10,9 @@ import csv
 import sys
 import re
 
+EXTENSIONS_TO_MIGRATE = ['bam', 'bai', 'md5']
+
+
 def run_subprocess(cmd, errorMessage):
     if isinstance(cmd, list):
         cmd = ' '.join(cmd)
@@ -40,8 +43,8 @@ def call_fiss(fapifunc, okcode, *args, specialcodes=None, **kwargs):
     example use:
         output = call_fiss(fapi.get_workspace, 200, 'help-gatk', 'Sequence-Format-Conversion')
     '''
-    # call the api 
-    response = fapifunc(*args, **kwargs) 
+    # call the api
+    response = fapifunc(*args, **kwargs)
     # print(response.status_code)
 
     # check for errors; this is copied from _check_response_code in fiss
@@ -203,7 +206,8 @@ def update_entities(workspace_name, workspace_project, replace_this, with_this):
 
 
 def is_in_bucket_list(path):
-    bucket_list = ['fc-122c390c-f0b9-4b01-82ae-3e87e858e01a',
+    bucket_list = [
+        'fc-122c390c-f0b9-4b01-82ae-3e87e858e01a',
         'fc-12be498d-4812-489b-9b02-023db71a470f',
         'fc-37557664-acea-408f-a944-027ed65502e5',
         'fc-38aeaeaf-02c4-493d-a35b-a4f95f2c2fae',
@@ -231,12 +235,23 @@ def is_in_bucket_list(path):
         'fc-e9440d64-3fad-44bc-a2c7-c439a94aff29',
         'fc-ed48dede-1e5e-41ff-b3a1-0ef4f9797cd4',
         'fc-effb3f55-962a-4b1f-b41d-63234d7e5735',
-        'fc-fd538f2b-e8bf-478a-8620-2c4c13a3e664']
+        'fc-fd538f2b-e8bf-478a-8620-2c4c13a3e664',
+        'fc-1fdf285a-be88-4800-8de8-2388b385f2f8',
+        'fc-3861e381-510f-4577-b43e-e0a9609d4a51',
+        'fc-57598c0a-2daf-4996-8422-41c8d2d1a354',
+        'fc-5d15a8c5-a865-44cb-a8db-1d44f78e0134',
+        'fc-66b68450-9d98-490f-934f-a9d824aac4be',
+        'fc-99cfac7d-851a-48cc-b248-427c2b7b2f66',
+        'fc-a9496738-473e-4cb8-86aa-28a7a0f6a91e',
+        'fc-cdb52728-3070-42e0-97c5-b24b37c86e3e',
+        'fc-fc7961ea-9642-4eef-829b-2ad619bc1f01',
+    ]
 
     for bucket in bucket_list:
         if bucket in path:
             return True
     return False
+
 
 def contains_str(attr, value, str_match):
     """ return True if str_match is in 'value' of a given attribute, else False
@@ -263,8 +278,12 @@ def is_gs_path(attr, value, str_match='gs://'):
     return contains_str(attr, value, str_match)
 
 
-def is_bam(attr, value, str_match='.bam'):
-    return contains_str(attr, value, str_match)
+def is_migratable_extension(attr, value):
+    for extension in EXTENSIONS_TO_MIGRATE:
+        if contains_str(attr, value, extension):
+            return True
+
+    return False
 
 
 def update_entity_data_paths(workspace_name, workspace_project, mapping_tsv, do_replacement=True):
@@ -275,15 +294,15 @@ def update_entity_data_paths(workspace_name, workspace_project, mapping_tsv, do_
 
     # load path mapping
     mapping = load_mapping(mapping_tsv)
-    
+
     # set up dataframe to track all paths
     columns = ['entity_name','entity_type','attribute','original_path','new_path',
                'map_key','fail_reason','file_type','update_status']
     df_paths = pd.DataFrame(columns=columns)
-    
+
     # get data attributes
     entities = call_fiss(fapi.get_entities_with_type, 200, workspace_project, workspace_name)
-    
+
     for ent in entities:
         ent_name = ent['name']
         ent_type = ent['entityType']
@@ -292,12 +311,12 @@ def update_entity_data_paths(workspace_name, workspace_project, mapping_tsv, do_
         attrs_list = []
         inds = [] # to keep track of rows to update with API call status
         for attr in ent_attrs.keys():
-            if is_gs_path(attr, ent_attrs[attr]) and is_bam(attr,ent_attrs[attr]): # this is a gs:// path
+            if is_gs_path(attr, ent_attrs[attr]) and is_migratable_extension(attr,ent_attrs[attr]): # this is a gs:// path
                 original_path = ent_attrs[attr]
                 if is_in_bucket_list(original_path): # this is a path we think we want to update
                     new_path, map_key, fail_reason = get_replacement_path(original_path, mapping)
                     gs_paths[attr] = original_path
-                    if new_path: 
+                    if new_path:
                         updated_attr = fapi._attr_set(attr, new_path) # format the update
                         attrs_list.append(updated_attr) # what we have replacements for
                         inds.append(len(df_paths))
@@ -310,128 +329,74 @@ def update_entity_data_paths(workspace_name, workspace_project, mapping_tsv, do_
                                                 'fail_reason': fail_reason,
                                                 'file_type': original_path.split('.')[-1]},
                                                ignore_index=True)
-                        
-                    
+
+
         if len(attrs_list) > 0:
             if do_replacement:
-                # DO THE REPLACEMENT 
+                # DO THE REPLACEMENT
                 response = fapi.update_entity(workspace_project, workspace_name, ent_type, ent_name, attrs_list)
                 status_code = response.status_code
                 if status_code != 200:
                     print(f'ERROR {status_code} updating {ent_name} with {str(attrs_list)} - {response.text}')
             else:
                 status_code = 0
-            
+
             df_paths.loc[inds, 'update_status'] = status_code
-      
+
     summarize_results(df_paths)
 
     return df_paths
-            
-            
-# globals for regex parsing
-SUFFIX_MUNCHER_REGEX = r"(?:\.reduced|\.duplicates_marked)*"
-BAM_PATH_DATATYPE_REGEX = rf"/seq/(?:fargo_)?picard_aggregation/(?P<project>[^/]+)/(?P<data_type>[^/]+)/(?P<sample>[^/]+)/(?P<version>v(?:[^/]+)|(?:current))/(?P=sample){SUFFIX_MUNCHER_REGEX}\.bam"
-BAM_PATH_LIBRARY_DATATYPE_REGEX = rf"/seq/(?:fargo_)?picard_aggregation/(?P<project>[^/]+)/(?P<data_type>[^/]+)/(?P<sample>[^/]+)/(?P<version>v(?:[^/]+)|(?:current))/(?P<library>[^/]+)/(?P=library){SUFFIX_MUNCHER_REGEX}\.bam"
-BAM_PATH_LIBRARY_NO_DATATYPE_REGEX = rf"/seq/(?:fargo_)?picard_aggregation/(?P<project>[^/]+)/(?P<sample>[^/]+)/(?P<version>v(?:[^/]+)|(?:current))/(?P<library>[^/]+)/(?P=library){SUFFIX_MUNCHER_REGEX}\.bam"
-BAM_PATH_NO_DATATYPE_REGEX = rf"/seq/(?:fargo_)?picard_aggregation/(?P<project>[^/]+)/(?P<sample>[^/]+)/(?P<version>v(?:[^/]+)|(?:current))/(?P=sample){SUFFIX_MUNCHER_REGEX}\.bam"
-
-FORMAT_REGEXES = [
-    BAM_PATH_DATATYPE_REGEX,
-    BAM_PATH_LIBRARY_DATATYPE_REGEX,
-    BAM_PATH_LIBRARY_NO_DATATYPE_REGEX,
-    BAM_PATH_NO_DATATYPE_REGEX,
-]
-
-MAPPING_HEADERS = ['project', 'sample', 'version', 'data_type', 'new_path']
-
-def normalize_alias(sample_alias):
-    return re.sub(r'[ ()/,]', '_', sample_alias)
 
 
-def sample_key(project, sample, data_type):
-    return '|'.join([project, normalize_alias(sample), data_type])
+MAPPING_HEADERS = ['old_path', 'new_path']
 
 
-def parse_path_into_fields(path):
-    for regex in FORMAT_REGEXES:
-        result = re.search(regex, path)
-        if result:
-            fields_dict = {
-                'project': result.group('project'),
-                'sample': result.group('sample'),
-                'version': result.group('version'),
-            }
-
-            try:
-                fields_dict['data_type'] = result.group('data_type')
-            except IndexError:
-                # some paths won't have a data type
-                fields_dict['data_type'] = 'N/A'
-
-            return fields_dict
-
-    return None # if no result of regexes
-
-
-def load_mapping(path):  
+def load_mapping(path):
     mapping = {}
 
     with open(path, 'r') as mapping_tsv:
         reader = csv.DictReader(mapping_tsv, fieldnames=MAPPING_HEADERS, delimiter='\t')
         for row in reader:
-            mapping[sample_key(row['project'], row['sample'], row['data_type'])] = row['new_path']
-    
+            mapping[row['old_path']] = row['new_path']
+
     return mapping
 
+
 def get_replacement_path(original_path, mapping):
-    ''' input original path; 
+    ''' input original path;
     outputs:
         new_path: either a new destination path or None
-        key: parsed key from original_path, or None
+        original_path: path requested for mapping, for identification
         fail_reason: if no new_path, more information about failure
     '''
-
-    fields = parse_path_into_fields(original_path)
-    if not fields:
+    try:
+        new_path = mapping[original_path]
+        fail_reason = None
+    except KeyError:
         new_path = None
-        key = None
-        fail_reason = 'regex fail: fields not parsable from path'
-        return new_path, key, fail_reason
-    
-    key = sample_key(fields['project'], fields['sample'], fields['data_type'])
+        fail_reason = 'key not found in map'
 
-    if key:
-        try:
-            new_path = mapping[str(key)]
-            fail_reason = None
-        except KeyError:
-            new_path = None
-            fail_reason = 'key not found in map'
-    else:
-        new_path = None
-        fail_reason = 'key not formulated from fields'
+    return new_path, original_path, fail_reason
 
-    return new_path, key, fail_reason
 
 def summarize_results(df_paths, do_replacement=True):
     # get some summary stats
-    n_bam_paths_to_replace = len(df_paths[df_paths['file_type'] == 'bam'])
+    n_valid_extension_paths_to_replace = len(df_paths[df_paths['file_type'] in EXTENSIONS_TO_MIGRATE])
     n_paths_updated = len(df_paths[df_paths['update_status'] == 200])
-    n_nonbam_paths = len(df_paths[df_paths['file_type'] != 'bam'])
-    n_bam_paths_not_updated = n_bam_paths_to_replace - n_paths_updated
-    
+    n_nonvalid_extension_paths = len(df_paths[df_paths['file_type'] not in EXTENSIONS_TO_MIGRATE])
+    n_valid_extension_paths_not_updated = n_valid_extension_paths_to_replace - n_paths_updated
+
     if not do_replacement:
         not_updated_text = '\nSet `do_replacement=True` to update the paths.\n'
-    elif n_bam_paths_not_updated > 0:
-        not_updated_text = f'\n{n_bam_paths_not_updated} bam paths could not be updated. \n\n'
+    elif n_valid_extension_paths_not_updated > 0:
+        not_updated_text = f'\n{n_valid_extension_paths_not_updated} file paths could not be updated. \n\n'
         not_updated_text += 'For more information, email pipeline-help@broadinstitute.org, \n'
         not_updated_text += 'attaching the output files in your bucket (see below).\n'
     else:
         not_updated_text = ''
 
     print(f'''
-{n_bam_paths_to_replace} migrated bam paths were found.
+{n_valid_extension_paths_to_replace} migrated file paths were found.
 
 {n_paths_updated} of those paths were updated.
 {not_updated_text}
@@ -443,7 +408,7 @@ def get_permissions_information(df_paths, pm_tsv):
     df_pms = pd.read_csv(pm_tsv,header=0)
 
     buckets_to_check = df_pms['bucket']
-    
+
     # find destination buckets in new paths
     # paths = df_paths.loc[df_paths.index[df_paths.new_path.notnull()].tolist()]['new_path']
     # get data attributes
@@ -454,19 +419,19 @@ def get_permissions_information(df_paths, pm_tsv):
 
     # get all entities (now of updated paths)
     entities = call_fiss(fapi.get_entities_with_type, 200, workspace_project, workspace_name)
-    
+
     for ent in entities:
         ent_name = ent['name']
         ent_type = ent['entityType']
         ent_attrs = ent['attributes']
         for attr in ent_attrs.keys():
-            if is_gs_path(attr, ent_attrs[attr]) and is_bam(attr,ent_attrs[attr]): # this is a gs:// path
+            if is_gs_path(attr, ent_attrs[attr]) and is_migratable_extension(attr,ent_attrs[attr]): # this is a gs:// path
                 gs_path = ent_attrs[attr]
                 for bucket in buckets_to_check:
                     if isinstance(bucket, str): # filter out nan buckets
                         if contains_str(attr, gs_path, str_match=bucket):
                             paths.append(gs_path)
-    
+
 
     buckets = set([item.split('/')[2] for item in paths]) # pulls out bucket name, i.e. 'gs://bucket-name/stuff' -> 'bucket-name'
 
@@ -477,9 +442,9 @@ def get_permissions_information(df_paths, pm_tsv):
     inds = []
     for bucket in buckets:
         inds.append(df_pms.index[df_pms['bucket']==bucket].tolist()[0])
-    
+
     print(pm_contact_text)
-    
+
     df_pm_display = df_pms.loc[inds].set_index('Workspace name')[['bucket','PM name','PM email']]
     display(df_pm_display)
 
@@ -492,12 +457,12 @@ def prepare_outputs(df_paths, df_pm_display):
     save_name_log = 'log_path_updates_'+timestamp+'.csv'
     print('Will save log as '+save_name_log)
     df_paths.to_csv(save_name_log)
-    
+
     # save a file to your bucket that documents contact information in case you need access to new workspaces
     save_name_contact = 'workspace_permissions_contacts_'+timestamp+'.csv'
     print('Will save permissions contact information as '+save_name_contact)
     df_pm_display.to_csv(save_name_contact)
-    
+
     return save_name_log, save_name_contact
 
 
