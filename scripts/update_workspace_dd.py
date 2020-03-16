@@ -4,7 +4,7 @@ import ast
 import shutil
 import argparse
 import pandas as pd
-import numpy
+import numpy as np
 from firecloud import api as fapi
 from datetime import datetime
 import csv
@@ -384,7 +384,7 @@ def summarize_results(df_paths, do_replacement=True):
     # get some summary stats
     n_valid_extension_paths_to_replace = len(df_paths[df_paths['file_type'].isin(EXTENSIONS_TO_MIGRATE)])
     n_paths_updated = len(df_paths[df_paths['update_status'] == 200])
-    n_nonvalid_extension_paths = len(df_paths[numpy.logical_not(df_paths['file_type'].isin(EXTENSIONS_TO_MIGRATE))])
+    n_nonvalid_extension_paths = len(df_paths[np.logical_not(df_paths['file_type'].isin(EXTENSIONS_TO_MIGRATE))])
     n_valid_extension_paths_not_updated = n_valid_extension_paths_to_replace - n_paths_updated
 
     if not do_replacement:
