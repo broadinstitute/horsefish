@@ -7,8 +7,6 @@ import pandas as pd
 from firecloud import api as fapi
 from datetime import datetime
 import csv
-import sys
-import re
 
 EXTENSIONS_TO_MIGRATE = ['bam', 'bai', 'md5']
 
@@ -24,6 +22,7 @@ def run_subprocess(cmd, errorMessage):
         print(errorMessage)
         print("Exited with " + str(e.returncode) + "-" + e.output)
         exit(1)
+
 
 def call_fiss(fapifunc, okcode, *args, specialcodes=None, **kwargs):
     ''' call FISS (firecloud api), check for errors, return json response
@@ -133,7 +132,7 @@ def update_notebooks(workspace_name, workspace_project, replace_this, with_this)
 def find_and_replace(attr, value, replace_this, with_this):
 
     updated_attr = None
-    if isinstance(value, str): # if value is just a string
+    if isinstance(value, str):  # if value is just a string
         if replace_this in value:
             new_value = value.replace(replace_this, with_this)
             updated_attr = fapi._attr_set(attr, new_value)
@@ -147,7 +146,7 @@ def find_and_replace(attr, value, replace_this, with_this):
         pass
     elif value is None:
         pass
-    else: # some other type, hopefully this doesn't exist
+    else:  # some other type, hopefully this doesn't exist
         print('unknown type of attribute')
         print('attr: '+attr)
         print('value: '+value)
@@ -257,7 +256,7 @@ def contains_str(attr, value, str_match):
     """ return True if str_match is in 'value' of a given attribute, else False
     """
 
-    if isinstance(value, str): # if value is just a string
+    if isinstance(value, str):  # if value is just a string
         if str_match in value:
             return True
     elif isinstance(value, dict):
@@ -267,12 +266,13 @@ def contains_str(attr, value, str_match):
         pass
     elif value is None:
         pass
-    else: # some other type, hopefully this doesn't exist
+    else:  # some other type, hopefully this doesn't exist
         print('unknown type of attribute')
         print('attr: '+attr)
         print('value: '+value)
 
     return False
+
 
 def is_gs_path(attr, value, str_match='gs://'):
     return contains_str(attr, value, str_match)
