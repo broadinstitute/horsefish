@@ -202,7 +202,7 @@ def update_entities(workspace_name, workspace_project, replace_this, with_this):
             if response.status_code == 200:
                 print('Updated entities:')
                 for attr in attrs_list:
-                    print('   '+attr['attributeName']+' : '+attr['addUpdateAttribute'])
+                    print('   '+str(attr['attributeName'])+' : '+str(attr['addUpdateAttribute']))
 
 
 def is_in_bucket_list(path):
