@@ -408,6 +408,7 @@ def get_permissions_information(df_paths, pm_tsv):
     # note: changing this to get all current paths in workspace, NOT using df_paths
     df_pms = pd.read_csv(pm_tsv,header=0)
 
+    print(list(df_pms.columns))
     buckets_to_check = df_pms['bucket']
 
     # find destination buckets in new paths
