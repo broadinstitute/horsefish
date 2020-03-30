@@ -459,12 +459,14 @@ def get_replacement_path(original_path, mapping):
     new_path_list = []
     fail_reason_list = []
     for original_path in original_path_list:
-        print(original_path)
         try:
             new_path_list.append(mapping[original_path])
             fail_reason_list.append(None)
         except KeyError:
-            new_path_list.append(None)
+            if is_list:
+                new_path_list.append(original_path) # keep lists intact
+            else:
+                new_path_list.append(None)
             if is_in_bucket_list(original_path, bucket_list=None): # bucket_list=None selects the original hardcoded buckets, for which we do want to note errors
                 fail_reason_list.append('key not found in map')
             else:
