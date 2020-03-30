@@ -205,47 +205,48 @@ def update_entities(workspace_name, workspace_project, replace_this, with_this):
                     print('   '+str(attr['attributeName'])+' : '+str(attr['addUpdateAttribute']))
 
 
-def is_in_bucket_list(path):
-    bucket_list = [
-        'fc-122c390c-f0b9-4b01-82ae-3e87e858e01a',
-        'fc-12be498d-4812-489b-9b02-023db71a470f',
-        'fc-37557664-acea-408f-a944-027ed65502e5',
-        'fc-38aeaeaf-02c4-493d-a35b-a4f95f2c2fae',
-        'fc-3d22b428-2d11-483e-9d6e-7b13c3546e27',
-        'fc-3e3e2d8c-ff7c-4a5d-a0c4-1b2d8a96cf4b',
-        'fc-4ccb3566-f985-4e68-993c-ec666287c45b',
-        'fc-52fb4dc7-0957-49c6-9851-95951ea5308e',
-        'fc-67ecfd09-da44-465d-8e09-fdf082fc1f8d',
-        'fc-6cff0a0e-16db-47bd-b482-91618628e87d',
-        'fc-75bd7886-4635-4453-83af-76951e9c0f4b',
-        'fc-7e333c4f-dcbf-4c0d-8644-07a1bccde045',
-        'fc-8261513a-5f0c-4be0-ae42-62bcf00dfc52',
-        'fc-9bc3b4e4-f2a1-4ef3-b408-cf74f1916610',
-        'fc-a78c8a3c-890b-4953-a67d-f226685ead99',
-        'fc-a9d8dab3-1c57-4e9e-879a-f9d39441bfb5',
-        'fc-ab3e3ef8-5e90-47c1-8f44-246552248074',
-        'fc-be4e0e22-021e-4edc-a52e-56d9f053119d',
-        'fc-c0f9b627-a631-4f6c-bbfe-5edbe80d7eff',
-        'fc-cd11a278-cda3-4211-9ea4-c964c78e9bb6',
-        'fc-dd9c4e05-3511-4d3e-bc23-92815d14ffa1',
-        'fc-ddea25e3-a077-4f5f-a9d1-9661431186b2',
-        'fc-e02d3247-5469-4a5c-8b66-c4397eeff5d0',
-        'fc-e67c6510-d7f1-4bc3-b55e-2dfad7d56786',
-        'fc-e6c84ae9-9ac9-4b35-ae86-ac9f04824bf8',
-        'fc-e9440d64-3fad-44bc-a2c7-c439a94aff29',
-        'fc-ed48dede-1e5e-41ff-b3a1-0ef4f9797cd4',
-        'fc-effb3f55-962a-4b1f-b41d-63234d7e5735',
-        'fc-fd538f2b-e8bf-478a-8620-2c4c13a3e664',
-        'fc-1fdf285a-be88-4800-8de8-2388b385f2f8',
-        'fc-3861e381-510f-4577-b43e-e0a9609d4a51',
-        'fc-57598c0a-2daf-4996-8422-41c8d2d1a354',
-        'fc-5d15a8c5-a865-44cb-a8db-1d44f78e0134',
-        'fc-66b68450-9d98-490f-934f-a9d824aac4be',
-        'fc-99cfac7d-851a-48cc-b248-427c2b7b2f66',
-        'fc-a9496738-473e-4cb8-86aa-28a7a0f6a91e',
-        'fc-cdb52728-3070-42e0-97c5-b24b37c86e3e',
-        'fc-fc7961ea-9642-4eef-829b-2ad619bc1f01',
-    ]
+def is_in_bucket_list(path, bucket_list=None):
+    if bucket_list is None:
+        bucket_list = [
+            'fc-122c390c-f0b9-4b01-82ae-3e87e858e01a',
+            'fc-12be498d-4812-489b-9b02-023db71a470f',
+            'fc-37557664-acea-408f-a944-027ed65502e5',
+            'fc-38aeaeaf-02c4-493d-a35b-a4f95f2c2fae',
+            'fc-3d22b428-2d11-483e-9d6e-7b13c3546e27',
+            'fc-3e3e2d8c-ff7c-4a5d-a0c4-1b2d8a96cf4b',
+            'fc-4ccb3566-f985-4e68-993c-ec666287c45b',
+            'fc-52fb4dc7-0957-49c6-9851-95951ea5308e',
+            'fc-67ecfd09-da44-465d-8e09-fdf082fc1f8d',
+            'fc-6cff0a0e-16db-47bd-b482-91618628e87d',
+            'fc-75bd7886-4635-4453-83af-76951e9c0f4b',
+            'fc-7e333c4f-dcbf-4c0d-8644-07a1bccde045',
+            'fc-8261513a-5f0c-4be0-ae42-62bcf00dfc52',
+            'fc-9bc3b4e4-f2a1-4ef3-b408-cf74f1916610',
+            'fc-a78c8a3c-890b-4953-a67d-f226685ead99',
+            'fc-a9d8dab3-1c57-4e9e-879a-f9d39441bfb5',
+            'fc-ab3e3ef8-5e90-47c1-8f44-246552248074',
+            'fc-be4e0e22-021e-4edc-a52e-56d9f053119d',
+            'fc-c0f9b627-a631-4f6c-bbfe-5edbe80d7eff',
+            'fc-cd11a278-cda3-4211-9ea4-c964c78e9bb6',
+            'fc-dd9c4e05-3511-4d3e-bc23-92815d14ffa1',
+            'fc-ddea25e3-a077-4f5f-a9d1-9661431186b2',
+            'fc-e02d3247-5469-4a5c-8b66-c4397eeff5d0',
+            'fc-e67c6510-d7f1-4bc3-b55e-2dfad7d56786',
+            'fc-e6c84ae9-9ac9-4b35-ae86-ac9f04824bf8',
+            'fc-e9440d64-3fad-44bc-a2c7-c439a94aff29',
+            'fc-ed48dede-1e5e-41ff-b3a1-0ef4f9797cd4',
+            'fc-effb3f55-962a-4b1f-b41d-63234d7e5735',
+            'fc-fd538f2b-e8bf-478a-8620-2c4c13a3e664',
+            'fc-1fdf285a-be88-4800-8de8-2388b385f2f8',
+            'fc-3861e381-510f-4577-b43e-e0a9609d4a51',
+            'fc-57598c0a-2daf-4996-8422-41c8d2d1a354',
+            'fc-5d15a8c5-a865-44cb-a8db-1d44f78e0134',
+            'fc-66b68450-9d98-490f-934f-a9d824aac4be',
+            'fc-99cfac7d-851a-48cc-b248-427c2b7b2f66',
+            'fc-a9496738-473e-4cb8-86aa-28a7a0f6a91e',
+            'fc-cdb52728-3070-42e0-97c5-b24b37c86e3e',
+            'fc-fc7961ea-9642-4eef-829b-2ad619bc1f01',
+        ]
 
     for bucket in bucket_list:
         if bucket in path:
@@ -287,6 +288,69 @@ def is_migratable_extension(attr, value):
     return False
 
 
+def update_entity_data_paths_test(workspace_name, workspace_project, mapping_tsv, do_replacement=True):
+    if do_replacement:
+        print(f'Updating paths in {workspace_name}\n\nNOTE: THIS STEP MAY TAKE A FEW MINUTES. As long as you see `In [*]:` to the left of this cell, it\'s still working!')
+    else:
+        print(f'Listing paths to update in {workspace_name}')
+
+    # load path mapping
+    mapping = load_mapping(mapping_tsv)
+    print(mapping.head())
+    exit(1)
+
+    # set up dataframe to track all paths
+    columns = ['entity_name','entity_type','attribute','original_path','new_path',
+               'map_key','fail_reason','file_type','update_status']
+    df_paths = pd.DataFrame(columns=columns)
+
+    # get data attributes
+    entities = call_fiss(fapi.get_entities_with_type, 200, workspace_project, workspace_name)
+
+    for ent in entities:
+        ent_name = ent['name']
+        ent_type = ent['entityType']
+        ent_attrs = ent['attributes']
+        gs_paths = {}
+        attrs_list = []
+        inds = [] # to keep track of rows to update with API call status
+        for attr in ent_attrs.keys():
+            if is_gs_path(attr, ent_attrs[attr]) and is_migratable_extension(attr,ent_attrs[attr]): # this is a gs:// path
+                original_path = ent_attrs[attr]
+                if is_in_bucket_list(original_path, list_of_buckets): # this is a path we think we want to update
+                    new_path, map_key, fail_reason = get_replacement_path(original_path, mapping)
+                    gs_paths[attr] = original_path
+                    if new_path:
+                        updated_attr = fapi._attr_set(attr, new_path) # format the update
+                        attrs_list.append(updated_attr) # what we have replacements for
+                        inds.append(len(df_paths))
+                    df_paths = df_paths.append({'entity_name': ent_name,
+                                                'entity_type': ent_type,
+                                                'attribute': attr,
+                                                'original_path': original_path,
+                                                'new_path': new_path,
+                                                'map_key': map_key,
+                                                'fail_reason': fail_reason,
+                                                'file_type': original_path.split('.')[-1]},
+                                               ignore_index=True)
+
+
+        if len(attrs_list) > 0:
+            if do_replacement:
+                # DO THE REPLACEMENT
+                response = fapi.update_entity(workspace_project, workspace_name, ent_type, ent_name, attrs_list)
+                status_code = response.status_code
+                if status_code != 200:
+                    print(f'ERROR {status_code} updating {ent_name} with {str(attrs_list)} - {response.text}')
+            else:
+                status_code = 0
+
+            df_paths.loc[inds, 'update_status'] = status_code
+
+    summarize_results(df_paths)
+
+    return df_paths
+
 def update_entity_data_paths(workspace_name, workspace_project, mapping_tsv, do_replacement=True):
     if do_replacement:
         print(f'Updating paths in {workspace_name}\n\nNOTE: THIS STEP MAY TAKE A FEW MINUTES. As long as you see `In [*]:` to the left of this cell, it\'s still working!')
@@ -314,7 +378,7 @@ def update_entity_data_paths(workspace_name, workspace_project, mapping_tsv, do_
         for attr in ent_attrs.keys():
             if is_gs_path(attr, ent_attrs[attr]) and is_migratable_extension(attr,ent_attrs[attr]): # this is a gs:// path
                 original_path = ent_attrs[attr]
-                if is_in_bucket_list(original_path): # this is a path we think we want to update
+                if is_in_bucket_list(original_path, list_of_buckets): # this is a path we think we want to update
                     new_path, map_key, fail_reason = get_replacement_path(original_path, mapping)
                     gs_paths[attr] = original_path
                     if new_path:
