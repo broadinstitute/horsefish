@@ -380,6 +380,8 @@ def update_entity_data_paths(workspace_name, workspace_project, mapping_tsv, do_
         attrs_list = []
         inds = [] # to keep track of rows to update with API call status
         for attr in ent_attrs.keys():
+            is_list = True if isinstance(attr, list) else False
+            
             if is_gs_path(attr, ent_attrs[attr]) and is_migratable_extension(attr,ent_attrs[attr]): # this is a gs:// path
                 original_path = ent_attrs[attr]
                 if is_in_bucket_list(original_path, bucket_list=None): # this is a path we think we want to update
@@ -438,15 +440,33 @@ def get_replacement_path(original_path, mapping):
         original_path: path requested for mapping, for identification
         fail_reason: if no new_path, more information about failure
     '''
-    try:
-        new_path = mapping[original_path]
-        fail_reason = None
-    except KeyError:
-        new_path = None
-        if is_in_bucket_list(original_path, bucket_list=None): # bucket_list=None selects the original hardcoded buckets, for which we do want to note errors
-            fail_reason = 'key not found in map'
-        else:
-            fail_reason = 'new bucket path does not need replacement'
+
+    if isinstance(original_path, list):
+        original_path_list = original_path
+        is_list = True
+    else:
+        original_path_list = [original_path]
+        is_list = False
+
+    new_path_list = []
+    fail_reason_list = []
+    for original_path in original_path_list:
+        try:
+            new_path_list.append(mapping[original_path])
+            fail_reason.append(None)
+        except KeyError:
+            new_path = None
+            if is_in_bucket_list(original_path, bucket_list=None): # bucket_list=None selects the original hardcoded buckets, for which we do want to note errors
+                fail_reason.append('key not found in map')
+            else:
+                fail_reason.append('new bucket path does not need replacement')
+
+    if not is_list:
+        new_path = new_path_list[0]
+        fail_reason = fail_reason_list[0]
+    else:
+        new_path = new_path_list
+        fail_reason = fail_reason_list
 
     return new_path, original_path, fail_reason
 
