@@ -317,7 +317,7 @@ def update_entity_data_paths(workspace_name, workspace_project, mapping_tsv, do_
         for attr in ent_attrs.keys():
             if is_gs_path(attr, ent_attrs[attr]) and is_migratable_extension(attr,ent_attrs[attr]): # this is a gs:// path
                 original_path = ent_attrs[attr]
-                if is_in_bucket_list(original_path, list_of_buckets=original_bucket_list): # this is a path we think we want to update
+                if is_in_bucket_list(original_path, bucket_list=original_bucket_list): # this is a path we think we want to update
                     new_path, map_key, fail_reason = get_replacement_path(original_path, mapping)
                     gs_paths[attr] = original_path
                     if new_path:
@@ -378,7 +378,7 @@ def update_entity_data_paths_deprecated(workspace_name, workspace_project, mappi
         for attr in ent_attrs.keys():
             if is_gs_path(attr, ent_attrs[attr]) and is_migratable_extension(attr,ent_attrs[attr]): # this is a gs:// path
                 original_path = ent_attrs[attr]
-                if is_in_bucket_list(original_path, list_of_buckets): # this is a path we think we want to update
+                if is_in_bucket_list(original_path, bucket_list=None): # this is a path we think we want to update
                     new_path, map_key, fail_reason = get_replacement_path(original_path, mapping)
                     gs_paths[attr] = original_path
                     if new_path:
