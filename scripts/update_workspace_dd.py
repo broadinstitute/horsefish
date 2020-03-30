@@ -342,7 +342,7 @@ def update_entity_data_paths_test(workspace_name, workspace_project, mapping_tsv
                                                 'new_path': new_path,
                                                 'map_key': map_key,
                                                 'fail_reason': fail_reason,
-                                                'file_type': original_path.split('.')[-1]},
+                                                'file_type': original_path.split('.')[-1][:3]},
                                                ignore_index=True)
 
 
@@ -459,6 +459,7 @@ def get_replacement_path(original_path, mapping):
     new_path_list = []
     fail_reason_list = []
     for original_path in original_path_list:
+        print(original_path)
         try:
             new_path_list.append(mapping[original_path])
             fail_reason_list.append(None)
