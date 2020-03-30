@@ -477,7 +477,7 @@ def get_replacement_path(original_path, mapping):
         fail_reason = fail_reason_list[0]
         original_path = original_path_list[0]
     else:
-        new_path = new_path_list
+        new_path = '[' + ','.join(['\"'+item+'\"' for item in new_path_list]) + ']'
         fail_reason = fail_reason_list
         original_path = original_path_list
 
