@@ -324,10 +324,10 @@ def update_entity_data_paths_test(workspace_name, workspace_project, mapping_tsv
                     update_this_attr = False
                     if isinstance(fail_reason, list):
                         for item in fail_reason:
-                            if item is None:
+                            if (item is None) or (item == 'new bucket path does not need replacement'):
                                 update_this_attr = True
                     else:
-                        if fail_reason is None:
+                        if (fail_reason is None) or (fail_reason == 'new bucket path does not need replacement'):
                             update_this_attr = True
 
                     if update_this_attr:
