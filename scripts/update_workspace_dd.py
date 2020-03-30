@@ -8,6 +8,7 @@ import numpy as np
 from firecloud import api as fapi
 from datetime import datetime
 import csv
+import ast
 
 EXTENSIONS_TO_MIGRATE = ['bam', 'bai', 'md5']
 
@@ -311,12 +312,12 @@ def update_entity_data_paths_test(workspace_name, workspace_project, mapping_tsv
         ent_name = ent['name']
         ent_type = ent['entityType']
         ent_attrs = ent['attributes']
-        gs_paths = {}
-        attrs_list = []
-        inds = [] # to keep track of rows to update with API call status
+        # gs_paths = {}
         for attr in ent_attrs.keys():
+            attrs_list = []
+            inds = [] # to keep track of rows to update with API call status
 
-            is_list = True if isinstance(attr, list) else False
+            is_list = True if isinstance(ast.literal_eval(attr), list) else False
             if is_list:
                 print('WARNING! list!')
 
@@ -325,7 +326,7 @@ def update_entity_data_paths_test(workspace_name, workspace_project, mapping_tsv
                 print(original_path)
                 if is_in_bucket_list(original_path, bucket_list=original_bucket_list): # this is a path we think we want to update
                     new_path, map_key, fail_reason = get_replacement_path(original_path, mapping)
-                    gs_paths[attr] = original_path
+                    # gs_paths[attr] = original_path
                     if new_path:
                         updated_attr = fapi._attr_set(attr, new_path) # format the update
                         attrs_list.append(updated_attr) # what we have replacements for
@@ -341,17 +342,17 @@ def update_entity_data_paths_test(workspace_name, workspace_project, mapping_tsv
                                                ignore_index=True)
 
 
-        if len(attrs_list) > 0:
-            if do_replacement:
-                # DO THE REPLACEMENT
-                response = fapi.update_entity(workspace_project, workspace_name, ent_type, ent_name, attrs_list)
-                status_code = response.status_code
-                if status_code != 200:
-                    print(f'ERROR {status_code} updating {ent_name} with {str(attrs_list)} - {response.text}')
-            else:
-                status_code = 0
+            if len(attrs_list) > 0:
+                if do_replacement:
+                    # DO THE REPLACEMENT
+                    response = fapi.update_entity(workspace_project, workspace_name, ent_type, ent_name, attrs_list)
+                    status_code = response.status_code
+                    if status_code != 200:
+                        print(f'ERROR {status_code} updating {ent_name} with {str(attrs_list)} - {response.text}')
+                else:
+                    status_code = 0
 
-            df_paths.loc[inds, 'update_status'] = status_code
+                df_paths.loc[inds, 'update_status'] = status_code
 
     summarize_results(df_paths)
 
@@ -444,8 +445,8 @@ def get_replacement_path(original_path, mapping):
         fail_reason: if no new_path, more information about failure
     '''
 
-    if isinstance(original_path, list):
-        original_path_list = original_path
+    if isinstance(ast.literal_eval(original_path), list):
+        original_path_list = ast.literal_eval(original_path)
         is_list = True
     else:
         original_path_list = [original_path]
