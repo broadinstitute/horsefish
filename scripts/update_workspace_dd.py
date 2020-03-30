@@ -296,8 +296,10 @@ def update_entity_data_paths_test(workspace_name, workspace_project, mapping_tsv
 
     # load path mapping
     mapping = load_mapping(mapping_tsv)
-    print([mapping.keys()])
-    print(set([x.split('/')[2] for x in [mapping.keys()]]))
+    original_path_list = list(mapping.keys())
+    original_bucket_list = set([x.split('/')[2] for x in original_path_list])
+    print(original_path_list[:10])
+    print(original_bucket_list)
     exit(1)
 
     # set up dataframe to track all paths
