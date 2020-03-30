@@ -318,6 +318,11 @@ def update_entity_data_paths_test(workspace_name, workspace_project, mapping_tsv
         attrs_list = []
         inds = [] # to keep track of rows to update with API call status
         for attr in ent_attrs.keys():
+
+            is_list = True if isinstance(attr, list) else False
+            if is_list:
+                print('WARNING! list!')
+                
             if is_gs_path(attr, ent_attrs[attr]) and is_migratable_extension(attr,ent_attrs[attr]): # this is a gs:// path
                 original_path = ent_attrs[attr]
                 print(original_path)
@@ -380,8 +385,6 @@ def update_entity_data_paths(workspace_name, workspace_project, mapping_tsv, do_
         attrs_list = []
         inds = [] # to keep track of rows to update with API call status
         for attr in ent_attrs.keys():
-            is_list = True if isinstance(attr, list) else False
-            
             if is_gs_path(attr, ent_attrs[attr]) and is_migratable_extension(attr,ent_attrs[attr]): # this is a gs:// path
                 original_path = ent_attrs[attr]
                 if is_in_bucket_list(original_path, bucket_list=None): # this is a path we think we want to update
