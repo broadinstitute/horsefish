@@ -288,7 +288,7 @@ def is_migratable_extension(attr, value):
     return False
 
 
-def update_entity_data_paths_test(workspace_name, workspace_project, mapping_tsv, do_replacement=True, show_results=False):
+def update_entity_data_paths(workspace_name, workspace_project, mapping_tsv, do_replacement=True, show_results=False):
     if do_replacement:
         print(f'Updating paths in {workspace_name}\n\nNOTE: THIS STEP MAY TAKE A FEW MINUTES. As long as you see `In [*]:` to the left of this cell, it\'s still working!')
     else:
@@ -366,7 +366,7 @@ def update_entity_data_paths_test(workspace_name, workspace_project, mapping_tsv
 
     return df_paths
 
-def update_entity_data_paths(workspace_name, workspace_project, mapping_tsv, do_replacement=True):
+def update_entity_data_paths_deprecated(workspace_name, workspace_project, mapping_tsv, do_replacement=True):
     if do_replacement:
         print(f'Updating paths in {workspace_name}\n\nNOTE: THIS STEP MAY TAKE A FEW MINUTES. As long as you see `In [*]:` to the left of this cell, it\'s still working!')
     else:
@@ -488,11 +488,11 @@ def get_replacement_path(original_path, mapping):
 
 def summarize_results(df_paths, do_replacement=True):
     # get some summary stats
-    n_valid_extension_paths_to_replace = len(df_paths[df_paths['file_type'].isin(EXTENSIONS_TO_MIGRATE)])
     n_extension_paths_from_new_buckets_not_needing_update = sum(df_paths.fail_reason == 'new bucket path does not need replacement')
+    n_valid_extension_paths_to_replace = len(df_paths[df_paths['file_type'].isin(EXTENSIONS_TO_MIGRATE)]) - n_extension_paths_from_new_buckets_not_needing_update
     n_paths_updated = len(df_paths[df_paths['update_status'] == 200])
     n_nonvalid_extension_paths = len(df_paths[np.logical_not(df_paths['file_type'].isin(EXTENSIONS_TO_MIGRATE))])
-    n_valid_extension_paths_not_updated = n_valid_extension_paths_to_replace - n_paths_updated - n_extension_paths_from_new_buckets_not_needing_update
+    n_valid_extension_paths_not_updated = n_valid_extension_paths_to_replace - n_paths_updated
 
     if not do_replacement:
         not_updated_text = '\nSet `do_replacement=True` to update the paths.\n'
