@@ -322,12 +322,12 @@ def update_entity_data_paths_test(workspace_name, workspace_project, mapping_tsv
                     new_path, map_key, fail_reason = get_replacement_path(original_path, mapping)
                     # gs_paths[attr] = original_path
                     update_this_attr = False
-                    if isinstance(new_path, list):
-                        for item in new_path:
-                            if item:
+                    if isinstance(fail_reason, list):
+                        for item in fail_reason:
+                            if item is None:
                                 update_this_attr = True
                     else:
-                        if new_path:
+                        if fail_reason is None:
                             update_this_attr = True
 
                     if update_this_attr:
