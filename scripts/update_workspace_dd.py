@@ -328,7 +328,7 @@ def update_entity_data_paths_test(workspace_name, workspace_project, mapping_tsv
                             if item:
                                 update_this_attr = True
                     else:
-                        if item:
+                        if new_path:
                             update_this_attr = True
 
                     print(update_this_attr)
