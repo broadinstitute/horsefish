@@ -324,24 +324,26 @@ def update_entity_data_paths_test(workspace_name, workspace_project, mapping_tsv
                     update_this_attr = False
                     if isinstance(fail_reason, list):
                         for item in fail_reason:
-                            if (item is None) or (item == 'new bucket path does not need replacement'):
+                            if item is None:
                                 update_this_attr = True
                     else:
-                        if (fail_reason is None) or (fail_reason == 'new bucket path does not need replacement'):
+                        if fail_reason is None:
                             update_this_attr = True
 
                     if update_this_attr:
                         updated_attr = fapi._attr_set(attr, str(new_path)) # format the update
                         attrs_list.append(updated_attr) # what we have replacements for
                         inds.append(len(df_paths))
-                        df_paths = df_paths.append({'entity_name': ent_name,
-                                                    'entity_type': ent_type,
-                                                    'attribute': attr,
-                                                    'original_path': original_path,
-                                                    'new_path': new_path,
-                                                    'map_key': map_key,
-                                                    'fail_reason': fail_reason,
-                                                    'file_type': original_path.split('.')[-1][:3]},
+                    
+                    # even if we don't update the attribute, add an entry for documentation of why not
+                    df_paths = df_paths.append({'entity_name': ent_name,
+                                                'entity_type': ent_type,
+                                                'attribute': attr,
+                                                'original_path': original_path,
+                                                'new_path': new_path,
+                                                'map_key': map_key,
+                                                'fail_reason': fail_reason,
+                                                'file_type': original_path.split('.')[-1][:3]},
                                                 ignore_index=True)
 
 
