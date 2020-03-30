@@ -322,7 +322,7 @@ def update_entity_data_paths_test(workspace_name, workspace_project, mapping_tsv
             is_list = True if isinstance(attr, list) else False
             if is_list:
                 print('WARNING! list!')
-                
+
             if is_gs_path(attr, ent_attrs[attr]) and is_migratable_extension(attr,ent_attrs[attr]): # this is a gs:// path
                 original_path = ent_attrs[attr]
                 print(original_path)
@@ -456,13 +456,13 @@ def get_replacement_path(original_path, mapping):
     for original_path in original_path_list:
         try:
             new_path_list.append(mapping[original_path])
-            fail_reason.append(None)
+            fail_reason_list.append(None)
         except KeyError:
-            new_path = None
+            new_path_list.append(None)
             if is_in_bucket_list(original_path, bucket_list=None): # bucket_list=None selects the original hardcoded buckets, for which we do want to note errors
-                fail_reason.append('key not found in map')
+                fail_reason_list.append('key not found in map')
             else:
-                fail_reason.append('new bucket path does not need replacement')
+                fail_reason_list.append('new bucket path does not need replacement')
 
     if not is_list:
         new_path = new_path_list[0]
