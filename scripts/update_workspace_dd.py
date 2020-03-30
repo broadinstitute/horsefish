@@ -288,7 +288,7 @@ def is_migratable_extension(attr, value):
     return False
 
 
-def update_entity_data_paths(workspace_name, workspace_project, mapping_tsv, do_replacement=True):
+def update_entity_data_paths_test(workspace_name, workspace_project, mapping_tsv, do_replacement=True):
     if do_replacement:
         print(f'Updating paths in {workspace_name}\n\nNOTE: THIS STEP MAY TAKE A FEW MINUTES. As long as you see `In [*]:` to the left of this cell, it\'s still working!')
     else:
@@ -298,6 +298,9 @@ def update_entity_data_paths(workspace_name, workspace_project, mapping_tsv, do_
     mapping = load_mapping(mapping_tsv)
     original_path_list = list(mapping.keys())
     original_bucket_list = list(set([x.split('/')[2] for x in original_path_list]))
+
+    print('\n'.join(original_bucket_list))
+    print(f'\nsearching for {len(original_bucket_list):} buckets')
 
     # set up dataframe to track all paths
     columns = ['entity_name','entity_type','attribute','original_path','new_path',
@@ -317,6 +320,7 @@ def update_entity_data_paths(workspace_name, workspace_project, mapping_tsv, do_
         for attr in ent_attrs.keys():
             if is_gs_path(attr, ent_attrs[attr]) and is_migratable_extension(attr,ent_attrs[attr]): # this is a gs:// path
                 original_path = ent_attrs[attr]
+                print(original_path)
                 if is_in_bucket_list(original_path, bucket_list=original_bucket_list): # this is a path we think we want to update
                     new_path, map_key, fail_reason = get_replacement_path(original_path, mapping)
                     gs_paths[attr] = original_path
@@ -351,7 +355,7 @@ def update_entity_data_paths(workspace_name, workspace_project, mapping_tsv, do_
 
     return df_paths
 
-def update_entity_data_paths_deprecated(workspace_name, workspace_project, mapping_tsv, do_replacement=True):
+def update_entity_data_paths(workspace_name, workspace_project, mapping_tsv, do_replacement=True):
     if do_replacement:
         print(f'Updating paths in {workspace_name}\n\nNOTE: THIS STEP MAY TAKE A FEW MINUTES. As long as you see `In [*]:` to the left of this cell, it\'s still working!')
     else:
