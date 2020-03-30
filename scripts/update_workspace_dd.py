@@ -288,7 +288,7 @@ def is_migratable_extension(attr, value):
     return False
 
 
-def update_entity_data_paths_test(workspace_name, workspace_project, mapping_tsv, do_replacement=True):
+def update_entity_data_paths_test(workspace_name, workspace_project, mapping_tsv, do_replacement=True, show_results=False):
     if do_replacement:
         print(f'Updating paths in {workspace_name}\n\nNOTE: THIS STEP MAY TAKE A FEW MINUTES. As long as you see `In [*]:` to the left of this cell, it\'s still working!')
     else:
@@ -298,9 +298,6 @@ def update_entity_data_paths_test(workspace_name, workspace_project, mapping_tsv
     mapping = load_mapping(mapping_tsv)
     original_path_list = list(mapping.keys())
     original_bucket_list = list(set([x.split('/')[2] for x in original_path_list]))
-
-    print('\n'.join(original_bucket_list))
-    print(f'\nsearching for {len(original_bucket_list):} buckets')
 
     # set up dataframe to track all paths
     columns = ['entity_name','entity_type','attribute','original_path','new_path',
@@ -357,6 +354,9 @@ def update_entity_data_paths_test(workspace_name, workspace_project, mapping_tsv
             df_paths.loc[inds, 'update_status'] = status_code
 
     summarize_results(df_paths)
+
+    if show_results:
+        display(df_paths)
 
     return df_paths
 
@@ -467,9 +467,11 @@ def get_replacement_path(original_path, mapping):
     if not is_list:
         new_path = new_path_list[0]
         fail_reason = fail_reason_list[0]
+        original_path = original_path_list[0]
     else:
         new_path = new_path_list
         fail_reason = fail_reason_list
+        original_path = original_path_list
 
     return new_path, original_path, fail_reason
 
