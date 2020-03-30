@@ -8,7 +8,6 @@ import numpy as np
 from firecloud import api as fapi
 from datetime import datetime
 import csv
-import ast
 
 EXTENSIONS_TO_MIGRATE = ['bam', 'bai', 'md5']
 
@@ -317,10 +316,6 @@ def update_entity_data_paths_test(workspace_name, workspace_project, mapping_tsv
             attrs_list = []
             inds = [] # to keep track of rows to update with API call status
 
-            is_list = True if isinstance(ast.literal_eval(attr), list) else False
-            if is_list:
-                print('WARNING! list!')
-
             if is_gs_path(attr, ent_attrs[attr]) and is_migratable_extension(attr,ent_attrs[attr]): # this is a gs:// path
                 original_path = ent_attrs[attr]
                 print(original_path)
@@ -445,9 +440,10 @@ def get_replacement_path(original_path, mapping):
         fail_reason: if no new_path, more information about failure
     '''
 
-    if isinstance(ast.literal_eval(original_path), list):
-        original_path_list = ast.literal_eval(original_path)
+    if ('[' in original_path):
+        original_path_list = original_path.replace('[','').replace(']','').split(',')
         is_list = True
+        print('WARNING! is list!')
     else:
         original_path_list = [original_path]
         is_list = False
