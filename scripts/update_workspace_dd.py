@@ -331,6 +331,7 @@ def update_entity_data_paths_test(workspace_name, workspace_project, mapping_tsv
                         if item:
                             update_this_attr = True
 
+                    print(update_this_attr)
                     if update_this_attr:
                         updated_attr = fapi._attr_set(attr, str(new_path)) # format the update
                         attrs_list.append(updated_attr) # what we have replacements for
@@ -451,6 +452,7 @@ def get_replacement_path(original_path, mapping):
 
     if ('[' in original_path):
         original_path_list = original_path.replace('[','').replace(']','').split(',')
+        original_path_list = [item.strip('\"').strip('\'') for item in original_path_list]
         is_list = True
     else:
         original_path_list = [original_path]
