@@ -515,7 +515,9 @@ def get_permissions_information(df_paths, pm_tsv):
 
     inds = []
     for bucket in buckets:
-        inds.append(df_pms.index[df_pms['bucket']==bucket].tolist()[0])
+        indices = df_pms.index[df_pms['bucket']==bucket].tolist()
+        if len(indices) > 0:
+            inds.append(indices[0])
 
     print(pm_contact_text)
 
