@@ -322,8 +322,17 @@ def update_entity_data_paths_test(workspace_name, workspace_project, mapping_tsv
                 if is_in_bucket_list(original_path, bucket_list=original_bucket_list): # this is a path we think we want to update
                     new_path, map_key, fail_reason = get_replacement_path(original_path, mapping)
                     # gs_paths[attr] = original_path
-                    if new_path:
-                        updated_attr = fapi._attr_set(attr, new_path) # format the update
+                    update_this_attr = False
+                    if isinstance(new_path, list):
+                        for item in new_path:
+                            if item:
+                                update_this_attr = True
+                    else:
+                        if item:
+                            update_this_attr = True
+
+                    if update_this_attr:
+                        updated_attr = fapi._attr_set(attr, str(new_path)) # format the update
                         attrs_list.append(updated_attr) # what we have replacements for
                         inds.append(len(df_paths))
                     df_paths = df_paths.append({'entity_name': ent_name,
@@ -443,7 +452,6 @@ def get_replacement_path(original_path, mapping):
     if ('[' in original_path):
         original_path_list = original_path.replace('[','').replace(']','').split(',')
         is_list = True
-        print('WARNING! is list!')
     else:
         original_path_list = [original_path]
         is_list = False
