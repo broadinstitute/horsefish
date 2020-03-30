@@ -297,10 +297,7 @@ def update_entity_data_paths_test(workspace_name, workspace_project, mapping_tsv
     # load path mapping
     mapping = load_mapping(mapping_tsv)
     original_path_list = list(mapping.keys())
-    original_bucket_list = set([x.split('/')[2] for x in original_path_list])
-    print(original_path_list[:10])
-    print(original_bucket_list)
-    exit(1)
+    original_bucket_list = list(set([x.split('/')[2] for x in original_path_list]))
 
     # set up dataframe to track all paths
     columns = ['entity_name','entity_type','attribute','original_path','new_path',
@@ -320,7 +317,7 @@ def update_entity_data_paths_test(workspace_name, workspace_project, mapping_tsv
         for attr in ent_attrs.keys():
             if is_gs_path(attr, ent_attrs[attr]) and is_migratable_extension(attr,ent_attrs[attr]): # this is a gs:// path
                 original_path = ent_attrs[attr]
-                if is_in_bucket_list(original_path, list_of_buckets): # this is a path we think we want to update
+                if is_in_bucket_list(original_path, list_of_buckets=original_bucket_list): # this is a path we think we want to update
                     new_path, map_key, fail_reason = get_replacement_path(original_path, mapping)
                     gs_paths[attr] = original_path
                     if new_path:
