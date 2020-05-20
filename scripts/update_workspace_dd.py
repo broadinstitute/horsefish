@@ -149,8 +149,8 @@ def find_and_replace(attr, value, replace_this, with_this):
         pass
     else:  # some other type, hopefully this doesn't exist
         print('unknown type of attribute')
-        print('attr: '+attr)
-        print('value: '+value)
+        print('attr: ' + attr)
+        print('value: ' + str(value))
 
     return updated_attr
 
@@ -334,7 +334,7 @@ def update_entity_data_paths(workspace_name, workspace_project, mapping_tsv, do_
                         updated_attr = fapi._attr_set(attr, str(new_path)) # format the update
                         attrs_list.append(updated_attr) # what we have replacements for
                         inds.append(len(df_paths))
-                    
+
                     # even if we don't update the attribute, add an entry for documentation of why not
                     df_paths = df_paths.append({'entity_name': ent_name,
                                                 'entity_type': ent_type,
