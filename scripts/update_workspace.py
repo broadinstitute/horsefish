@@ -95,8 +95,8 @@ def find_and_replace(attr, value, replace_this, with_this):
     else: # some other type, hopefully this doesn't exist
         if replace_this in value:
             print('unknown type of attribute')
-            print('attr: '+attr)
-            print('value: '+value)
+            print('attr: ' + attr)
+            print('value: ' + str(value))
 
     return updated_attr
 
@@ -184,11 +184,11 @@ def update_entity_data_paths(workspace_name, workspace_project, bucket_list):
     # get data attributes
     response = call_fiss(fapi.get_entities_with_type, 200, workspace_project, workspace_name)
     entities = response
-    
+
     paths_without_replacements = {} # where we store paths for which we don't have a replacement
 
     replacements_made = 0
-    
+
     for ent in entities:
         ent_name = ent['name']
         ent_type = ent['entityType']
@@ -208,12 +208,12 @@ def update_entity_data_paths(workspace_name, workspace_project, bucket_list):
                         replacements_made += 1
                     else:
                         paths_without_replacements[attr] = original_path # what we don't have replacements for
-        
+
         if len(gs_paths) > 0:
             print(f'Found the following paths to update in {ent_name}:')
             for item in gs_paths.keys():
                 print('   '+item+' : '+gs_paths[item])
-        
+
         if len(attrs_list) > 0:
             response = fapi.update_entity(workspace_project, workspace_name, ent_type, ent_name, attrs_list)
             if response.status_code == 200:
@@ -223,17 +223,17 @@ def update_entity_data_paths(workspace_name, workspace_project, bucket_list):
 
     if replacements_made == 0:
         print('\nNo paths were updated!')
-        
+
     if len(paths_without_replacements) > 0:
         print('\nWe could not find replacements for the following paths: ')
         for item in paths_without_replacements.keys():
             print('   '+item+' : '+paths_without_replacements[item])
-            
+
 
 def get_replacement_path(original_path):
-    ''' input original path; 
+    ''' input original path;
     get back either a new destination path or None
-    
+
     TODO: insert Steve's function here
     '''
     if 'fastq' in original_path:
