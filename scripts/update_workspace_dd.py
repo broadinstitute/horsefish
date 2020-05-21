@@ -270,8 +270,8 @@ def contains_str(attr, value, str_match):
         pass
     else:  # some other type, hopefully this doesn't exist
         print('unknown type of attribute')
-        print('attr: '+attr)
-        print('value: '+value)
+        print('attr: ' + attr)
+        print('value: ' + str(value))
 
     return False
 

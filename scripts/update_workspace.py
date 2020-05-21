@@ -173,8 +173,8 @@ def is_gs_path(attr, value, str_match='gs://'):
     else: # some other type, hopefully this doesn't exist
         if str_match in value:
             print('unknown type of attribute')
-            print('attr: '+attr)
-            print('value: '+value)
+            print('attr: ' + attr)
+            print('value: ' + str(value))
 
     return False
 
