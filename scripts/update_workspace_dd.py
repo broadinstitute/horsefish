@@ -11,6 +11,13 @@ import csv
 
 EXTENSIONS_TO_MIGRATE = ['bam', 'bai', 'md5']
 
+# if a path ends with one of these, we replace it with the corresponding value
+# and try to find it in the mapping again before giving up (e.g. for files that have been run
+# through specific process, like reduced bams)
+FALLBACK_REPLACEMENTS = {
+    '.reduced.bam': '.bam',
+}
+
 
 def run_subprocess(cmd, errorMessage):
     if isinstance(cmd, list):
@@ -76,7 +83,7 @@ def update_notebooks(workspace_name, workspace_project, replace_this, with_this)
     gsutil_args = ['gsutil', 'ls', 'gs://' + bucket + '/']
     bucket_files = subprocess.check_output(gsutil_args)
     # Check output produces a string in Py2, Bytes in Py3, so decode if necessary
-    if type(bucket_files) == bytes:
+    if isinstance(bucket_files, bytes):
         bucket_files = bucket_files.decode().split('\n')
     # print(bucket_files)
 
@@ -450,6 +457,21 @@ def get_replacement_path(original_path, mapping):
         fail_reason: if no new_path, more information about failure
     '''
 
+    def get_destination_from_mapping(path):
+        try:
+            return mapping[path]
+        except KeyError:
+            for suffix, replacement in FALLBACK_REPLACEMENTS.items():
+                if path.endswith(suffix):
+                    replaced_path = path.replace(suffix, replacement)
+
+                    return mapping[replaced_path]
+
+            # if the path doesn't match any of our fallback suffixes, then we can't map it, so we
+            # re-raise the key error.
+            raise
+
+
     if ('[' in original_path):
         original_path_list = original_path.replace('[','').replace(']','').split(',')
         original_path_list = [item.strip('\"').strip('\'') for item in original_path_list]
@@ -462,7 +484,7 @@ def get_replacement_path(original_path, mapping):
     fail_reason_list = []
     for original_path in original_path_list:
         try:
-            new_path_list.append(mapping[original_path])
+            new_path_list.append(get_destination_from_mapping(original_path))
             fail_reason_list.append(None)
         except KeyError:
             if is_list:
