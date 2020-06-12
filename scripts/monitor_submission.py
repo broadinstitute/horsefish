@@ -1,31 +1,63 @@
 # -*- coding: utf-8 -*-
 """Monitor status of existing Terra workflow submission and report response code upon completion."""
 
-import sys
+import argparse
+
+from firecloud import api as fapi
+from time import sleep
+
+from fiss_fns import call_fiss
 
 # Shaun's script:
 # calls Optimus with FISS, so can get submission_id
 # needs to call Monitoring WDL with FISS, give it submission_id as input - need inputs.json to contain submission_id
 
+TERMINAL_STATES = set(['Done', 'Aborted'])
+
+
 # THIS SCRIPT:
-# intake submission_id, workspace, namespace
-# TODO add argparse
-submission_id = sys.argv[1]
-workspace = sys.argv[2]
-namespace = sys.argv[3]
-if len(sys.argv) == 3:
-    time_frequency = 300  # seconds
-else:
-    time_frequency = sys.argv[4]  # in WDL and/or here set default = 300 seconds
+def monitor_submission(terra_workspace, terra_project, submission_id, sleep_time=300, abort_hr=None, call_cache=True):
 
-# maybe use argparse if we're going to have optional inputs? or if optional inputs are set in WDL, then this is less necessary
-# script.py --name name_var --project project_var --sec 300
-# vs
-# script.py name_var project_var 300
+    print(f"monitoring workspace: {terra_workspace}\n"
+          f"   Terra project: {terra_project}\n"
+          f"   submission ID: {submission_id}")
+    # set up monitoring of status of submission
+    # check every X time amount (maybe this is a user input with default = 5 min?)
 
-# set up monitoring of status of submission
-# check every X time amount (maybe this is a user input with default = 5 min?)
+    break_out = False
+    while not break_out:
+        # check status of submission
+        res = call_fiss(fapi.get_submission, 200, terra_project, terra_workspace, submission_id)
 
-# check status: res = call_fiss(fapi.get_submission, 200, self.project, self.workspace, self.sub_id)
+        # submission status
+        submission_status = res['status']
+        if submission_status in TERMINAL_STATES:
+            break_out = True
+        else:
+            sleep(sleep_time)
 
-# upon success or failure (final status), capture into variable and return as output
+    # try to get the wf_id
+    workflow_id = None
+    for i in res['workflows']:
+        if 'workflowId' in i:
+            workflow_id = i['workflowId']
+
+    # TODO: get workflow status (failed or succeeded)
+
+    # upon success or failure (final status), capture into variable and return as output
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='')
+
+    parser.add_argument('--terra_workspace', type=str, help='name of Terra workspace')
+    parser.add_argument('--terra_project', type=str, help='name of Terra project / namespace')
+    parser.add_argument('--submission_id', type=str, help='submission ID for workflow')
+
+    parser.add_argument('--sleep_time', type=int, default=300, help='time to wait (sec) between checking whether the submissions are complete')
+    parser.add_argument('--abort_hr', type=int, default=None, help='# of hours after which to abort submissions (default None). set to None if you do not wish to abort ever.')
+    parser.add_argument('--call_cache', type=bool, default=True, help='whether to call cache the submissions (default True)')
+
+    args = parser.parse_args()
+
+    monitor_submission(args.terra_workspace, args.terra_project, args.submission_id, args.sleep_time, args.abort_hr, args.call_cache)
