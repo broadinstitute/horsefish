@@ -15,7 +15,10 @@ EXTENSIONS_TO_MIGRATE = ['bam', 'bai', 'md5']
 # and try to find it in the mapping again before giving up (e.g. for files that have been run
 # through specific process, like reduced bams)
 FALLBACK_REPLACEMENTS = {
-    '.reduced.bam': '.bam',
+    '.reduced.bam': {
+        'replacement': '.bam',
+        'notice': 'No reduced bam version migrated, mapped to unreduced instead',
+    }
 }
 
 
@@ -449,6 +452,28 @@ def load_mapping(path):
     return mapping
 
 
+def get_destination_from_mapping(path, mapping):
+    try:
+        return mapping[path]
+    except KeyError:
+        for suffix, replacement_info in FALLBACK_REPLACEMENTS.items():
+            if path.endswith(suffix):
+                replaced_path = path.replace(suffix, replacement_info['replacement'])
+
+                replaced_mapping = mapping.get(replaced_path)
+
+                if not replaced_mapping:
+                    continue
+
+                replacement_notice = replacement_info['notice']
+                print(f' - {path}: {replacement_notice}')
+                return replaced_mapping
+
+        # if the path doesn't match any of our fallback suffixes, then we can't map it, so we
+        # re-raise the key error.
+        raise
+
+
 def get_replacement_path(original_path, mapping):
     ''' input original path;
     outputs:
@@ -457,19 +482,6 @@ def get_replacement_path(original_path, mapping):
         fail_reason: if no new_path, more information about failure
     '''
 
-    def get_destination_from_mapping(path):
-        try:
-            return mapping[path]
-        except KeyError:
-            for suffix, replacement in FALLBACK_REPLACEMENTS.items():
-                if path.endswith(suffix):
-                    replaced_path = path.replace(suffix, replacement)
-
-                    return mapping[replaced_path]
-
-            # if the path doesn't match any of our fallback suffixes, then we can't map it, so we
-            # re-raise the key error.
-            raise
 
 
     if ('[' in original_path):
@@ -484,7 +496,7 @@ def get_replacement_path(original_path, mapping):
     fail_reason_list = []
     for original_path in original_path_list:
         try:
-            new_path_list.append(get_destination_from_mapping(original_path))
+            new_path_list.append(get_destination_from_mapping(original_path, mapping))
             fail_reason_list.append(None)
         except KeyError:
             if is_list:
