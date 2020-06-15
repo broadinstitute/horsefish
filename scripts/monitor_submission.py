@@ -61,14 +61,14 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    [workflow_succeeded, submission_metadata] = monitor_submission(args.terra_workspace,
-                                                                   args.terra_project,
-                                                                   args.submission_id,
-                                                                   args.sleep_time,
-                                                                   args.write_outputs_to_disk)
+    [submission_succeeded, submission_metadata] = monitor_submission(args.terra_workspace,
+                                                                     args.terra_project,
+                                                                     args.submission_id,
+                                                                     args.sleep_time,
+                                                                     args.write_outputs_to_disk)
 
     # demo of pulling out workflow output metadata
-    if workflow_succeeded:
+    if submission_succeeded:
         print('\nWorkflow succeeded!')
         # pull out metadata for all workflows in the submission
         for i in submission_metadata['workflows']:
