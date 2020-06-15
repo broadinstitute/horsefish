@@ -42,10 +42,8 @@ task run_monitor {
     }
 
     command {
-
-        if [ -z ${time_check_interval}]; then
-            TIME_INTERVAL_OPTION=""
-        else
+        TIME_INTERVAL_OPTION=""
+        if [ ! -z ${time_check_interval}]; then
             TIME_INTERVAL_OPTION="$time_check_interval,"
         fi
 
