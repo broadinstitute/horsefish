@@ -29,17 +29,19 @@ def monitor_submission(terra_workspace, terra_project, submission_id, sleep_time
 
     # check workflow status for all workflows (failed or succeeded)
     submission_succeeded = True
+    submission_status_to_report = 'Succeeded'
 
     for i in submission_metadata['workflows']:
         # check workflow outcome
         if i['status'] != 'Succeeded':
             submission_succeeded = False
+            submission_status_to_report = 'Failed'
 
     # if using WDL, this flag should be set to true so these outputs can be parsed
     if write_outputs_to_disk:
         # save submission_succeeded
-        with open('submission_succeeded.txt', 'w') as f:
-            f.write(str(submission_succeeded))
+        with open(f'{submission_id}_status', 'w') as f:
+            f.write(submission_status_to_report)
 
         # save metadata
         with open('monitor_submission_metadata.json', 'w') as f:
