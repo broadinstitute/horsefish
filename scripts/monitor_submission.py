@@ -3,6 +3,7 @@
 
 import argparse
 
+import pprint
 from firecloud import api as fapi
 from time import sleep
 
@@ -36,15 +37,26 @@ def monitor_submission(terra_workspace, terra_project, submission_id, sleep_time
         else:
             sleep(sleep_time)
 
-    # try to get the wf_id
-    workflow_id = None
-    for i in res['workflows']:
+    submission_metadata = res
+
+    # get workflow status for all workflows (failed or succeeded)
+    submission_succeeded = True
+
+    for i in res['workflows']:  # this res is from get_submission
+        # get workflow_id
         if 'workflowId' in i:
             workflow_id = i['workflowId']
+            # res_wf = call_fiss(fapi.get_workflow_metadata, 200, terra_project, terra_workspace, submission_id, workflow_id)
+            # print(f'result of get_workflow_metadata for {workflow_id}:')
+            # pprint.pprint(res_wf)
 
-    # TODO: get workflow status (failed or succeeded)
+        # store workflow outcome
+        if i['status'] != 'Succeeded':
+            submission_succeeded = False
+
 
     # upon success or failure (final status), capture into variable and return as output
+    return submission_succeeded, submission_metadata
 
 
 if __name__ == "__main__":
@@ -60,4 +72,12 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    monitor_submission(args.terra_workspace, args.terra_project, args.submission_id, args.sleep_time, args.abort_hr, args.call_cache)
+    [workflow_succeeded, submission_metadata] = monitor_submission(args.terra_workspace,
+                                                             args.terra_project,
+                                                             args.submission_id,
+                                                             args.sleep_time,
+                                                             args.abort_hr,
+                                                             args.call_cache)
+
+    print(workflow_succeeded)
+    print(submission_metadata)
