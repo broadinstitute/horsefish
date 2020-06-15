@@ -2,6 +2,7 @@
 """Monitor status of existing Terra workflow submission and report response code upon completion."""
 
 import argparse
+import json
 import pprint
 
 from firecloud import api as fapi
@@ -10,11 +11,7 @@ from time import sleep
 from fiss_fns import call_fiss
 
 
-TERMINAL_STATES = set(['Done', 'Aborted'])
-
-
-# THIS SCRIPT:
-def monitor_submission(terra_workspace, terra_project, submission_id, sleep_time=300):
+def monitor_submission(terra_workspace, terra_project, submission_id, sleep_time=300, write_outputs_to_disk=False):
     # set up monitoring of status of submission
     break_out = False
     while not break_out:
@@ -23,7 +20,7 @@ def monitor_submission(terra_workspace, terra_project, submission_id, sleep_time
 
         # submission status
         submission_status = res['status']
-        if submission_status in TERMINAL_STATES:
+        if submission_status in ['Done', 'Aborted']:
             break_out = True
         else:
             sleep(sleep_time)
@@ -38,6 +35,16 @@ def monitor_submission(terra_workspace, terra_project, submission_id, sleep_time
         if i['status'] != 'Succeeded':
             submission_succeeded = False
 
+    # if using WDL, this flag should be set to true so these outputs can be parsed
+    if write_outputs_to_disk:
+        # save submission_succeeded
+        with open('submission_succeeded.txt', 'w') as f:
+            f.write(str(submission_succeeded))
+
+        # save metadata
+        with open('monitor_submission_metadata.json', 'w') as f:
+            f.write(json.dumps(submission_metadata))
+
     # upon success or failure (final status), capture into variable and return as output
     return submission_succeeded, submission_metadata
 
@@ -50,13 +57,15 @@ if __name__ == "__main__":
     parser.add_argument('--submission_id', type=str, help='submission ID for workflow')
 
     parser.add_argument('--sleep_time', type=int, default=300, help='time to wait (sec) between checking whether the submissions are complete')
+    parser.add_argument('--write_outputs_to_disk', action='store_true', help='whether to save function outputs to disk (useful in WDL)')
 
     args = parser.parse_args()
 
     [workflow_succeeded, submission_metadata] = monitor_submission(args.terra_workspace,
                                                                    args.terra_project,
                                                                    args.submission_id,
-                                                                   args.sleep_time)
+                                                                   args.sleep_time,
+                                                                   args.write_outputs_to_disk)
 
     # demo of pulling out workflow output metadata
     if workflow_succeeded:
