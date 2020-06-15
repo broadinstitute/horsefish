@@ -38,12 +38,16 @@ def monitor_submission(terra_workspace, terra_project, submission_id, sleep_time
     # if using WDL, this flag should be set to true so these outputs can be parsed
     if write_outputs_to_disk:
         # save submission_succeeded
-        with open('submission_succeeded.txt', 'w') as f:
-            f.write(str(submission_succeeded))
+        save_name = 'SUBMISSION_STATUS'
+        with open(save_name, 'w') as f:
+            f.write('true' if submission_succeeded else 'false')
+            print(f'submission status (boolean) saved to {save_name}')
 
         # save metadata
-        with open('monitor_submission_metadata.json', 'w') as f:
+        save_name = 'monitor_submission_metadata.json'
+        with open(save_name, 'w') as f:
             f.write(json.dumps(submission_metadata))
+            print(f'submission metadata saved to {save_name}')
 
     # upon success or failure (final status), capture into variable and return as output
     return submission_succeeded, submission_metadata
@@ -61,14 +65,14 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    [workflow_succeeded, submission_metadata] = monitor_submission(args.terra_workspace,
-                                                                   args.terra_project,
-                                                                   args.submission_id,
-                                                                   args.sleep_time,
-                                                                   args.write_outputs_to_disk)
+    [submission_succeeded, submission_metadata] = monitor_submission(args.terra_workspace,
+                                                                     args.terra_project,
+                                                                     args.submission_id,
+                                                                     args.sleep_time,
+                                                                     args.write_outputs_to_disk)
 
     # demo of pulling out workflow output metadata
-    if workflow_succeeded:
+    if submission_succeeded:
         print('\nWorkflow succeeded!')
         # pull out metadata for all workflows in the submission
         for i in submission_metadata['workflows']:
