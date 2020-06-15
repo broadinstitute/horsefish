@@ -9,9 +9,6 @@ from time import sleep
 
 from fiss_fns import call_fiss
 
-# Shaun's script:
-# calls Optimus with FISS, so can get submission_id
-# needs to call Monitoring WDL with FISS, give it submission_id as input - need inputs.json to contain submission_id
 
 TERMINAL_STATES = set(['Done', 'Aborted'])
 
@@ -59,9 +56,7 @@ if __name__ == "__main__":
     [workflow_succeeded, submission_metadata] = monitor_submission(args.terra_workspace,
                                                                    args.terra_project,
                                                                    args.submission_id,
-                                                                   args.sleep_time,
-                                                                   args.abort_hr,
-                                                                   args.call_cache)
+                                                                   args.sleep_time)
 
     # demo of pulling out workflow output metadata
     if workflow_succeeded:
