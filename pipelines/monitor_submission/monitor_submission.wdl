@@ -10,6 +10,7 @@ workflow monitor_submission {
         terra_workspace: "Name of Terra workspace."
         submission_id: "Submission ID (found from Job History tab or API)."
     }
+    
     input {
         String terra_project
         String terra_workspace
@@ -24,7 +25,7 @@ workflow monitor_submission {
     }
 
     output {
-        Boolean submission_success = run_monitor.completion_status
+        Boolean submission_succeeded = run_monitor.succeeded
         File metadata_json = run_monitor.json
     } 
 
@@ -42,17 +43,12 @@ task run_monitor {
     }
 
     command {
-        TIME_INTERVAL_OPTION=""
-        if [ ! -z ${time_check_interval}]; then
-            TIME_INTERVAL_OPTION="$time_check_interval,"
-        fi
-
-        python3 -c 'from scripts/monitor_submission import monitor_submission; \
-        monitor_submission(~{terra_workspace}, \
-            ~{terra_project}, \
-            ~{submission_id}, \
-            ~{TIME_INTERVAL_OPTION} \
-            write_outputs_to_disk=True)'
+        python3 /scripts/monitor_submission.py \
+            --terra_workspace ~{terra_workspace} \
+            --terra_project ~{terra_project} \
+            --submission_id ~{submission_id} \
+            ~{"--sleep_time " + time_check_interval} \
+            --write_outputs_to_disk
     }
 
     runtime {
@@ -61,7 +57,7 @@ task run_monitor {
     }
 
     output {
-        Boolean completion_status = read_string("submission_succeeded.txt")
+        Boolean succeeded = read_boolean("SUBMISSION_STATUS")
         File json = "monitor_submission_metadata.json"
     }
 }
