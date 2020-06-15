@@ -42,11 +42,18 @@ task run_monitor {
     }
 
     command {
+
+        if [ -z ${time_check_interval}]; then
+            TIME_INTERVAL_OPTION=""
+        else
+            TIME_INTERVAL_OPTION="$time_check_interval,"
+        fi
+
         python3 -c 'from scripts/monitor_submission import monitor_submission; \
         monitor_submission(~{terra_workspace}, \
             ~{terra_project}, \
             ~{submission_id}, \
-            ~{time_check_interval}, \
+            ~{TIME_INTERVAL_OPTION} \
             write_outputs_to_disk=True)'
     }
 
