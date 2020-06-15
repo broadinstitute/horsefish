@@ -21,6 +21,11 @@ workflow monitor_submission {
             terra_project = terra_project,
             terra_workspace = terra_workspace,
             submission_id = submission_id
+    }
+
+    output {
+        Boolean submission_success = run_monitor.completion_status
+        File metadata_json = run_monitor.json
     } 
 
 }
@@ -51,7 +56,7 @@ task run_monitor {
     }
 
     output {
-        completion_status = "submission_succeeded.txt"
-        json = "monitor_submission_metadata.json"
+        Boolean completion_status = read_string("submission_succeeded.txt")
+        File json = "monitor_submission_metadata.json"
     }
 }
