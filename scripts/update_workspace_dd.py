@@ -18,11 +18,11 @@ FALLBACK_REPLACEMENTS = {
     '.reduced.bam': {
         'replacement': '.bam',
         'notice': 'No reduced bam version migrated, mapped to unreduced instead',
-    }
+    },
     '.reduced.bai': {
         'replacement': '.bai',
         'notice': 'No reduced bai version migrated, mapped to unreduced instead',
-    }
+    },
     '.reduced.bam.md5': {
         'replacement': '.bam.md5',
         'notice': 'No reduced md5 version migrated, mapped to unreduced instead',
