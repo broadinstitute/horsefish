@@ -22,6 +22,9 @@ RUN rm /usr/bin/lsb_release \
     && apt-get install python3-pip idle3 -y \ 
     && python3 -m pip install --no-cache-dir --upgrade pip
 
+# install python packages
+RUN python3 -m pip install gcsfs
+
 COPY scripts /scripts
 
 COPY requirements.txt .
