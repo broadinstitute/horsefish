@@ -13,6 +13,7 @@ workflow_name = 'monitor_submission'
 workflow = fapi.get_workspace_config(workspace_project, workspace_name, workflow_repo, workflow_name)
 if workflow.status_code != 200:
     print(workflow.content)
+    raise ferrors.FireCloudServerError(workflow.status_code, workflow.content)
 else:
     workflow_json = workflow.json()
 
@@ -21,11 +22,13 @@ else:
     updated_workflow = fapi.update_workspace_config(workspace_project, workspace_name, workflow_repo, workflow_name, workflow_json)
     if updated_workflow.status_code != 200:
         print(updated_workflow.content)
+        raise ferrors.FireCloudServerError(updated_workflow.status_code, updated_workflow.content)
     else:
         # Launching the Updated Monitor Submission Workflow
         create_submisson_response = fapi.create_submission(workspace_project, workspace_name, workflow_repo, workflow_name, entity=None, etype=None, expression=None, use_callcache=True)
         if create_submisson_response.status_code != 201:
             print(create_submisson_response.content)
+            raise ferrors.FireCloudServerError(create_submisson_response.status_code, create_submisson_response.content)
         else:
             print("Successfully Created Submisson")
             print(create_submisson_response.json())
