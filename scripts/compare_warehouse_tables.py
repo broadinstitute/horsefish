@@ -1,6 +1,7 @@
 # from googlecloud_bigquery_class import BigQuery
 from google.cloud import bigquery
 
+
 def call_bigquery(env_query, project_name):
     """Call BigQuery table."""
     # Construct a BigQuery client object.
@@ -20,8 +21,12 @@ def call_bigquery(env_query, project_name):
     return results_df
 
 
-# 1. Get list of the dev tables - only want to compare these in prod warehouse
-query_get_dev_tables = "SELECT * FROM broad-dsde-prod-analytics-dev.warehouse_dev.INFORMATION_SCHEMA.TABLES"
+def get_dev_tables(dev_dataframe):
+    """Get a list of the tables in warehouse_dev."""
+
+    unique_tables = list(dev_dataframe['table_name']) # type list
+    return unique_tables
+
 
 # 2. Extract out the names of the tables that we want to look at. Column name = "table_name"
 
@@ -40,8 +45,11 @@ if __name__ == "__main__":
     # hard-coded project name for warehouse tables
     project = "broad-dsde-prod-analytics-dev"
 
-    # get a list of all the tables in warehouse_dev
-    call_bigquery(query_get_dev_tables, project)
+    query_get_dev_table_schema = "SELECT * FROM broad-dsde-prod-analytics-dev.warehouse_dev.INFORMATION_SCHEMA.TABLES"
+    dev_table_schema = call_bigquery(query_get_dev_table_schema, project)
+
+    get_dev_tables(dev_table_schema)
+    
     # call_bigquery(dev_query, project)
     # call_bigquery(prod_query, project)
 
