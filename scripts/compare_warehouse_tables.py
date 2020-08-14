@@ -1,6 +1,6 @@
 # from googlecloud_bigquery_class import BigQuery
 from google.cloud import bigquery
-
+import pandas as import pd
 
 def call_bigquery(env_query, project_name):
     """Call BigQuery table."""
@@ -21,11 +21,12 @@ def call_bigquery(env_query, project_name):
     return results_df
 
 
-def get_dev_tables(dev_dataframe):
+def get_tables(schema):
     """Get a list of the tables in warehouse_dev."""
 
-    unique_tables = list(dev_dataframe['table_name']) # type list
-    return unique_tables
+    dev_tables = list(schema['table_name']) # type list
+    print(dev_tables)
+    return dev_tables
 
 
 # 2. Extract out the names of the tables that we want to look at. Column name = "table_name"
@@ -45,10 +46,10 @@ if __name__ == "__main__":
     # hard-coded project name for warehouse tables
     project = "broad-dsde-prod-analytics-dev"
 
-    query_get_dev_table_schema = "SELECT * FROM broad-dsde-prod-analytics-dev.warehouse_dev.INFORMATION_SCHEMA.TABLES"
-    dev_table_schema = call_bigquery(query_get_dev_table_schema, project)
+    query_get_dev_schema = "SELECT * FROM broad-dsde-prod-analytics-dev.warehouse_dev.INFORMATION_SCHEMA.TABLES"
+    dev_table_schema = call_bigquery(query_get_dev_schema, project)
 
-    get_dev_tables(dev_table_schema)
+    get_tables(dev_table_schema)
     
     # call_bigquery(dev_query, project)
     # call_bigquery(prod_query, project)
