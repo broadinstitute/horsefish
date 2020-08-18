@@ -25,8 +25,8 @@ def get_tables(schema):
     """Get a list of the tables in warehouse_dev."""
 
     dev_tables = list(schema['table_name']) # type list
-    print(dev_tables)
-    return dev_tables
+    print(f"List of dev tables in " {dev_tables})
+    return tables
 
 
 # 2. Extract out the names of the tables that we want to look at. Column name = "table_name"
@@ -47,9 +47,9 @@ if __name__ == "__main__":
     project = "broad-dsde-prod-analytics-dev"
 
     query_get_dev_schema = "SELECT * FROM broad-dsde-prod-analytics-dev.warehouse_dev.INFORMATION_SCHEMA.TABLES"
-    dev_table_schema = call_bigquery(query_get_dev_schema, project)
+    dev_dataset_schema = call_bigquery(query_get_dev_schema, project)
 
-    get_tables(dev_table_schema)
+    dev_table_list = get_tables(dev_dataset_schema)
     
     # call_bigquery(dev_query, project)
     # call_bigquery(prod_query, project)
