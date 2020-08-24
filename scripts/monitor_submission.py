@@ -49,14 +49,11 @@ def monitor_submission(terra_workspace, terra_project, submission_id, sleep_time
             # terra_details to be appended to json
             terra_details = {"terra_workspace": terra_workspace, "terra_project": terra_project}
 
-            # loading JSON submission_metadata:
-            submission_data = json.loads(submission_metadata)
-
-            # appending the terra_details
-            submission_data.update(terra_details)
+            # udating/appending the terra_details to current json
+            submission_metadata.update(terra_details)
 
             # writes final result to file:
-            f.write(json.dumps(submission_data))
+            f.write(json.dumps(submission_metadata))
             print(f'submission metadata saved to {save_name}')
 
     # upon success or failure (final status), capture into variable and return as output
