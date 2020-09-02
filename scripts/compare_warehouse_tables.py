@@ -1,6 +1,8 @@
+"""WILL FILL OUT."""
 # from googlecloud_bigquery_class import BigQuery
 from google.cloud import bigquery
-import pandas as import pd
+# import pandas as pd
+
 
 def call_bigquery(env_query, project_name):
     """Call BigQuery table."""
@@ -23,11 +25,45 @@ def call_bigquery(env_query, project_name):
 
 def get_tables(schema):
     """Get a list of the tables in warehouse_dev."""
+    dev_tables = list(schema['table_name'])  # type list
+    dev_tables.remove("rawls_entity")
+    dev_tables.remove("rawls_entity_attribute")
+    dev_tables.remove("cromwell_metadata")
+    print(f"List of dev tables in {dev_tables}")
+    return dev_tables
 
-    dev_tables = list(schema['table_name']) # type list
-    print(f"List of dev tables in " {dev_tables})
-    return tables
 
+def get_newrows(table_names):
+    """Get the list of new row in dev."""
+    project = "broad-dsde-prod-analytics-dev"
+    for table_name in table_names:
+        print(table_name)
+        query_get_dev_schema = f"""WITH
+        DevData AS (
+            SELECT
+                allDevData AS data,
+                FARM_FINGERPRINT(FORMAT("%T", allDevData)) AS allRows
+            FROM
+                `broad-dsde-prod-analytics-dev.warehouse_dev.{table_name}` AS allDevData
+        ),
+        RawData AS (
+            SELECT
+                allRawData AS data,
+                FARM_FINGERPRINT(FORMAT("%T", allRawData)) AS allRows
+            FROM
+                `broad-dsde-prod-analytics-dev.warehouse.{table_name}` AS allRawData
+        )
+        SELECT
+            IF(DevData.allRows IS NULL,"Not in dev","Not in Warehouse") AS Change,
+            IF(DevData.allRows IS NULL,RawData.data,DevData.data).*
+        FROM
+            DevData
+        FULL OUTER JOIN RawData
+            ON DevData.allRows = RawData.allRows
+        WHERE
+            RawData.allRows IS NULL"""
+
+        dev_dataset_schema = call_bigquery(query_get_dev_schema, project)
 
 # 2. Extract out the names of the tables that we want to look at. Column name = "table_name"
 
@@ -50,6 +86,8 @@ if __name__ == "__main__":
     dev_dataset_schema = call_bigquery(query_get_dev_schema, project)
 
     dev_table_list = get_tables(dev_dataset_schema)
+    get_newrows(dev_table_list)
+
     
     # call_bigquery(dev_query, project)
     # call_bigquery(prod_query, project)
