@@ -37,15 +37,15 @@ def call_bigquery(bq, env_query, project_name, verbose=False):
     return results_df
 
 
-def get_tables(schema, verbose=False):
+def get_tables(schema, tables_to_skip, verbose=False):
     """Get a list of the tables in warehouse_dev."""
     # Getting the list of tables
     dev_tables = list(schema['table_name'])
 
-    # Remove tables not in Prod or too long to parse
-    dev_tables.remove("rawls_entity")
-    dev_tables.remove("rawls_entity_attribute")
-    dev_tables.remove("cromwell_metadata")
+    # Remove tables not in Prod
+    for table in tables_to_skip:
+        dev_tables.remove(table)
+
     if verbose:
         print(f"List of dev tables in {dev_tables}")
     return dev_tables
@@ -56,8 +56,11 @@ def get_newrows(bq, project, table_names, tables_with_timestamps, verbose):
     # Creating the master list of the new rows in dev and prod for the table
     results_newrows = []
 
-    # Getting today date
+    # Getting date today, yesterday, one month, and six_month
     today = datetime.today()
+    one_day = today - timedelta(days=1)
+    one_month = today - timedelta(days=31)
+    six_month = today - timedelta(days=186)
 
     # initializing the time count variable that Loops through the dates: today, yesterday, 1 month and six months
     time_count = 0
@@ -70,46 +73,25 @@ def get_newrows(bq, project, table_names, tables_with_timestamps, verbose):
 
     # Looping through all the table names for columns and rows match, and extra rows in Dev and prod
     for table_name in table_names:
-        row_result = []
-        time_iteration = True
+        row_result = None
         not_matched = False
         not_matched_info = ""
         newrows = [table_name]
-        while time_iteration:
-            # Checking if table has a timestamps and (if applicable) looping through today, yesterday, one month ago, and six month ago
-            if table_name in tables_with_timestamps:
-                if time_count == 0:
-                    has_timestamp = True
-                    not_matched = False
-                    not_matched_info += ""
-                    timestamp_DevData = f" WHERE Date(allDevData.{tables_with_timestamps[table_name]}) = '{today.date()}'"
-                    timestamp_ProdData = f" WHERE Date(allProdData.{tables_with_timestamps[table_name]}) = '{today.date()}'"
-                if time_count == 1:
-                    one_day = today - timedelta(days=1)
-                    timestamp_DevData = f" WHERE Date(allDevData.{tables_with_timestamps[table_name]}) = '{one_day.date()}'"
-                    timestamp_ProdData = f" WHERE Date(allProdData.{tables_with_timestamps[table_name]}) = '{one_day.date()}'"
-                    row_result = extra_rows
-                if time_count == 2:
-                    one_month = today - timedelta(days=31)
-                    timestamp_DevData = f" WHERE Date(allDevData.{tables_with_timestamps[table_name]}) = '{one_month.date()}'"
-                    timestamp_ProdData = f" WHERE Date(allProdData.{tables_with_timestamps[table_name]}) = '{one_month.date()}'"
-                    if extra_rows["in_Prod_not_Dev"].values[0] is not None and extra_rows["in_Dev_not_Prod"].values[0] is not None:
-                        not_matched = True
-                        not_matched_info += " yesterday :"
-                if time_count == 3:
-                    six_month = today - timedelta(days=186)
-                    timestamp_DevData = f" WHERE Date(allDevData.{tables_with_timestamps[table_name]}) = '{six_month.date()}'"
-                    timestamp_ProdData = f" WHERE Date(allProdData.{tables_with_timestamps[table_name]}) = '{six_month.date()}'"
-                    if extra_rows["in_Prod_not_Dev"].values[0] is not None and extra_rows["in_Dev_not_Prod"].values[0] is not None:
-                        not_matched = True
-                        not_matched_info += " One Month :"
-                time_count += 1
-            else:
-                timestamp_DevData = ""
-                timestamp_ProdData = ""
-                time_iteration = False
-                has_timestamp = False
+        extra_rows = {"in_Prod_not_Dev": None, "in_Dev_not_Prod": None}
+        if table_name in tables_with_timestamps:
+            has_timestamp = True
+            not_matched = False
+            timestamp_DevData = f" WHERE Date(allDevData.{tables_with_timestamps[table_name]}) = "
+            timestamp_ProdData = f" WHERE Date(allProdData.{tables_with_timestamps[table_name]}) = "
+            days_to_test = [f"'{one_day.date()}'", f"'{one_month.date()}'", f"'{six_month.date()}'"]
+        else:
+            has_timestamp = False
+            not_matched = False
+            timestamp_DevData = ""
+            timestamp_ProdData = ""
+            days_to_test = [""]
 
+        for day_to_check in days_to_test:
             # Initializing query
             extra_rows_query = f"""WITH
             DevData AS (
@@ -117,14 +99,14 @@ def get_newrows(bq, project, table_names, tables_with_timestamps, verbose):
                     FARM_FINGERPRINT(FORMAT("%T", allDevData)) AS allRows
                 FROM
                     `broad-dsde-prod-analytics-dev.warehouse_dev.{table_name}` AS allDevData
-                {timestamp_DevData}
+                {timestamp_DevData}{day_to_check}
             ),
             ProdData AS (
                 SELECT
                     FARM_FINGERPRINT(FORMAT("%T", allProdData)) AS allRows
                 FROM
                     `broad-dsde-prod-analytics-dev.warehouse.{table_name}` AS allProdData
-                {timestamp_ProdData}
+                {timestamp_ProdData}{day_to_check}
             )
             SELECT
                 Sum(IF(ProdData.allRows IS NULL,1,0)) AS in_Dev_not_Prod,
@@ -139,18 +121,19 @@ def get_newrows(bq, project, table_names, tables_with_timestamps, verbose):
             # Calling big query to get In_Dev_Only and In_Prod_Only extra rows count
             extra_rows = call_bigquery(bq, extra_rows_query, project)
 
-            if time_count == 4:
-                if extra_rows["in_Prod_not_Dev"].values[0] is not None and extra_rows["in_Dev_not_Prod"].values[0] is not None:
-                    not_matched = True
-                    not_matched_info += " Six Month :"
-                time_iteration = False
-                timestamp_DevData = ""
-                timestamp_ProdData = ""
-                time_count = -1
+            # Checking if table has a timestamps and (if applicable) looping through today, yesterday, one month ago, and six month ago
+            if extra_rows["in_Prod_not_Dev"].values[0] is not None and extra_rows["in_Dev_not_Prod"].values[0] is not None:
+                not_matched = True
+                not_matched_info += f" {day_to_check} :"
+                row_result = extra_rows
 
         # Assigning row relust for tablw without a timestamp
         if not has_timestamp:
             row_result = extra_rows
+        
+        # Setting in_Prod_not_Dev and in_Dev_not_Prod to zero if return null
+        if row_result is None:
+            row_result = {"in_Prod_not_Dev": 0, "in_Dev_not_Prod": 0}
 
         # Getting Dev and Prod table colunms
         dev_table = bq.get_table(f"warehouse_dev.{table_name}")
@@ -173,12 +156,7 @@ def get_newrows(bq, project, table_names, tables_with_timestamps, verbose):
         if dev_table_rows is None:
             newrows.append("True")
         else:
-            match_percent = int(100 - (((dev_table_rows + prod_table_rows) / dev_table.num_rows) * 100))
-            if match_percent > 85:
-                newrows.append("True (" + str(match_percent) + "%)")
-            else:
-                newrows.append("False")
-                more_info += f"{table_name} table rows Not Matched, only (" + str(match_percent) + "%) the same \n"
+            newrows.append("False")
 
         # Adding information about today, yesterday, one month ago, and six month ago matchs to more info
         if has_timestamp and not_matched:
@@ -197,7 +175,7 @@ def get_newrows(bq, project, table_names, tables_with_timestamps, verbose):
 
     # Creating the table of new rows in dev and prod from results_newrows
     newrows_df = pd.DataFrame(results_newrows, columns=["Table_Name", "Columns_Match?", "Rows_Match?", "In_Dev_Only", "In_Prod_Only"])
-    
+
     # Returning the table and information of new rows in dev and prod.
     return newrows_df, more_info
 
@@ -224,21 +202,24 @@ if __name__ == "__main__":
     query_get_dev_schema = "SELECT * FROM broad-dsde-prod-analytics-dev.warehouse_dev.INFORMATION_SCHEMA.TABLES"
     dev_dataset_schema = call_bigquery(bq, query_get_dev_schema, project, verbose)
 
-    # Getting all the warehouse tables names
-    dev_table_list = get_tables(dev_dataset_schema, verbose)
-
-    # Dict with the warehouse tables that has a date value 
+    # Dict with the warehouse tables that has a date value
     tables_with_timestamps = {"terra_nps": "timestamp",
                                 "rawls_workspaces": "last_modified",
                                 "rawls_access_logs": "timestamp",
                                 "rawls_submissions": "DATE_SUBMITTED",
                                 "leo_access_logs": "timestamp",
                                 "rawls_workflows": "STATUS_LAST_CHANGED",
-                                "orchestration_access_logs": "timestamp"}
+                                "orchestration_access_logs": "timestamp",
+                                "cromwell_metadata": "METADATA_TIMESTAMP"}
+
+    # List of tables to skip
+    tables_to_skip = ['rawls_entity', 'rawls_entity_attribute']
+
+    # Getting all the warehouse tables names
+    dev_table_list = get_tables(dev_dataset_schema, tables_to_skip, verbose)
 
     # Getting the table and information of new rows in dev and prod, and printing it out
     newrows_table, more_info = get_newrows(bq, project, dev_table_list, tables_with_timestamps, verbose)
     print(tabulate(newrows_table, headers='keys', tablefmt='pretty'))
     print("More Information:")
     print(more_info)
-
