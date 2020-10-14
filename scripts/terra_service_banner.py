@@ -9,12 +9,12 @@ def update_service_banner(json, env):
     storage_client = gcs.Client()
 
     # set bucket and suitable_group based on env
-    if env == "dev":
-        bucket = storage_client.get_bucket(f"firecloud-alerts-{env}")
-        suitable_group = (f"fc-comms@{env}.test.firecloud.org")
-    else:
+    if env == "prod":
         bucket = storage_client.get_bucket("firecloud-alerts")
         suitable_group = "fc-comms@firecloud.org"
+    else:
+        bucket = storage_client.get_bucket(f"firecloud-alerts-{env}")
+        suitable_group = (f"fc-comms@{env}.test.firecloud.org")
 
     # define required filename (alerts.json) and upload json string to gcs
     blob = bucket.blob("alerts.json")
