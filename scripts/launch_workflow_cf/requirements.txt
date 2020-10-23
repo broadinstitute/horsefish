@@ -1,1 +1,5 @@
 firecloud==0.16.25
+gcs-oauth2-boto-plugin==2.5
+google-cloud-secret-manager==0.2.0
+google-cloud-storage==1.26.0
+oauth2client

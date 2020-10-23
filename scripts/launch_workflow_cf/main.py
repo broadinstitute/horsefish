@@ -1,9 +1,12 @@
 """Google Cloud Function to launch a workflow."""
 
+import requests
 import os
 
 from firecloud import api as fapi
 from firecloud import errors as ferrors
+
+from utils import get_access_token, get_workspace_config, update_workspace_config, create_submission
 
 
 # read config variables from env
@@ -14,70 +17,63 @@ WORKFLOW_NAMESPACE = os.environ.get("WORKFLOW_NAMESPACE")
 
 
 def prepare_and_launch(file_path):
-    # get workspace information (this checks permissions too)
-    response = fapi.get_workspace(
-        WORKSPACE_NAMESPACE,
-        WORKSPACE_NAME
-    )
-    if response.status_code != 200:
-        print(response.content)
-        raise ferrors.FireCloudServerError(response.status_code, response.content)
-    response_json = response.json()
-    print(response_json)
+    # get access token and input to headers for requests
+    headers = {"Authorization" : "bearer " + get_access_token()}
 
-    # get the json for the Monitor Submission Workflow
-    workflow = fapi.get_workspace_config(
-        WORKSPACE_NAMESPACE,
-        WORKSPACE_NAME,
-        WORKFLOW_NAMESPACE,
-        WORKFLOW_NAME
-    )
-    if workflow.status_code != 200:
-        print(workflow.content)
-        raise ferrors.FireCloudServerError(workflow.status_code, workflow.content)
-    workflow_json = workflow.json()
-    print(workflow_json)
 
-    file_name = file_path.split('/')[-1]  # extract the file name from the full path
-    base_id = file_name.split('.')[0]  # remove extension to generate a toy id
-
-    # update the inputs in the JSON
-    workflow_json['inputs'] = {
-        "HelloWorldPlus.id": f"\"{base_id}\"",
-        "HelloWorldPlus.input_file": f"\"{file_path}\""
-    }
-    # remove entity type & outputs assignment from config
-    if 'rootEntityType' in workflow_json:
-        workflow_json.pop('rootEntityType')
-    workflow_json['outputs'] = {}
-    print(workflow_json)
-    updated_workflow = fapi.update_workspace_config(
+    # get the workflow config
+    workflow = get_workspace_config(
         WORKSPACE_NAMESPACE,
         WORKSPACE_NAME,
         WORKFLOW_NAMESPACE,
         WORKFLOW_NAME,
-        workflow_json
+        headers
+    )
+    if workflow.status_code != 200:
+        print(workflow.content)
+        raise ferrors.FireCloudServerError(workflow.status_code, workflow.content)
+    workflow_config_json = workflow.json()
+
+    file_name = file_path.split('/')[-1]  # extract the file name from the full path
+    base_id = file_name.split('.')[0]  # remove extension to generate a toy id
+
+    # update the inputs in the workflow config
+    workflow_config_json['inputs'] = {
+        "HelloWorldPlus.id": f"\"{base_id}\"",
+        "HelloWorldPlus.input_file": f"\"{file_path}\""
+    }
+    # remove entity type & outputs assignment from config
+    if 'rootEntityType' in workflow_config_json:
+        workflow_config_json.pop('rootEntityType')
+    workflow_config_json['outputs'] = {}
+
+    # update the workflow configuration
+    updated_workflow = update_workspace_config(
+        WORKSPACE_NAMESPACE,
+        WORKSPACE_NAME,
+        WORKFLOW_NAMESPACE,
+        WORKFLOW_NAME,
+        workflow_config_json,
+        headers
     )
     if updated_workflow.status_code != 200:
         print(updated_workflow.content)
         raise ferrors.FireCloudServerError(updated_workflow.status_code, updated_workflow.content)
 
     # launch the workflow
-    create_submisson_response = fapi.create_submission(
+    create_submisson_response = create_submission(
         WORKSPACE_NAMESPACE,
         WORKSPACE_NAME,
         WORKFLOW_NAMESPACE,
         WORKFLOW_NAME,
-        entity=None,
-        etype=None,
-        expression=None,
+        headers
         use_callcache=True
     )
     if create_submisson_response.status_code != 201:
         print(create_submisson_response.content)
         raise ferrors.FireCloudServerError(create_submisson_response.status_code, create_submisson_response.content)
     else:
-        print("Successfully Created Submisson")
+        print("Successfully created submission")
         print(create_submisson_response.json())
 
 
