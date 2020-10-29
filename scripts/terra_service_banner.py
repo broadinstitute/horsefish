@@ -3,6 +3,17 @@ import json
 from google.cloud import storage as gcs
 
 
+def convert_json_to_string(json, env):
+    """Convert json file to string if supplied with custom banner json file."""
+
+    # open json file and read contents to a string
+    with open(json, "r") as j:
+        custom_banner_string = j.read()
+
+    print(f'Starting custom banner upload to {env} Terra.')
+    update_service_banner(custom_banner_string, env)
+
+
 def update_service_banner(json, env):
     """Push json to bucket in selected production environment."""
     # create storage Client and assign destination bucket
@@ -21,6 +32,10 @@ def update_service_banner(json, env):
     blob.upload_from_string(json)
 
     print(f'Setting permissions and security on banner json object in GCS location.')
+    # set metadata on json object (gsutil -m setmeta -r -h "Cache-Control:private, max-age=0, no-cache")
+    blob.cache_control = "private, max-age=0, no-cache"
+    blob.patch()
+
     # set and save READ access for AllUsers on json object (gsutil ach ch -u AllUsers:R)
     blob.acl.all().grant_read()
     blob.acl.save()
@@ -28,10 +43,6 @@ def update_service_banner(json, env):
     # set and save OWNER access for suitable_group on json object (gsutil ach ch -g suitable_group:O)
     blob.acl.user(suitable_group).grant_owner()
     blob.acl.save()
-
-    # set metadata on json object (gsutil -m setmeta -r -h "Cache-Control:private, max-age=0, no-cache")
-    blob.cache_control = "private, max-age=0, no-cache"
-    blob.patch()
 
     print("Banner action complete.")
 
@@ -53,7 +64,7 @@ def post_banner(env):
     post_json = json.dumps(post_json_obj, indent=1)
 
     # push json string to bucket - post banner
-    print(f'Starting banner upload to {env} Terra.')
+    print(f'Starting template banner upload to {env} Terra.')
     update_service_banner(post_json, env)
 
 
@@ -75,14 +86,19 @@ def delete_banner(env):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Publish or remove a production incident banner on Terra UI.')
-    parser.add_argument('--env', required=True, help='"prod" or "dev" environment for banner.')
-    parser.add_argument('--delete', action='store_true', help='set parameter if intention is to remove banner from Terra UI.')
+    parser.add_argument('--env', required=True, help='"prod" or "dev" Terra environment for banner.')
+    parser.add_argument('--json', help='set to post custom banner (via json file) to Terra UI.')
+    parser.add_argument('--delete', action='store_true', help='set to delete banner from Terra UI.')
 
     args = parser.parse_args()
 
-    # if not "--delete", post banner
+    # if custom banner
+    if args.json:
+        convert_json_to_string(args.json, args.env)
+
+    # if "--delete", remove banner
     if args.delete:
         delete_banner(args.env)
-    # if "--delete", remove banner
+    # if not "--delete", post banner
     else:
         post_banner(args.env)
