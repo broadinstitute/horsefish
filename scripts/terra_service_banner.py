@@ -41,7 +41,7 @@ def update_service_banner(json, env):
     blob.acl.save()
 
     # set and save OWNER access for suitable_group on json object (gsutil ach ch -g suitable_group:O)
-    blob.acl.user(suitable_group).grant_owner()
+    blob.acl.group(suitable_group).grant_owner()
     blob.acl.save()
 
     print("Banner action complete.")
@@ -94,11 +94,13 @@ if __name__ == '__main__':
 
     # if custom banner
     if args.json:
+        # convert file to string, post banner
         convert_json_to_string(args.json, args.env)
-
-    # if "--delete", remove banner
-    if args.delete:
-        delete_banner(args.env)
-    # if not "--delete", post banner
+    # if not custom banner
     else:
-        post_banner(args.env)
+        # if "--delete" (remove banner)
+        if args.delete:
+            delete_banner(args.env)
+        # if not "--delete" (post banner)
+        else:
+            post_banner(args.env)
