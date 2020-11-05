@@ -1,5 +1,4 @@
 import argparse
-import json
 from google.cloud import storage as gcs
 
 
@@ -16,6 +15,7 @@ def convert_json_to_string(json, env):
 
 def update_service_banner(json, env):
     """Push json to bucket in selected production environment."""
+
     # create storage Client and assign destination bucket
     storage_client = gcs.Client()
 
@@ -59,13 +59,9 @@ def post_banner(env):
                         }
                     ]"""
 
-    # convert string --> json object --> json formatted string
-    post_json_obj = json.loads(banner_text)
-    post_json = json.dumps(post_json_obj, indent=1)
-
     # push json string to bucket - post banner
     print(f'Starting template banner upload to {env} Terra.')
-    update_service_banner(post_json, env)
+    update_service_banner(banner_text, env)
 
 
 def delete_banner(env):
@@ -74,13 +70,9 @@ def delete_banner(env):
     # template json text for banner deletion
     banner_text = """[]"""
 
-    # convert string --> json object --> json formatted string
-    delete_json_obj = json.loads(banner_text)
-    delete_json = json.dumps(delete_json_obj, indent=1)
-
     # push json string to bucket - delete banner
     print(f'Starting banner removal from {env} Terra.')
-    update_service_banner(delete_json, env)
+    update_service_banner(banner_text, env)
 
 
 if __name__ == '__main__':
