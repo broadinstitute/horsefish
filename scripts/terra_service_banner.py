@@ -10,7 +10,7 @@ def convert_json_to_string(json, env):
         custom_banner_string = j.read()
 
     print(f'Starting custom banner upload to {env} Terra.')
-    update_service_banner(custom_banner_string, env)
+    return(custom_banner_string)
 
 
 def update_service_banner(json, env):
@@ -47,7 +47,7 @@ def update_service_banner(json, env):
     print("Banner action complete.")
 
 
-def post_banner(env):
+def post_standard_banner(env):
     """Create json string for upload to GCS location to post/publish banner."""
 
     # template json text for banner publication
@@ -64,13 +64,13 @@ def post_banner(env):
     update_service_banner(banner_text, env)
 
 
-def delete_banner(env):
-    """Create json string for upload to GCS location to delete/remove banner."""
+def clear_service_banner(env):
+    """Create json string for upload to GCS location to clear/remove banner."""
 
     # template json text for banner deletion
     banner_text = """[]"""
 
-    # push json string to bucket - delete banner
+    # push json string to bucket - clear banner
     print(f'Starting banner removal from {env} Terra.')
     update_service_banner(banner_text, env)
 
@@ -78,21 +78,22 @@ def delete_banner(env):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Publish or remove a production incident banner on Terra UI.')
-    parser.add_argument('--env', required=True, help='"prod" or "dev" Terra environment for banner.')
-    parser.add_argument('--json', help='set to post custom banner (via json file) to Terra UI.')
-    parser.add_argument('--delete', action='store_true', help='set to delete banner from Terra UI.')
+    parser.add_argument('--env', type=str, required=True, help='"prod" or "dev" Terra environment for banner.')
+    parser.add_argument('--json', type=str, help='set to post custom banner (via json file) to Terra UI.')
+    parser.add_argument('--delete', action='store_true', help='set to clear banner from Terra UI.')
 
     args = parser.parse_args()
 
     # if custom banner
     if args.json:
-        # convert file to string, post banner
-        convert_json_to_string(args.json, args.env)
+        # convert json file to string, post banner
+        custom_banner_string = convert_json_to_string(args.json, args.env)
+        update_service_banner(custom_banner_string, args.env)
     # if not custom banner
     else:
-        # if "--delete" (remove banner)
+        # if "--delete" (clear banner)
         if args.delete:
-            delete_banner(args.env)
+            clear_service_banner(args.env)
         # if not "--delete" (post banner)
         else:
-            post_banner(args.env)
+            post_standard_banner(args.env)
