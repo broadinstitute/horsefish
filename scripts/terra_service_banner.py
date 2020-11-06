@@ -13,7 +13,7 @@ def convert_json_to_string(env, json):
 
 
 def update_service_banner(env, json_string=None):
-    """Push json to bucket in selected production environment."""
+    """Push json to bucket in selected environment."""
 
     # if no custom banner json is passed in, post standard banner text/string
     if not json_string:
@@ -69,7 +69,7 @@ def clear_service_banner(env):
     """Create json string for upload to GCS location to clear/remove banner."""
 
     # template json text for banner deletion
-    clear_banner_text = """[]"""
+    clear_banner_text = "[]"
 
     # push json string to bucket - clear banner
     update_service_banner(env, clear_banner_text)
@@ -79,7 +79,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Publish or remove a production incident banner on Terra UI.')
     parser.add_argument('--env', type=str, required=True, help='"prod" or "dev" Terra environment for banner.')
-    parser.add_argument('--json', type=str, required=False, help='set to post custom banner (via json file) to Terra UI.')
+    parser.add_argument('--json', type=str, required=False, help='path to json file containing custom banner text.')
     parser.add_argument('--delete', required=False, action='store_true', help='set to clear banner from Terra UI.')
 
     args = parser.parse_args()
