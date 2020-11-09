@@ -9,7 +9,7 @@ from google.cloud.secretmanager_v1 import SecretManagerServiceClient
 from oauth2client.client import GoogleCredentials
 from oauth2client.service_account import ServiceAccountCredentials
 
-from firecloud import api as fapi
+from firecloud import errors as ferrors
 
 
 def get_access_token():
@@ -27,12 +27,12 @@ def get_access_token():
     return credentials.get_access_token().access_token
 
 
-### Firecloud API calls
-
 def check_fapi_response(response, success_code):
     if response.status_code != success_code:
         print(response.content)
         raise ferrors.FireCloudServerError(response.status_code, response.content)
+
+### Firecloud API calls
 
 def get_workspace_config(namespace, workspace, cnamespace, config, headers):
     uri = f"https://api.firecloud.org/api/workspaces/{namespace}/{workspace}/method_configs/{cnamespace}/{config}"
@@ -61,7 +61,6 @@ def create_submission(wnamespace, workspace, cnamespace, config, headers,
     if expression:
         body['expression'] = expression
     return requests.post(uri, json=body, headers=headers)
-
 
 
 class SecretManager:

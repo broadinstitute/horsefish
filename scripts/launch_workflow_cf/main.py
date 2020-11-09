@@ -1,15 +1,10 @@
 """Google Cloud Function to launch a workflow."""
 
-import requests
 import os
-
-from firecloud import api as fapi
-from firecloud import errors as ferrors
 
 from utils import get_access_token, check_fapi_response, get_workspace_config, \
     get_entities, update_workspace_config, create_submission
 
-import pprint
 
 # read config variables from env
 WORKSPACE_NAME = os.environ.get("WORKSPACE_NAME")
