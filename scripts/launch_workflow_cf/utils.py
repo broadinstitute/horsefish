@@ -6,7 +6,6 @@ import json
 import requests
 
 from google.cloud.secretmanager_v1 import SecretManagerServiceClient
-# from google.oauth2 import service_account
 from oauth2client.client import GoogleCredentials
 from oauth2client.service_account import ServiceAccountCredentials
 
@@ -24,45 +23,6 @@ def get_access_token():
     else:  # running locally
         credentials = GoogleCredentials.get_application_default()
         credentials = credentials.create_scoped(scopes)
-
-    #####
-
-    # credentials = service_account.Credentials.from_service_account_info(json_acct_info).with_scopes(scopes)
-    # print(dir(credentials))
-    # access_token = credentials.get_access_token().access_token
-
-    # return access_token
-
-    #######
-
-    # METADATA_URL = 'http://metadata.google.internal/computeMetadata/v1/'
-    # METADATA_HEADERS = {'Metadata-Flavor': 'Google'}
-    # SERVICE_ACCOUNT = 'default'
-
-    # url = '{}instance/service-accounts/{}/token?scopes='.format(
-    #     METADATA_URL, SERVICE_ACCOUNT, ','.join(scopes))
-    
-    # print(url)
-
-    # # Request an access token from the metadata server.
-    # r = requests.get(url, headers=METADATA_HEADERS)
-    # r.raise_for_status()
-
-    # # Extract the access token from the response.
-    # access_token = r.json()['access_token']
-
-    # return access_token
-
-    # credentials = GoogleCredentials.get_application_default()
-    # credentials = credentials.create_scoped(scopes)
-    # access_token = credentials.get_access_token().access_token
-
-
-    ## original code
-    
-    
-    # from_json_keyfile_name(
-    #     json_credentials, scopes=scopes)
 
     return credentials.get_access_token().access_token
 

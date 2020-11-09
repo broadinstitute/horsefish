@@ -20,7 +20,6 @@ def prepare_and_launch(file_path):
     # get access token and input to headers for requests
     headers = {"Authorization" : "bearer " + get_access_token()}
 
-
     # get the workflow config
     workflow = get_workspace_config(
         WORKSPACE_NAMESPACE,
@@ -38,10 +37,8 @@ def prepare_and_launch(file_path):
     base_id = file_name.split('.')[0]  # remove extension to generate a toy id
 
     # update the inputs in the workflow config
-    workflow_config_json['inputs'] = {
-        "HelloWorldPlus.id": f"\"{base_id}\"",
-        "HelloWorldPlus.input_file": f"\"{file_path}\""
-    }
+    workflow_config_json['inputs']["HelloWorldPlusPrefixes.input_file"] = f"\"{file_path}\""
+
     # remove entity type & outputs assignment from config
     if 'rootEntityType' in workflow_config_json:
         workflow_config_json.pop('rootEntityType')
@@ -66,7 +63,7 @@ def prepare_and_launch(file_path):
         WORKSPACE_NAME,
         WORKFLOW_NAMESPACE,
         WORKFLOW_NAME,
-        headers
+        headers,
         use_callcache=True
     )
     if create_submisson_response.status_code != 201:

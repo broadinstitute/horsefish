@@ -1,6 +1,5 @@
 ---
 WORKSPACE_NAME: launch-workflow-test
 WORKSPACE_NAMESPACE: morgan-fieldeng
-WORKFLOW_NAME: hello-world-plus
+WORKFLOW_NAME: hello-world-plus-prefixes
 WORKFLOW_NAMESPACE: morgan-fieldeng
-SA_KEY_PATH: gs://secret-storage-bucket/SA_key.json
