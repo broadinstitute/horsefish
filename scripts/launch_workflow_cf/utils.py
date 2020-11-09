@@ -29,6 +29,11 @@ def get_access_token():
 
 ### Firecloud API calls
 
+def check_fapi_response(response, success_code):
+    if response.status_code != success_code:
+        print(response.content)
+        raise ferrors.FireCloudServerError(response.status_code, response.content)
+
 def get_workspace_config(namespace, workspace, cnamespace, config, headers):
     uri = f"https://api.firecloud.org/api/workspaces/{namespace}/{workspace}/method_configs/{cnamespace}/{config}"
     return requests.get(uri, headers=headers)
@@ -36,6 +41,10 @@ def get_workspace_config(namespace, workspace, cnamespace, config, headers):
 def update_workspace_config(namespace, workspace, cnamespace, config, body, headers):
     uri = f"https://api.firecloud.org/api/workspaces/{namespace}/{workspace}/method_configs/{cnamespace}/{config}"
     return requests.post(uri, json=body, headers=headers)
+
+def get_entities(namespace, workspace, etype, headers):
+    uri = f"https://api.firecloud.org/api/workspaces/{namespace}/{workspace}/entities/{etype}"
+    return requests.get(uri, headers=headers)
 
 def create_submission(wnamespace, workspace, cnamespace, config, headers,
                       entity=None, etype=None, expression=None, use_callcache=True):

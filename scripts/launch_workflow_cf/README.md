@@ -15,7 +15,7 @@ Before running `deploy_local.sh`, you must perform these manual steps:
     a. Grant that SA's proxy group `Storage Object Viewer` permissions to the input bucket
     b. If your workflow uses a private container image, also grant the SA's proxy group `Storage Object Viewer` permissions to the `artifacts.<project-id>.appspot.com` bucket
 6. Share the Terra workspace with the SA, granting Writer & compute access.
-7. Update the `config.yaml` file in this directory with the Terra workspace and workflow information you want to use.
+7. Update the `config.yaml` file in this directory with the Terra workspace and workflow information you want to use, including the name of the workflow input that needs to be updated with the file information from the file that triggers each CF run.
 
 These values will be used as input parameters to the deployment script.
 
