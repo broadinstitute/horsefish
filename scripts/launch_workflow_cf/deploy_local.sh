@@ -16,7 +16,7 @@ FUNCTION="launch_workflow"
 gcloud alpha functions deploy "${FUNCTION}" \
   --entry-point="${FUNCTION}" \
   --env-vars-file="config.yaml" \
-  --max-instances="20" \
+  --max-instances="1" \
   --memory="1024MB" \
   --project="${PROJECT}" \
   --runtime="python37" \
