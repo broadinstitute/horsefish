@@ -33,7 +33,7 @@ def update_service_banner(env, json_string=None):
     blob = bucket.blob("alerts.json")
     blob.upload_from_string(banner_text)
 
-    print(f'Setting permissions and security on banner json object in GCS location.')
+    print("Setting permissions and security on banner json object in GCS location.")
     # set metadata on json object (gsutil -m setmeta -r -h "Cache-Control:private, max-age=0, no-cache")
     blob.cache_control = "private, max-age=0, no-cache"
     blob.patch()
