@@ -31,7 +31,7 @@ def update_service_banner(env, json_string=None):
 
     # define required filename (alerts.json) and upload json string to gcs
     blob = bucket.blob("alerts.json")
-    blob.upload_from_string(banner_text)
+    blob.upload_from_string(json_string)
 
     print("Setting permissions and security on banner json object in GCS location.")
     # set metadata on json object (gsutil -m setmeta -r -h "Cache-Control:private, max-age=0, no-cache")
@@ -75,5 +75,3 @@ if __name__ == '__main__':
     else:
         banner = build_service_banner(args.title, args.message, args.link)
         update_service_banner(args.env, banner)
-
-
