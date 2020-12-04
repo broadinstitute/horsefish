@@ -7,7 +7,7 @@ BUCKET=$2
 SERVICE_ACCOUNT=$3
 
 if [ $# -lt 3 ]; then
-    echo "USAGE: ./deploy_local.sh PROJECT BUCKET SERVICE_ACCOUNT"
+    echo "USAGE: ./deploy_cloud_function.sh PROJECT BUCKET SERVICE_ACCOUNT"
     exit 1
 fi
 
@@ -25,4 +25,3 @@ gcloud alpha functions deploy "${FUNCTION}" \
   --trigger-event="google.storage.object.finalize" \
   --trigger-resource="${BUCKET}" \
   -q
-

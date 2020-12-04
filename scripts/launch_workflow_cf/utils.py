@@ -5,94 +5,160 @@ import os
 import json
 import requests
 
+from firecloud.errors import FireCloudServerError
+
 from google.cloud.secretmanager_v1 import SecretManagerServiceClient
 from oauth2client.client import GoogleCredentials
 from oauth2client.service_account import ServiceAccountCredentials
 
-from firecloud import errors as ferrors
 
+def prepare_and_launch(workspace_namespace, workspace_name, method_namespace, method_name,
+                       secret_path, workflow_parameters, entity_set_name=None):
+  """Launch a Terra workflow.
 
-def get_access_token():
-    """Takes a path to a service account's json credentials file and return an access token with scopes."""
-    scopes = ['https://www.googleapis.com/auth/userinfo.profile', 'https://www.googleapis.com/auth/userinfo.email']
+    Args:
+      workspace_namespace: The project id of the Terra billing project in which the workspace resides.
+      workspace_name: The name of the workspace in which the workflow resides
+      method_namespace: The namespace of the workflow method.
+      method_name: The name of the workflow method.
+      secret_path: The 'Resource ID' of the service account key stored in Secret Manager. Or, if
+        testing locally, the filepath to the json key for the service account.
+      workflow_parameters: A dictionary of key value pairs to merge with the inputs from the workflow configuration,
+        overwriting any duplicate keys.
+      entity_set_name: The name of the entity set to be used for all other workflow parameters. Defaults to
+        the most recently created entity set of the root entity type.
+    Returns:
+      None; the side effect is the execution of a parameter-parallel Terra workflow.
+  """
+  # Get access token and and add to headers for requests.
+  headers = {"Authorization": "bearer " + get_access_token(secret_path=secret_path)}
 
-    if 'GCP_PROJECT' in os.environ:  # inside the CF
-        service_account_key = SecretManager().get_secret("service_account_key")
-        json_acct_info = json.loads(service_account_key)
-        credentials = ServiceAccountCredentials.from_json_keyfile_dict(json_acct_info, scopes=scopes)
-    else:  # running locally
-        credentials = GoogleCredentials.get_application_default()
-        credentials = credentials.create_scoped(scopes)
+  # Get the workflow config.
+  workflow_config_response = get_workflow_method_config(
+      workspace_namespace=workspace_namespace,
+      workspace_name=workspace_name,
+      method_namespace=method_namespace,
+      method_name=method_name,
+      headers=headers
+  )
+  check_fapi_response(response=workflow_config_response, success_code=200)
+  print("Current default workflow configuration:\n", json.dumps(workflow_config_response.json(), indent=4))
 
-    return credentials.get_access_token().access_token
+  # Merge the workflow inputs configured in the Terra UI with the items from 'workflow_parameters'
+  # in-place, overwriting existing keys.
+  workflow_config_json = workflow_config_response.json()
+  workflow_config_json["inputs"].update(workflow_parameters)
+  if not "rootEntityType" in workflow_config_json:
+    raise ValueError("""The current default workflow configuration does not have a root entity type specified.
+      Be sure to use the Terra UI at least once to successfully run the workflow with an entity set.""")
 
+  # Configure the entity set to be used.
+  root_entity_type = workflow_config_json["rootEntityType"]
+  expression = f"this.{root_entity_type}s"
+  set_entity_type = f"{root_entity_type}_set"
+  entities_response = get_entities(
+      workspace_namespace=workspace_namespace,
+      workspace_name=workspace_name,
+      etype=set_entity_type,
+      headers=headers
+  )
+  check_fapi_response(entities_response, 200)
+  all_set_names = [ent['name'] for ent in entities_response.json()]
+  if entity_set_name:
+    if not entity_set_name in all_set_names:
+      raise ValueError(f"entity set '{entity_set_name}' is not a member of root entity type '{root_entity_type}'")
+  else:
+    entity_set_name = all_set_names[-1]  # Use the most recently created entity set.
+
+  # Update the workflow configuration.
+  updated_workflow_response = update_workflow_method_config(
+      workspace_namespace=workspace_namespace,
+      workspace_name=workspace_name,
+      method_namespace=method_namespace,
+      method_name=method_name,
+      body=workflow_config_json,
+      headers=headers
+  )
+  check_fapi_response(response=updated_workflow_response, success_code=200)
+
+  # Launch the workflow.
+  create_submisson_response = create_submission(
+      workspace_namespace=workspace_namespace,
+      workspace_name=workspace_name,
+      method_namespace=method_namespace,
+      method_name=method_name,
+      entity=entity_set_name,
+      etype=set_entity_type,
+      expression=expression,
+      headers=headers
+  )
+  print("Submission response:\n", json.dumps(create_submisson_response.json(), indent=4))
+  check_fapi_response(response=create_submisson_response, success_code=201)
+  submission_id = create_submisson_response.json()["submissionId"]
+  print(f"Successfully created submission: submissionId = {submission_id}.")
+
+def get_access_token(secret_path):
+  """Conditionally create an access token with the minimum necessary scopes.
+
+  When run as a Cloud Function, a service account's json credentials file from Secret Manager
+  is used to populate the access token. When run locally, either the service account JSON key file or the
+  application default credential is used to populate the access token.
+  
+  Args:
+    secret_path: The 'Resource ID' of the service account key stored in Secret Manager. Or, if
+      testing locally, the filepath to the json key for the service account.
+  Returns:
+    An access token.
+  """
+  scopes = ["https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/userinfo.email"]
+
+  if not secret_path:  # Running locally as a user.
+    credentials = GoogleCredentials.get_application_default()
+    credentials = credentials.create_scoped(scopes)
+  elif os.path.isfile(secret_path):  # Running locally as the service account.
+    credentials = ServiceAccountCredentials.from_json_keyfile_name(secret_path, scopes=scopes)
+  else: # Running inside the Cloud Function.
+    # Retrieve the secret from the secret manager API.
+    client = SecretManagerServiceClient()
+    response = client.access_secret_version(secret_path)
+    service_account_key = response.payload.data.decode("utf-8")
+    json_acct_info = json.loads(service_account_key)
+    credentials = ServiceAccountCredentials.from_json_keyfile_dict(json_acct_info, scopes=scopes)
+
+  return credentials.get_access_token().access_token
+
+# Helper methods for Firecloud API calls. We cannot use the methods in firecloud.api because
+# we need to explicitly pass a header for auth.
 
 def check_fapi_response(response, success_code):
-    if response.status_code != success_code:
-        print(response.content)
-        raise ferrors.FireCloudServerError(response.status_code, response.content)
+  if response.status_code != success_code:
+    print(response.content)
+    raise FireCloudServerError(response.status_code, response.content)
 
-### Firecloud API calls
+def get_workflow_method_config(workspace_namespace, workspace_name, method_namespace, method_name, headers):
+  uri = f"https://api.firecloud.org/api/workspaces/{workspace_namespace}/{workspace_name}/method_configs/{method_namespace}/{method_name}"
+  return requests.get(uri, headers=headers)
 
-def get_workspace_config(namespace, workspace, cnamespace, config, headers):
-    uri = f"https://api.firecloud.org/api/workspaces/{namespace}/{workspace}/method_configs/{cnamespace}/{config}"
-    return requests.get(uri, headers=headers)
+def update_workflow_method_config(workspace_namespace, workspace_name, method_namespace, method_name, body, headers):
+  uri = f"https://api.firecloud.org/api/workspaces/{workspace_namespace}/{workspace_name}/method_configs/{method_namespace}/{method_name}"
+  return requests.post(uri, json=body, headers=headers)
 
-def update_workspace_config(namespace, workspace, cnamespace, config, body, headers):
-    uri = f"https://api.firecloud.org/api/workspaces/{namespace}/{workspace}/method_configs/{cnamespace}/{config}"
-    return requests.post(uri, json=body, headers=headers)
+def get_entities(workspace_namespace, workspace_name, etype, headers):
+  uri = f"https://api.firecloud.org/api/workspaces/{workspace_namespace}/{workspace_name}/entities/{etype}"
+  return requests.get(uri, headers=headers)
 
-def get_entities(namespace, workspace, etype, headers):
-    uri = f"https://api.firecloud.org/api/workspaces/{namespace}/{workspace}/entities/{etype}"
-    return requests.get(uri, headers=headers)
-
-def create_submission(wnamespace, workspace, cnamespace, config, headers,
+def create_submission(workspace_namespace, workspace_name, method_namespace, method_name, headers,
                       entity=None, etype=None, expression=None, use_callcache=True):
-    uri = f"https://api.firecloud.org/api/workspaces/{wnamespace}/{workspace}/submissions"
-    body = {
-        "methodConfigurationNamespace" : cnamespace,
-        "methodConfigurationName" : config,
-         "useCallCache" : use_callcache
-    }
-    if etype:
-        body['entityType'] = etype
-    if entity:
-        body['entityName'] = entity
-    if expression:
-        body['expression'] = expression
-    return requests.post(uri, json=body, headers=headers)
-
-
-class SecretManager:
-    """SecretManager class."""
-
-    def __init__(self, project=None):
-        """Initialize a class instance."""
-        if project is None:
-            project = os.environ['GCP_PROJECT']
-        # set the project - defaults to current project
-        self.project = project
-
-        # create a secret manager service client
-        self.client = SecretManagerServiceClient()
-
-    def get_secret(self, secret_name, version="latest"):
-        """Return the decoded payload of a secret version.
-
-        Arguments:
-            secret_name {string} -- The name of the secret to be retrieved.
-            version {string} -- Version of the secret to be retrieved. Default: "latest".
-
-        Returns:
-            string -- Decoded secret.
-
-        """
-        # generate the path to the key
-        # secret_path = projects/{project}/secrets/{secret_name}/versions/{version}
-        secret_path = self.client.secret_version_path(self.project, secret_name, version)
-
-        # retrieve the secret from the secret manager api
-        response = self.client.access_secret_version(secret_path)
-
-        # return the decoded payload data of the secret version
-        return response.payload.data.decode("utf-8")
+  uri = f"https://api.firecloud.org/api/workspaces/{workspace_namespace}/{workspace_name}/submissions"
+  body = {
+      "methodConfigurationNamespace": method_namespace,
+      "methodConfigurationName": method_name,
+      "useCallCache": use_callcache
+  }
+  if etype:
+    body["entityType"] = etype
+  if entity:
+    body["entityName"] = entity
+  if expression:
+    body["expression"] = expression
+  return requests.post(uri, json=body, headers=headers)

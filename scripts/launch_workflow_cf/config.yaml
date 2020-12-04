@@ -1,6 +1,7 @@
 ---
-WORKSPACE_NAME: launch-workflow-test
 WORKSPACE_NAMESPACE: morgan-fieldeng
-WORKFLOW_NAME: hello-world-plus-prefixes
-WORKFLOW_NAMESPACE: morgan-fieldeng
-INPUT_NAME: input_file
+WORKSPACE_NAME: launch-workflow-test
+METHOD_NAMESPACE: morgan-fieldeng
+METHOD_NAME: hello-world-plus-prefixes
+SECRET_PATH: projects/<project number>/secrets/<secret name>/versions/1
+TRIGGER_PARAMETER_NAME: MyWorkflowName.aCloudStorageFilePath
