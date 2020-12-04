@@ -11,7 +11,7 @@ DEFAULT_LINK="https://support.terra.bio/hc/en-us/sections/360003692231-Service-N
 def build_service_banner(title, message, link):
     """Create a json banner using args if they exist, else defaults"""
 
-    banner_dict = {"title": title, "message": message, "link": link}
+    banner_dict = [{"title": title, "message": message, "link": link}]
     return json.dumps(banner_dict)
 
 
