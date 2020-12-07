@@ -12,8 +12,6 @@ def build_service_banner(title, message, link):
     """Create a json banner using args if they exist, else implement default values."""
 
     banner_dict = [{"title": title, "message": message, "link": link}]
-    print(banner_dict)
-    exit(1)
     return json.dumps(banner_dict)
 
 
