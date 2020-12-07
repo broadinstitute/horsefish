@@ -12,6 +12,8 @@ def build_service_banner(title, message, link):
     """Create a json banner using args if they exist, else implement default values."""
 
     banner_dict = [{"title": title, "message": message, "link": link}]
+    print(banner_dict)
+    exit(1)
     return json.dumps(banner_dict)
 
 
@@ -67,11 +69,11 @@ if __name__ == '__main__':
                         help='"prod" or "dev" Terra environment for banner.')
     parser.add_argument('--delete', required=False, action='store_true',
                         help='set to clear banner from Terra UI.')
-    parser.add_argument('--title', required=False, default=DEFAULT_TITLE,
+    parser.add_argument('--title', required=False, type=str, default=DEFAULT_TITLE,
                         help='custom title for service banner')
-    parser.add_argument('--message', required=False, default=DEFAULT_MESSAGE,
+    parser.add_argument('--message', required=False, type=str, default=DEFAULT_MESSAGE,
                         help='custom message for service banner')
-    parser.add_argument('--link', required=False, default=DEFAULT_LINK,
+    parser.add_argument('--link', required=False, type=str, default=DEFAULT_LINK,
                         help='custom link to service incident alerts page')
 
     args = parser.parse_args()
