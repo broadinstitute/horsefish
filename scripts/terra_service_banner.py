@@ -85,6 +85,7 @@ if __name__ == '__main__':
     if args.link == '':
         args.link = "https://support.terra.bio/hc/en-us/sections/360003692231-Service-Notifications"
 
+    print(args.title, args.message, args.link)
     if args.delete:
         clear_service_banner(args.env)
     else:
