@@ -3,13 +3,13 @@ from google.cloud import storage as gcs
 import json
 
 
-DEFAULT_TITLE="Service Incident"
-DEFAULT_MESSAGE="We are currently investigating an issue impacting the platform. Information about this incident will be made available here."
-DEFAULT_LINK="https://support.terra.bio/hc/en-us/sections/360003692231-Service-Notifications"
+DEFAULT_TITLE = "Service Incident"
+DEFAULT_MESSAGE = "We are currently investigating an issue impacting the platform. Information about this incident will be made available here."
+DEFAULT_LINK = "https://support.terra.bio/hc/en-us/sections/360003692231-Service-Notifications"
 
 
 def build_service_banner(title, message, link):
-    """Create a json banner using args if they exist, else defaults"""
+    """Create a json banner using args if they exist, else implement default values."""
 
     banner_dict = [{"title": title, "message": message, "link": link}]
     return json.dumps(banner_dict)
