@@ -67,14 +67,22 @@ if __name__ == '__main__':
                         help='"prod" or "dev" Terra environment for banner.')
     parser.add_argument('--delete', required=False, action='store_true',
                         help='set to clear banner from Terra UI.')
-    parser.add_argument('--title', required=False, type=str, default=DEFAULT_TITLE,
+    parser.add_argument('--title', required=False, default=DEFAULT_TITLE,
                         help='custom title for service banner')
-    parser.add_argument('--message', required=False, type=str, default=DEFAULT_MESSAGE,
+    parser.add_argument('--message', required=False, default=DEFAULT_MESSAGE,
                         help='custom message for service banner')
-    parser.add_argument('--link', required=False, type=str, default=DEFAULT_LINK,
+    parser.add_argument('--link', required=False, default=DEFAULT_LINK,
                         help='custom link to service incident alerts page')
 
     args = parser.parse_args()
+
+    # handle empty string scenario - consider empty string as default value
+    if args.title == '':
+        args.title = DEFAULT_TITLE
+    if args.message == '':
+        args.message = DEFAULT_MESSAGE
+    if args.link == '':
+        args.link = DEFAULT_LINK
 
     if args.delete:
         clear_service_banner(args.env)
