@@ -14,16 +14,24 @@ from oauth2client.service_account import ServiceAccountCredentials
 
 def prepare_and_launch(workspace_namespace, workspace_name, method_namespace, method_name,
                        secret_path, workflow_parameters, entity_set_name=None):
-  """Launch a Terra workflow.
+  """Launch a Terra workflow programmatically.
+
+    Arguments `workflow_parameters` and `entity_set_name` are used to specify the parameters to the
+    workflow. The Terra UI is used to control *all other aspects* of the workflow configuration, such as:
+    * which version of the method is to be used
+    * whether call caching is enabled
+    * whether to delete intermediate outputs
+    * the type of the root entity
+    * how the columns of the root entity map onto the workflow parameters
 
     Args:
       workspace_namespace: The project id of the Terra billing project in which the workspace resides.
-      workspace_name: The name of the workspace in which the workflow resides
+      workspace_name: The name of the workspace in which the workflow resides.
       method_namespace: The namespace of the workflow method.
       method_name: The name of the workflow method.
       secret_path: The 'Resource ID' of the service account key stored in Secret Manager. Or, if
         testing locally, the filepath to the json key for the service account.
-      workflow_parameters: A dictionary of key value pairs to merge with the inputs from the workflow configuration,
+      workflow_parameters: A dictionary of key/value pairs to merge with the inputs from the workflow configuration,
         overwriting any duplicate keys.
       entity_set_name: The name of the entity set to be used for all other workflow parameters. Defaults to
         the most recently created entity set of the root entity type.
@@ -100,13 +108,13 @@ def prepare_and_launch(workspace_namespace, workspace_name, method_namespace, me
 def get_access_token(secret_path):
   """Conditionally create an access token with the minimum necessary scopes.
 
-  When run as a Cloud Function, a service account's json credentials file from Secret Manager
+  When run as a Cloud Function, a service account's JSON credentials file from Secret Manager
   is used to populate the access token. When run locally, either the service account JSON key file or the
   application default credential is used to populate the access token.
-  
+
   Args:
     secret_path: The 'Resource ID' of the service account key stored in Secret Manager. Or, if
-      testing locally, the filepath to the json key for the service account.
+      testing locally, the filepath to the JSON key for the service account.
   Returns:
     An access token.
   """

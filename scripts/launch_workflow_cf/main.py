@@ -12,22 +12,7 @@ def launch_workflow(data: Dict[Any, Any], context: Any):
     This Cloud Function reads configuration from environment variables and the triggering event.
 
     This example workflow uses entities from a data table so that workflow parameter values do
-    not need to be hardcoded here in this script. But if you do want to hardcode values for the
-    other parameters, follow the pattern in the code example below for correct escaping. Use a
-    'for loop' if you wish to execute concurrent jobs in a parameter-parallel manner.
-
-    # Note: All parameter values must be of type string in the json.
-    # WDL parameter of type 'String' must be surrounded by an extra set of quotes.
-    # WDL parameter of type 'Array[String]' must be surrounded by square brackets.
-    a_string_value = "example"
-    a_string_array_value = ["one", "two", "three"]
-    a_boolean_value = True
-    a_numeric_value = 42
-    workflow_parameters = {
-        "MyWorkflowOrTaskName.aStringParameter": f"\"{a_string_value}\"",
-        "MyWorkflowOrTaskName.aStringArrayParameter": "[\"" + "\", \"".join(a_string_array_value) + "\"]",
-        "MyWorkflowOrTaskName.aNumericParameter": f"{a_numeric_value}",
-    }
+    not need to be hardcoded here in this script.
 
     Environment variables:
       WORKSPACE_NAMESPACE: The project id of the Terra billing project in which the workspace resides.
@@ -35,7 +20,7 @@ def launch_workflow(data: Dict[Any, Any], context: Any):
       METHOD_NAMESPACE: The namespace of the workflow method.
       METHOD_NAME: The name of the workflow method.
       SECRET_PATH: The 'Resource ID' of the service account key stored in Secret Manager. Or, if
-        testing locally, the filepath to the json key for the service account.
+        testing locally, the filepath to the JSON key for the service account.
       TRIGGER_PARAMETER_NAME: The name of the workflow parameter to receive the path to the triggering file.
         Defaults to `MyWorkflowName.aCloudStorageFilePath`.
       ENTITY_SET_NAME: The name of the entity set to be used for all other workflow parameters. Defaults to
@@ -68,7 +53,7 @@ def launch_workflow(data: Dict[Any, Any], context: Any):
       method_name=os.getenv("METHOD_NAME"),
       secret_path=os.getenv("SECRET_PATH"),
       workflow_parameters=workflow_parameters,
-      # Default to the most recently created entity set.
+      # Default to 'None', which will cause the most recently created entity set to be used.
       entity_set_name=os.getenv("ENTITY_SET_NAME", None)
       )
 

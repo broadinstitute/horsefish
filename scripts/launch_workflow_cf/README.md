@@ -2,10 +2,10 @@
 
 The scripts in this directory can be used to deploy a Google Cloud Function (CF) that launches a Terra workflow. The Cloud Function is triggered when a file is created or modified in a specific Google Cloud Storage bucket.
 
-Note: this example is specificaly written assumming:
+Note: this example is specifically written assuming:
 
 * the triggering file is an input parameter to the Terra workflow
-* the most recently created entity set should be used, or override this default via `ENTITY_SET_TO_USE`
+* the most recently created entity set should be used, or override this default via `ENTITY_SET_NAME`
 * the Terra UI is used to control *all other aspects* of the workflow configuration, such as:
   * which version of the method is to be used
   * whether call caching is enabled
@@ -18,7 +18,7 @@ Note: this example is specificaly written assumming:
 * [Python Quickstart | Cloud Functions Documentation | Google Cloud](http://cloud/functions/docs/quickstart-python)
 * [Quickstart | Secret Manager Documentation | Google Cloud](http://cloud/secret-manager/docs/quickstart)
 
-**New to Terra groups and permssions?** Don't start here. Instead see:
+**New to Terra groups and permissions?** Don't start here. Instead see:
 
 * [Pet accounts and proxy groups – Terra Support](https://support.terra.bio/hc/en-us/articles/360031023592-Understanding-and-setting-up-a-proxy-group)
 * [Accessing advanced GCP features in Terra – Terra Support](https://support.terra.bio/hc/en-us/articles/360051229072)
@@ -42,7 +42,7 @@ Note: this example is specificaly written assumming:
     1. Enable the [Cloud Build API](https://console.developers.google.com/apis/library/cloudbuild.googleapis.com) for this project.
 1. Create or identify the bucket in that project that will be used for files to trigger the Cloud Function.
 1. Create a new [service account](https://console.cloud.google.com/iam-admin/serviceaccounts) within that project. It will look like `<your service account name>@<your project id>.iam.gserviceaccount.com`.
-1. Downlad a JSON key for the newly created service account and store it in a safe place.
+1. Download a JSON key for the newly created service account and store it in a safe place.
 1. Upload the JSON key to [Secret Manager](https://console.cloud.google.com/security/secret-manager).
 1. For the newly created secret, in column "Actions", choose "Copy Resource ID". You'll need this value for the deployment step and it will look like: `projects/<your project number>/secrets/<your secret name>/versions/1`.
 1. Give the service account the needed permissions to items within the project.
@@ -50,13 +50,13 @@ Note: this example is specificaly written assumming:
     1. Grant role `Storage Object Viewer` to the service account on the bucket that will trigger the Cloud Function.
 1. [Register the service account](https://github.com/broadinstitute/terra-tools/tree/master/scripts/register_service_account) in Terra.
 1. [Create a new Terra group](https://app.terra.bio/#groups) to hold only the service account. It will look like `
-<your groupname>@firecloud.org`.
+<your group name>@firecloud.org`.
 1. Give the Terra Group the needed permissions to items within the project.
     1. Add the Terra group to the billing project (a.k.a. workspace namespace).
     1. Grant role `Storage Object Viewer` to the Terra group on the bucket that will trigger the Cloud Function. This is because, presumably, the workflow will need to read the contents of the file that triggered the workflow.
     1. If your workflow uses a private Google Container Repository image, also grant role `Storage Object Viewer` to the Terra group on the bucket that holds the image (e.g., `artifacts.<your project id>.appspot.com`).
 1. Give the Terra Group the needed permissions within Terra.
-    1. Share the Terra workspace with the Terra group, granting "Writer" and "Can compute" access.
+    1. Share the Terra workspace with the Terra group, granting `Writer` and `Can compute` access.
     1. If the workspace has an Authorization Domain, ensure that the Terra group is a member of the Authorization Domain.
 1. If the workflow method is private, share the workflow method. Note that for the Broad Methods repository, sharing with groups is not yet supported. Instead share the method with the service account.
 
