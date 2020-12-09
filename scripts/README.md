@@ -20,7 +20,7 @@ Include the `--delete` flag to delete an existing banner in the given environmen
 ### Running in Jenkins
 The banner script is hosted in Jenkins via the [Horsefish docker image](https://hub.docker.com/r/broadinstitute/horsefish).  No authentication is needed as the job uses built in credentials. 
 
-| env         | prod        | dev         |
+|             | prod        | dev         |
 | ----------- | ----------- | ----------- |
 | **job**   | [prod job](https://fcprod-jenkins.dsp-techops.broadinstitute.org/job/terra-service-banner) | [dev job](https://fc-jenkins.dsp-techops.broadinstitute.org/job/terra-service-banner/)
 | **service acct (for authing with GCS)**   | banner-svcacct-prod.json “put up banner in broad-dsde-prod” | broad-dsde-dev-************.json “put up banner in broad-dsde-dev” |
