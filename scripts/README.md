@@ -18,7 +18,7 @@ python3 terra_service_banner.py --env ["prod" or "dev"] --title ["custom banner 
 Include the `--delete` flag to delete an existing banner in the given environment. `--title`, `--message`, and `--link` are all optional, otherwise the banner will use generic defaults in those fields.
 
 ### Running in Jenkins
-The banner script is hosted in Jenkins via the [Horsefish docker image](https://hub.docker.com/r/broadinstitute/horsefish).  No authentication is needed as the job uses built in credentials. 
+The banner script is hosted in Jenkins via the [Horsefish docker image](https://hub.docker.com/r/broadinstitute/horsefish).  No authentication is needed as the job uses built in credentials. There are two jobs: one in the dev Jenkins that uploads to dev Terra, and one in the prod Jenkins that uploads to prod Terra.  
 
 |             | prod        | dev         |
 | ----------- | ----------- | ----------- |
