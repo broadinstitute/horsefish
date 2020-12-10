@@ -1,38 +1,22 @@
 import argparse
 from google.cloud import storage as gcs
+import json
 
 
-def convert_json_to_string(env, json):
-    """Convert json file to string if supplied with custom banner json file."""
+DEFAULT_TITLE = "Service Incident"
+DEFAULT_MESSAGE = "We are currently investigating an issue impacting the platform. Information about this incident will be made available here."
+DEFAULT_LINK = "https://support.terra.bio/hc/en-us/sections/360003692231-Service-Notifications"
 
-    # open json file and read contents to a string
-    with open(json, "r") as j:
-        custom_banner_string = j.read()
 
-    return(custom_banner_string)
+def build_service_banner(title, message, link):
+    """Create a json banner using args if they exist, else implement default values."""
+
+    banner_dict = [{"title": title, "message": message, "link": link}]
+    return json.dumps(banner_dict)
 
 
 def update_service_banner(env, json_string=None):
     """Push json to bucket in selected environment."""
-
-    # if no custom banner json is passed in, post standard banner text/string
-    if not json_string:
-        banner_text = """[
-                        {
-                        "title":"Service Incident",
-                        "message":"We are currently investigating an issue impacting the platform. Information about this incident will be made available here.",
-                        "link":"https://support.terra.bio/hc/en-us/sections/360003692231-Service-Notifications"
-                        }
-                    ]"""
-        print(f'Starting standard banner upload to {env} Terra.')
-    # if json_string is empty, remove banner
-    elif json_string == "[]":
-        banner_text = json_string
-        print(f'Starting banner removal from {env} Terra.')
-    # if custom banner json is passed in, post custom banner text/string
-    else:
-        banner_text = json_string
-        print(f'Starting custom banner upload to {env} Terra.')
 
     # create storage Client and assign destination bucket
     storage_client = gcs.Client()
@@ -47,9 +31,9 @@ def update_service_banner(env, json_string=None):
 
     # define required filename (alerts.json) and upload json string to gcs
     blob = bucket.blob("alerts.json")
-    blob.upload_from_string(banner_text)
+    blob.upload_from_string(json_string)
 
-    print(f'Setting permissions and security on banner json object in GCS location.')
+    print("Setting permissions and security on banner json object in GCS location.")
     # set metadata on json object (gsutil -m setmeta -r -h "Cache-Control:private, max-age=0, no-cache")
     blob.cache_control = "private, max-age=0, no-cache"
     blob.patch()
@@ -78,23 +62,30 @@ def clear_service_banner(env):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Publish or remove a production incident banner on Terra UI.')
-    parser.add_argument('--env', type=str, required=True, help='"prod" or "dev" Terra environment for banner.')
-    parser.add_argument('--json', type=str, required=False, help='path to json file containing custom banner text.')
-    parser.add_argument('--delete', required=False, action='store_true', help='set to clear banner from Terra UI.')
+
+    parser.add_argument('--env', type=str, required=True,
+                        help='"prod" or "dev" Terra environment for banner.')
+    parser.add_argument('--delete', required=False, action='store_true',
+                        help='set to clear banner from Terra UI.')
+    parser.add_argument('--title', required=False, default=DEFAULT_TITLE,
+                        help='custom title for service banner')
+    parser.add_argument('--message', required=False, default=DEFAULT_MESSAGE,
+                        help='custom message for service banner')
+    parser.add_argument('--link', required=False, default=DEFAULT_LINK,
+                        help='custom link to service incident alerts page')
 
     args = parser.parse_args()
 
-    # if custom banner
-    if args.json:
-        # convert json file to string, post banner
-        custom_banner_string = convert_json_to_string(args.env, args.json)
-        update_service_banner(args.env, custom_banner_string)
-    # if not custom banner
+    # handle empty string scenario - consider empty string as default value
+    if args.title == '':
+        args.title = DEFAULT_TITLE
+    if args.message == '':
+        args.message = DEFAULT_MESSAGE
+    if args.link == '':
+        args.link = DEFAULT_LINK
+
+    if args.delete:
+        clear_service_banner(args.env)
     else:
-        # if "--delete" (clear banner)
-        if args.delete:
-            clear_service_banner(args.env)
-        # if not "--delete" (post banner)
-        else:
-            # post_standard_banner(args.env)
-            update_service_banner(args.env)
+        banner = build_service_banner(args.title, args.message, args.link)
+        update_service_banner(args.env, banner)
