@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ $# -lt 1 ]; then
-    echo "USAGE: ./test_local.sh BUCKET"
+    echo "USAGE: ./test_cloud_function.sh BUCKET"
     exit 1
 fi
 

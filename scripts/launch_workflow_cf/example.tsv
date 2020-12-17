@@ -1,0 +1,4 @@
+entity:job_id	aStringParameter	aStringArrayParameter	aNumericParameter
+job_1	one	o, n, e	1
+job_2	two	t, w, o	2
+job_3	three	t, h, r, e, e	3
