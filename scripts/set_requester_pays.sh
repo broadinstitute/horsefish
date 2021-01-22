@@ -2,6 +2,7 @@
 
 if (( $# < 2 )); then
   echo "Usage: $0 PROJECT_ID gs://BUCKET1 [gs://BUCKET2 gs://BUCKET3...]"
+  echo "NOTE: this script requires you to be authed as your firecloud.org admin account."
   exit 0
 fi
 
