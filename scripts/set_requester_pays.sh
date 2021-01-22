@@ -6,17 +6,23 @@ if (( $# < 2 )); then
 fi
 
 PROJECT_ID=$1
-
-MEMBER="user:marymorg@firecloud.org"
+USER_EMAIL=$(gcloud config get-value account)
+MEMBER="user:${USER_EMAIL}"
 ROLE="projects/${PROJECT_ID}/roles/RequesterPays"
 
 # enable requesterpays permissions
-echo "Enabling permissions to switch on Requester Pays"
+echo "Enabling permissions for ${USER_EMAIL} to switch on Requester Pays"
 gcloud beta projects add-iam-policy-binding $PROJECT_ID --member=$MEMBER --role=$ROLE | grep -A 1 -B 1 "${MEMBER}"
 
-echo "Gatorcounting for 10 seconds while iam change goes into effect"
-sleep 10
+echo "Gatorcounting for 15 seconds while iam change goes into effect"
+echo ""
+echo "NOTE: if you get an error message saying:"
+echo "    AccessDeniedException: 403 ${USER_EMAIL} does not have storage.buckets.update access to the Google Cloud Storage bucket."
+echo "THEN wait 10 seconds and run this again."
+echo ""
+sleep 15
 
+# if needed for troubleshooting, this command retrieves the existing policy
 # gcloud beta projects get-iam-policy $PROJECT_ID
 
 for BUCKET in "${@:2}"; do
@@ -24,8 +30,6 @@ for BUCKET in "${@:2}"; do
   gsutil requesterpays set on ${BUCKET} || exit 1
 done
 
-
-
 # revoke requesterpays permissions
-echo "Revoking permissions to edit Requester Pays"
+echo "Revoking permissions for ${USER_EMAIL} to edit Requester Pays"
 gcloud beta projects remove-iam-policy-binding $PROJECT_ID --member=$MEMBER --role=$ROLE | grep -A 1 -B 1 "${MEMBER}"
