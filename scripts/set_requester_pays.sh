@@ -1,9 +1,15 @@
 #!/bin/bash
 
-if (( $# < 2 )); then
-  echo "Usage: $0 PROJECT_ID gs://BUCKET1 [gs://BUCKET2 gs://BUCKET3...]"
+if (( $# < 1 )); then
+  echo "Usage: $0 PROJECT_ID [PATH_TO_BUCKET_LIST_FILE]"
+  echo "Unless you specify a source file, the script will read buckets from a file 'buckets.txt'."
+  echo "The source file must include newline-delimited gs://bucket-names"
   echo "NOTE: this script requires you to be authed as your firecloud.org admin account."
   exit 0
+elif (( $# == 1 )); then
+  BUCKETS=$(cat buckets.txt)
+elif (( $# == 2 )); then
+  BUCKETS=$(cat $2)
 fi
 
 PROJECT_ID=$1
@@ -27,7 +33,7 @@ sleep 20
 # if needed for troubleshooting, this command retrieves the existing policy
 # gcloud beta projects get-iam-policy $PROJECT_ID
 
-for BUCKET in "${@:2}"; do
+for BUCKET in $BUCKETS; do
   # set requester pays
   gsutil requesterpays set on ${BUCKET} || exit 1
 done
