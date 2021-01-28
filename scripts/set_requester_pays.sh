@@ -1,9 +1,9 @@
 #!/bin/bash
 
 if (( $# < 1 )); then
-  echo "Usage: $0 PROJECT_ID [PATH_TO_BUCKET_LIST_FILE]"
+  echo "Usage: $0 TERRA_PROJECT_ID [PATH_TO_TERRA_BUCKET_LIST_FILE]"
   echo "Unless you specify a source file, the script will read buckets from a file 'buckets.txt'."
-  echo "The source file must include newline-delimited bucket paths of format gs://fc-XXXXX"
+  echo "The source file must include newline-delimited Terra bucket paths of format gs://fc-XXXXX"
   echo "NOTE: this script requires you to be authed as your firecloud.org admin account."
   exit 0
 elif (( $# == 1 )); then
@@ -15,7 +15,10 @@ fi
 PROJECT_ID=$1
 USER_EMAIL=$(gcloud config get-value account)
 MEMBER="user:${USER_EMAIL}"
-ROLE="organizations/386193000800/roles/RequesterPaysToggler"
+
+# this is the firecloud.org id - should be used for all Terra projects
+ORG_ID="386193000800"
+ROLE="organizations/${ORG_ID}/roles/RequesterPaysToggler"
 
 # enable requesterpays permissions
 echo "Enabling permissions for ${USER_EMAIL} to switch on Requester Pays"
