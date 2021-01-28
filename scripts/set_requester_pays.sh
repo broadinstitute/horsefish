@@ -15,23 +15,23 @@ fi
 PROJECT_ID=$1
 USER_EMAIL=$(gcloud config get-value account)
 MEMBER="user:${USER_EMAIL}"
-ROLE="projects/${PROJECT_ID}/roles/RequesterPays"
+ROLE="organizations/386193000800/roles/RequesterPaysToggler"
 
 # enable requesterpays permissions
 echo "Enabling permissions for ${USER_EMAIL} to switch on Requester Pays"
 gcloud beta projects add-iam-policy-binding $PROJECT_ID --member=$MEMBER --role=$ROLE | grep -A 1 -B 1 "${MEMBER}"
 
+# # if needed for troubleshooting, this command retrieves the existing policy
+# gcloud beta projects get-iam-policy $PROJECT_ID | grep -A 1 -B 1 "${MEMBER}"
+
 echo ""
-echo "Gatorcounting for 20 seconds while iam change goes into effect"
+echo "Gatorcounting for 10 seconds while iam change goes into effect"
 echo ""
 echo "NOTE: if you get an error message saying:"
 echo "    AccessDeniedException: 403 ${USER_EMAIL} does not have storage.buckets.update access to the Google Cloud Storage bucket."
 echo "THEN gatorcount 10 more seconds and run this again."
 echo ""
-sleep 20
-
-# if needed for troubleshooting, this command retrieves the existing policy
-# gcloud beta projects get-iam-policy $PROJECT_ID
+sleep 10
 
 for BUCKET in $BUCKETS; do
   # set requester pays
