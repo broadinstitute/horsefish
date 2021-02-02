@@ -26,19 +26,17 @@ task echoFileName {
     }
     
     String base_file_name=basename(input_file)
-    Array[String] file_contents=read_lines(input_file)
     String output_file_name="~{output_base_name}_output.txt"
 
 	command <<<
-        echo "The name of the input file was ~{base_file_name}. The first line of its contents is: ~{file_contents[0]}" > ~{output_file_name}
+        echo "The name of the input file was ~{base_file_name}." > ~{output_file_name}
     >>>
 
     runtime {
     	docker: "ubuntu"
         cpu: 1
         disks: "local-disk 1 HDD"
-        preemptible: 1  
-        yo: "sup"
+        preemptible: 1
     }
     output {
     	File output_file = output_file_name
