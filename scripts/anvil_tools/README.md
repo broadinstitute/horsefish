@@ -1,10 +1,13 @@
-# Get Workspace Attributes
+# AnVIL Tools/Scripts
 
 ------------------------
-
-#### Contains two stand-alone scripts (get_workspace_attributes.py and get_workspaces_list_in_project.py)
-
+#### This directory contains scripts/tools to automate steps in the AnVIL data delivery workspace creation process.
 ------------------------
+
+### Setup
+    Follow the steps below to set up permissions prior to running the scripts:
+    1. `gcloud auth login username@broadinstitute.org`
+    2. `gcloud auth application-default login`
 
 ## get_workspace_attributes.py
 #### Description 

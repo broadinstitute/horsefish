@@ -48,7 +48,7 @@ def update_workspace_attributes(tsv, workspace_project):
     '''Create individual request body per workspace listed in tsv file.'''
 
     # read full tsv into dataframe, workspace name = index
-    tsv_all = pd.read_csv(tsv, sep="\t", index_col="name")
+    tsv_all = pd.read_csv(tsv, sep="\t", index_col="name", encoding='latin-1')
 
     # remove columns that have ".itemsType" in col name - col values are AttributeValue
     tsv_modified = tsv_all[tsv_all.columns.drop(list(tsv_all.filter(regex='.itemsType')))]
