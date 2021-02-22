@@ -1,7 +1,7 @@
 """Create AnVIL workspaces, set up with auth domain, add workspace READER access to auth domain, and OWNER access to AnVIL admins.
 
 Usage:
-    > python3 set_up_anvil_workspace.py -t INPUT_TSV_FILE [-p BILLING-PROJECT] """
+    > python3 set_up_anvil_workspace.py -t TSV_FILE [-p BILLING-PROJECT] """
 
 import argparse
 import json

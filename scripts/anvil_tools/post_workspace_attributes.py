@@ -1,7 +1,7 @@
 """Put/update Dataset attributes to workspaces parsed from input tsv file.
 
 Usage:
-    > python3 post_workspace_attributes.py -t ATTRIBUTES_CSV_FILE [-p BILLING-PROJECT] """
+    > python3 post_workspace_attributes.py -t TSV_FILE [-p BILLING-PROJECT] """
 
 import argparse
 import pandas as pd
