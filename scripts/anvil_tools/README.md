@@ -12,7 +12,7 @@
 
 ### Scripts
 
-#### add_user_to_workspace.py
+#### **add_user_to_workspace.py**
 ##### Description
     Update/add user/group to workspace ACL (as READER, WRITER, OWNER). Input is a .tsv file with 3 columns:
         1. "workspace_name"
@@ -30,7 +30,7 @@
     2. `--project`, `-p`: workspace project/namespace for listed workspaces in tsv (default = anvil_datastorage)
 
 
-#### get_workspace_attributes.py
+#### **get_workspace_attributes.py**
 ##### Description 
     Gets the workspace's attributes from all the workspaces in a project and makes a master tsv containing Terra workspace attributes, where each row is a workspace and each column is a field in workspace attributes.
 ##### Usage (from the main directory):
@@ -43,7 +43,7 @@
     2. `--workspace_project`, `-wp`: workspace project/namespace (default = "anvil-datastorage")
 
 
-#### get_workspaces_list_in_project.py
+#### **get_workspaces_list_in_project.py**
 ##### Description 
     Gets the list of workspaces in a project from the warehouse and saves as txt file.
 ##### Usage (from the main directory):
@@ -56,7 +56,7 @@
     2. `--terra_project`, `-tp`: workspace project/namespace (default = "anvil-datastorage")
 
 
-#### set_up_anvil_workspace.py
+#### **set_up_anvil_workspace.py**
 ##### Description
     Create workspace with authorization domain and add user/groups with appropriate workspace ACLs. Input is a .tsv file with columns:
         1. "workspace_name"
@@ -73,7 +73,7 @@
     2. `--project`, `-p`: workspace project/namespace for listed workspaces in tsv (default = anvil_datastorage)
 
 
-#### post_workspace_attributes.py
+#### **post_workspace_attributes.py**
 ##### Description
     Post dataset attributes to workspaces. Input is a .tsv file:
         1. Template input.tsv linked [here]()
