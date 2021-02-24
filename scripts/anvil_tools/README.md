@@ -14,10 +14,14 @@
 
 #### **add_user_to_workspace.py**
 ##### Description
-    Update/add user/group to workspace ACL (as READER, WRITER, OWNER). Input is a .tsv file with 3 columns:
+    Update/add user/group to workspace ACL (as READER, WRITER, OWNER). 
+    
+    Input is a .tsv file with 3 columns:
         1. "workspace_name"
         2. "email"
         3. "accessLevel" - (READER, WRITER, or OWNER)
+    Output:
+        NA
 ##### Usage
     Locally
         `python3 /scripts/anvil_tools/add_user_to_workspace.py -t TSV_FILE [-p WORKSPACE_PROJECT]`
@@ -58,9 +62,13 @@
 
 #### **set_up_anvil_workspace.py**
 ##### Description
-    Create workspace with authorization domain and add user/groups with appropriate workspace ACLs. Input is a .tsv file with columns:
+    Create workspace with authorization domain and add user/groups with appropriate workspace ACLs. 
+    
+    Input is a .tsv file with columns:
         1. "workspace_name"
         2. "auth_domain_name"
+    Output is a .tsv file with name:
+        1. `timestamp_workspaces_setup_status.tsv`
 ##### Usage
     Locally
         `python3 /scripts/anvil_tools/set_up_anvil_workspace.py -t TSV_FILE [-p WORKSPACE_PROJECT]
@@ -75,8 +83,12 @@
 
 #### **post_workspace_attributes.py**
 ##### Description
-    Post dataset attributes to workspaces. Input is a .tsv file:
+    Post dataset attributes to workspaces.
+    
+    Input is a .tsv file:
         1. Template input.tsv linked [here]()
+    Output:
+        NA
 ##### Usage
     Locally
         `python3 post_workspace_attributes.py -t TSV_FILE [-p BILLING-PROJECT]`
