@@ -20,15 +20,13 @@
         1. "workspace_name"
         2. "email"
         3. "accessLevel" - (READER, WRITER, or OWNER)
-    Output:
-        NA
 ##### Usage
     Locally
         `python3 /scripts/anvil_tools/add_user_to_workspace.py -t TSV_FILE [-p WORKSPACE_PROJECT]`
     Docker
-        `docker run --rm -v "$HOME"/.config:/.config -v ~/input_data_directory/:/data broadinstitute/horsefish:anvil_tools  python3 /scripts/anvil_tools/add_user_to_workspace.py -t /data/INPUT.tsv [-p WORKSPACE_PROJECT]`
+        `docker run --rm -it -v "$HOME"/.config:/.config -v "$HOME"/local_data_directory/:/data broadinstitute/horsefish:anvil_tools bash -c "cd data; python3 /scripts/anvil_tools/add_user_to_workspace.py -t /data/INPUT.tsv [-p WORKSPACE_PROJECT]"`
 
-        Note: input_data_directory should be the path to the folder where your desired input .tsv file is located.
+        Note: `local_data_directory` should be the path to the folder where your desired input .tsv file is located.
 ##### Flags
     1. `--tsv`, `-t`: input .tsv file (required)
     2. `--project`, `-p`: workspace project/namespace for listed workspaces in tsv (default = anvil_datastorage)
@@ -41,7 +39,9 @@
     Locally
         `python3 /scripts/anvil_tools/get_workspace_attributes.py -wp workspace project/namespace [-v]`
     Docker
-        `docker run --rm -v "$HOME"/.config:/.config -v ~/input_data_directory/:/data broadinstitute/horsefish:anvil_tools  python3 /scripts/anvil_tools/get_workspace_attributes.py -wp TERRA_PROJECT [-v]`
+        `docker run --rm -it -v "$HOME"/.config:/.config -v "$HOME"/local_data_directory/:/data broadinstitute/horsefish:anvil_tools bash -c "cd data; python3 /scripts/anvil_tools/get_workspace_attributes.py -wp TERRA_PROJECT [-v]"`
+
+        Note: `local_data_directory` should be the path to the folder where your desired output .tsv file should be placed.
 ##### Flags
     1. `--verbose`, `-v`: set for more detailed/information to stdout (default = False)
     2. `--workspace_project`, `-wp`: workspace project/namespace (default = "anvil-datastorage")
@@ -54,13 +54,15 @@
     Locally
         `python3 /scripts/anvil_tools/get_workspaces_list_in_project.py -tp terra project/namespace [-v]`
     Docker
-        `docker run --rm -v "$HOME"/.config:/.config -v ~/input_data_directory/:/data broadinstitute/horsefish:anvil_tools  python3 /scripts/anvil_tools/get_workspaces_list_in_project.py -tp TERRA_PROJECT [-v]`
+        `docker run --rm -it -v "$HOME"/.config:/.config -v "$HOME"/local_data_directory/:/data broadinstitute/horsefish:anvil_tools bash -c "cd data; python3 /scripts/anvil_tools/get_workspaces_list_in_project.py -tp TERRA_PROJECT [-v]"`
+
+        Note: `local_data_directory` should be the path to the folder where your desired output .tsv file should be placed.
 ##### Flags
     1. `--verbose`, `-v`: set for more detailed/information to stdout (default = False)
     2. `--terra_project`, `-tp`: workspace project/namespace (default = "anvil-datastorage")
 
 
-#### **set_up_anvil_workspace.py**
+#### **set_up_anvil_workspaces.py**
 ##### Description
     Create workspace with authorization domain and add user/groups with appropriate workspace ACLs. 
     
@@ -73,9 +75,9 @@
     Locally
         `python3 /scripts/anvil_tools/set_up_anvil_workspace.py -t TSV_FILE [-p WORKSPACE_PROJECT]
     Docker
-        `docker run --rm -v "$HOME"/.config:/.config -v ~/input_data_directory/:/data broadinstitute/horsefish:anvil_tools  python3 /scripts/anvil_tools/set_up_anvil_workspace.py -t /data/INPUT.tsv [-p WORKSPACE_PROJECT]`
+        `docker run --rm -it -v "$HOME"/.config:/.config -v "$HOME"/local_data_directory/:/data broadinstitute/horsefish:anvil_tools bash -c "cd data; python3 /scripts/anvil_tools/set_up_anvil_workspace.py -t /data/INPUT.tsv [-p WORKSPACE_PROJECT]"`
 
-        Note: input_data_directory should be the path to the folder where your input .tsv file is located.
+        Note: local_data_directory should be the path to the folder where your input .tsv file is located and where your output .tsv file will be placed.
 ##### Flags
     1. `--tsv`, `-t`: input .tsv file (required)
     2. `--project`, `-p`: workspace project/namespace for listed workspaces in tsv (default = anvil_datastorage)
@@ -86,16 +88,14 @@
     Post dataset attributes to workspaces.
     
     Input is a .tsv file:
-        1. Template input.tsv linked [here]()
-    Output:
-        NA
+        1. Template input.tsv linked [here](https://docs.google.com/spreadsheets/d/1k6fTGJL9j0p5ROsrxHIKObBwwVJFfHLpoWocZ2p8jPM/edit?usp=sharing). This document also contains definitions and examples for each column/attribute.
 ##### Usage
     Locally
         `python3 post_workspace_attributes.py -t TSV_FILE [-p BILLING-PROJECT]`
     Docker
-        `docker run --rm -v "$HOME"/.config:/.config -v ~/input_data_directory/:/data broadinstitute/horsefish:anvil_tools  python3 /scripts/anvil_tools/post_workspace_attributes.py -t /data/INPUT.tsv [-p WORKSPACE_PROJECT]`
+        `docker run --rm -it -v "$HOME"/.config:/.config -v "$HOME"/local_data_directory/:/data broadinstitute/horsefish:anvil_tools bash -c "cd data; python3 /scripts/anvil_tools/post_workspace_attributes.py -t /data/INPUT.tsv [-p WORKSPACE_PROJECT]"`
 
-        Note: input_data_directory should be the path to the folder where your input .tsv file is located.
+        Note: local_data_directory should be the path to the folder where your input .tsv file is located.
 ##### Flags
     1. `--tsv`, `-t`: input .tsv file (required)
     2. `--project`, `-p`: workspace project/namespace for listed workspaces in tsv (default = anvil_datastorage)
