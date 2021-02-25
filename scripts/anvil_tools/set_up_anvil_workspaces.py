@@ -93,13 +93,16 @@ def check_workspace_exists(workspace_name, project="anvil-datastorage"):
         return None, None, response.json()
 
 
-def create_workspace(json_request, workspace_name, project="anvil-datastorage"):
+def create_workspace(workspace_name, auth_domain_name, project="anvil-datastorage"):
     """Create the Terra workspace with given authorization domain."""
 
     # check if workspace already exists
     ws_exists, ws_exists_status_code, ws_exists_response = check_workspace_exists(workspace_name, project)
 
     if not ws_exists:  # if workspace doesn't exist, create workspace
+        # create request JSON
+        create_ws_json = make_create_workspace_request(workspace_name, auth_domain_name, project)  # json for API request
+
         # request URL for createWorkspace
         uri = f"https://api.firecloud.org/api/workspaces"
 
@@ -108,7 +111,7 @@ def create_workspace(json_request, workspace_name, project="anvil-datastorage"):
         headers = {"Authorization": "Bearer " + get_access_token(), "accept": "application/json", "Content-Type": "application/json"}
 
         # capture response from API and parse out status code
-        response = requests.post(uri, headers=headers, data=json.dumps(json_request))
+        response = requests.post(uri, headers=headers, data=json.dumps(create_ws_json))
         status_code = response.status_code
 
         # print success or fail message based on status code
@@ -245,24 +248,25 @@ def setup_single_workspace(workspace, project="anvil-datastorage"):
     # workspace creation if AD set up succeeds
     workspace_name = workspace["workspace_name"]
     workspace_dict["input_workspace_name"] = workspace_name
-    create_ws_request = make_create_workspace_request(workspace_name, auth_domain_name, project)  # json for API request
 
-    create_workspace_status = create_workspace(create_ws_request, workspace_name, project)  # create workspace
+    # create workspace
+    create_workspace_status = create_workspace(workspace_name, auth_domain_name, project)
 
-    if create_workspace_status in [201, 200]:  # new ws created or user selected 'continue with existing ws'
-        workspace_dict["workspace_link"] = (f"https://app.terra.bio/#workspaces/{project}/{workspace_name}").replace(" ", "%20")
-        # add ACLs to workspace
-        member_status_code, member_response = add_members_to_workspace(workspace_name, auth_domain_name, project)
+    if create_workspace_status not in [201, 200]:  # ws creation fail - "N" (don't continue with existing workspace), other error
+        workspace_dict["workspace_creation_error"] = create_workspace_status  # update dict with workspace creation status
+        return workspace_dict
 
-        if member_status_code != 200:  # adding ACLs to workspace fail
-            workspace_dict["workspace_ACLs_error"] = member_response
-            return workspace_dict
+    workspace_dict["workspace_link"] = (f"https://app.terra.bio/#workspaces/{project}/{workspace_name}").replace(" ", "%20")
+    # add ACLs to workspace
+    member_status_code, member_response = add_members_to_workspace(workspace_name, auth_domain_name, project)
 
-        # adding ACLs to workspace success
-        workspace_dict["workspace_ACLs"] = member_response  # update dict with ACL emails
-        workspace_dict["workspace_setup_status"] = "Success"  # final workspace setup step
-    else:  # if "N" (user does not want to continue with existing workspace) or other error
-        workspace_dict["workspace_creation_error"] = create_workspace_status  # update error in dict
+    if member_status_code != 200:  # adding ACLs to workspace fail
+        workspace_dict["workspace_ACLs_error"] = member_response
+        return workspace_dict
+
+    # adding ACLs to workspace success
+    workspace_dict["workspace_ACLs"] = member_response  # update dict with ACL emails
+    workspace_dict["workspace_setup_status"] = "Success"  # final workspace setup step
 
     return workspace_dict
 
