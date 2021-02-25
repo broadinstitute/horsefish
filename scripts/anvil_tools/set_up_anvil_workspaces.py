@@ -227,33 +227,42 @@ def setup_single_workspace(workspace, project="anvil-datastorage"):
 
     if auth_domain_status != 201:  # AD creation fail - abort setup
         workspace_dict["auth_domain_creation_error"] = auth_domain_status  # update error in dict
-    else:                          # AD creation success - continue setup
-        workspace_dict["auth_domain_email"] = f"{auth_domain_name}@firecloud.org"
-        anvil_admin_group_name = "anvil-admins@firecloud.org"
-        add_member_status = add_member_to_auth_domain(auth_domain_name, anvil_admin_group_name, "ADMIN")
-        if add_member_status != 204:  # adding member to AD fail - abort setup
-            workspace_dict["add_email_to_AD_error"] = auth_domain_status  # update error in dict
-        else:                         # adding member to AD success - continue setup
-            workspace_dict["email_added_to_AD"] = anvil_admin_group_name
+        return workspace_dict
 
-            # workspace creation if AD set up succeeds
-            workspace_name = workspace["workspace_name"].replace(" ", "%20")
-            workspace_dict["input_workspace_name"] = workspace["workspace_name"]
-            create_ws_request = make_create_workspace_request(workspace_name, auth_domain_name, project)  # json for API request
+    # AD creation success - continue setup
+    workspace_dict["auth_domain_email"] = f"{auth_domain_name}@firecloud.org"  # update dict with AD email
+    # add members to AD
+    anvil_admin_group_name = "anvil-admins@firecloud.org"
+    add_member_status = add_member_to_auth_domain(auth_domain_name, anvil_admin_group_name, "ADMIN")
 
-            create_workspace_status = create_workspace(create_ws_request, workspace_name, project)  # create workspace
+    if add_member_status != 204:  # adding member to AD fail - abort setup
+        workspace_dict["add_email_to_AD_error"] = auth_domain_status  # update error in dict
+        return workspace_dict
 
-            if create_workspace_status in [201, 200]:  # new ws created or user selected 'continue with existing ws'
-                workspace_dict["workspace_link"] = f"https://app.terra.bio/#workspaces/{project}/{workspace_name}"
-                # add member ACLs to workspace
-                member_status_code, member_response = add_members_to_workspace(workspace_name, auth_domain_name, project)
-                if member_status_code == 200:  # adding ACLs to workspace success
-                    workspace_dict["workspace_ACLs"] = member_response  # add emails to df
-                    workspace_dict["workspace_setup_status"] = "Success"  # final workspace setup step
-                else:                          # adding ACLs to workspace fail
-                    workspace_dict["workspace_ACLs_error"] = member_response
-            else:  # if "N" (user does not want to continue with existing workspace) or other error
-                workspace_dict["workspace_creation_error"] = create_workspace_status  # update error in dict
+    # adding member to AD success - continue setup
+    workspace_dict["email_added_to_AD"] = anvil_admin_group_name  # update dict with member added to AD
+
+    # workspace creation if AD set up succeeds
+    workspace_name = workspace["workspace_name"]
+    workspace_dict["input_workspace_name"] = workspace_name
+    create_ws_request = make_create_workspace_request(workspace_name, auth_domain_name, project)  # json for API request
+
+    create_workspace_status = create_workspace(create_ws_request, workspace_name, project)  # create workspace
+
+    if create_workspace_status in [201, 200]:  # new ws created or user selected 'continue with existing ws'
+        workspace_dict["workspace_link"] = (f"https://app.terra.bio/#workspaces/{project}/{workspace_name}").replace(" ", "%20")
+        # add ACLs to workspace
+        member_status_code, member_response = add_members_to_workspace(workspace_name, auth_domain_name, project)
+
+        if member_status_code != 200:  # adding ACLs to workspace fail
+            workspace_dict["workspace_ACLs_error"] = member_response
+            return workspace_dict
+
+        # adding ACLs to workspace success
+        workspace_dict["workspace_ACLs"] = member_response  # update dict with ACL emails
+        workspace_dict["workspace_setup_status"] = "Success"  # final workspace setup step
+    else:  # if "N" (user does not want to continue with existing workspace) or other error
+        workspace_dict["workspace_creation_error"] = create_workspace_status  # update error in dict
 
     return workspace_dict
 
