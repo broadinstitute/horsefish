@@ -139,10 +139,11 @@ def create_workspace(workspace_name, auth_domain_name, project="anvil-datastorag
         else:
             print("Not a valid option. Choose: Y/N")
     if update_existing_ws.upper() == "N":       # don't overwrite existing workspace
-        already_exists_message = f"{project}/{workspace_name} already exists. User selected not to overwrite. Try again with unique workspace name."
-        return None, already_exists_message
+        deny_overwrite_message = f"{project}/{workspace_name} already exists. User selected not to overwrite. Try again with unique workspace name."
+        return None, deny_overwrite_message
 
-    return True, None    # overwrite existing workspace - 200 status code for "Y"
+    accept_overwrite_message = f"{project}/{workspace_name} already exists. User selected to overwrite."
+    return True, accept_overwrite_message    # overwrite existing workspace - 200 status code for "Y"
 
 
 def make_create_workspace_request(workspace_name, auth_domain_name, project="anvil-datastorage"):
@@ -266,8 +267,9 @@ def setup_single_workspace(workspace, project="anvil-datastorage"):
     # create workspace
     create_ws_success, create_ws_message = create_workspace(workspace_name, auth_domain_name, project)
 
+    workspace_dict["workspace_creation_error"] = create_ws_message
+
     if not create_ws_success:
-        workspace_dict["workspace_creation_error"] = create_ws_message
         return workspace_dict
 
     # ws creation success
