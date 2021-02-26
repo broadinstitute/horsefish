@@ -103,46 +103,46 @@ def create_workspace(workspace_name, auth_domain_name, project="anvil-datastorag
     # check if workspace already exists
     ws_exists, ws_exists_response = check_workspace_exists(workspace_name, project)
 
-    if ws_exists is not None:
-        if not ws_exists:  # workspace doesn't exist (404), create workspace
-            # create request JSON
-            create_ws_json = make_create_workspace_request(workspace_name, auth_domain_name, project)  # json for API request
+    if ws_exists is None:
+        return False, ws_exists_response
 
-            # request URL for createWorkspace
-            uri = f"https://api.firecloud.org/api/workspaces"
+    if not ws_exists:  # workspace doesn't exist (404), create workspace
+        # create request JSON
+        create_ws_json = make_create_workspace_request(workspace_name, auth_domain_name, project)  # json for API request
 
-            # Get access token and and add to headers for requests.
-            # -H  "accept: application/json" -H  "Authorization: Bearer [token] -H  "Content-Type: application/json"
-            headers = {"Authorization": "Bearer " + get_access_token(), "accept": "application/json", "Content-Type": "application/json"}
+        # request URL for createWorkspace
+        uri = f"https://api.firecloud.org/api/workspaces"
 
-            # capture response from API and parse out status code
-            response = requests.post(uri, headers=headers, data=json.dumps(create_ws_json))
-            status_code = response.status_code
+        # Get access token and and add to headers for requests.
+        # -H  "accept: application/json" -H  "Authorization: Bearer [token] -H  "Content-Type: application/json"
+        headers = {"Authorization": "Bearer " + get_access_token(), "accept": "application/json", "Content-Type": "application/json"}
 
-            if status_code != 201:  # ws creation fail
-                print(f"WARNING: Failed to create workspace with name: {workspace_name}. Check output file for error details.")
-                return False, response.text
-            # workspace creation success
-            print(f"Successfully created workspace with name: {workspace_name}.")
-            return True, None
+        # capture response from API and parse out status code
+        response = requests.post(uri, headers=headers, data=json.dumps(create_ws_json))
+        status_code = response.status_code
 
-        # workspace already exists
-        print(f"Workspace already exists with name: {project}/{workspace_name}.")
-        print(f"Existing workspace details: {json.dumps(json.loads(ws_exists_response), indent=2)}")
-        # make user decide if they want to update/overwrite existing workspace
-        while True:  # try until user inputs valid response
-            update_existing_ws = input("Would you like to continue modifying the existing workspace? (Y/N)" + "\n")
-            if update_existing_ws.upper() in ["Y", "N"]:
-                break
-            else:
-                print("Not a valid option. Choose: Y/N")
-        if update_existing_ws.upper() == "N":       # don't overwrite existing workspace
-            already_exists_message = f"{project}/{workspace_name} already exists. User selected not to overwrite. Try again with unique workspace name."
-            return None, already_exists_message
+        if status_code != 201:  # ws creation fail
+            print(f"WARNING: Failed to create workspace with name: {workspace_name}. Check output file for error details.")
+            return False, response.text
+        # workspace creation success
+        print(f"Successfully created workspace with name: {workspace_name}.")
+        return True, None
 
-        return True, None    # overwrite existing workspace - 200 status code for "Y"
+    # workspace already exists
+    print(f"Workspace already exists with name: {project}/{workspace_name}.")
+    print(f"Existing workspace details: {json.dumps(json.loads(ws_exists_response), indent=2)}")
+    # make user decide if they want to update/overwrite existing workspace
+    while True:  # try until user inputs valid response
+        update_existing_ws = input("Would you like to continue modifying the existing workspace? (Y/N)" + "\n")
+        if update_existing_ws.upper() in ["Y", "N"]:
+            break
+        else:
+            print("Not a valid option. Choose: Y/N")
+    if update_existing_ws.upper() == "N":       # don't overwrite existing workspace
+        already_exists_message = f"{project}/{workspace_name} already exists. User selected not to overwrite. Try again with unique workspace name."
+        return None, already_exists_message
 
-    return False, ws_exists_response
+    return True, None    # overwrite existing workspace - 200 status code for "Y"
 
 
 def make_create_workspace_request(workspace_name, auth_domain_name, project="anvil-datastorage"):
