@@ -1,7 +1,7 @@
 """Put/update Dataset attributes to workspaces parsed from input tsv file.
 
 Usage:
-    > python3 post_workspace_attributes.py -t ATTRIBUTES_CSV_FILE [-p BILLING-PROJECT] """
+    > python3 post_workspace_attributes.py -t TSV_FILE [-p BILLING-PROJECT] """
 
 import argparse
 import pandas as pd
@@ -11,7 +11,7 @@ from oauth2client.client import GoogleCredentials
 
 
 def get_access_token():
-    '''Get access token.'''
+    """Get access token."""
 
     scopes = ["https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/userinfo.email"]
     credentials = GoogleCredentials.get_application_default()
@@ -21,7 +21,7 @@ def get_access_token():
 
 
 def call_putLibraryMetadata_api(request, workspace_name, workspace_project):
-    '''PUT request to the putLibraryMetadata API.'''
+    """PUT request to the putLibraryMetadata API."""
 
     # request URL for putLibraryMetadata
     uri = f"https://api.firecloud.org/api/library/{workspace_project}/{workspace_name}/metadata"
@@ -45,10 +45,10 @@ def call_putLibraryMetadata_api(request, workspace_name, workspace_project):
 
 
 def update_workspace_attributes(tsv, workspace_project):
-    '''Create individual request body per workspace listed in tsv file.'''
+    """Create individual request body per workspace listed in tsv file."""
 
     # read full tsv into dataframe, workspace name = index
-    tsv_all = pd.read_csv(tsv, sep="\t", index_col="name")
+    tsv_all = pd.read_csv(tsv, sep="\t", index_col="name", encoding='latin-1')
 
     # remove columns that have ".itemsType" in col name - col values are AttributeValue
     tsv_modified = tsv_all[tsv_all.columns.drop(list(tsv_all.filter(regex='.itemsType')))]
