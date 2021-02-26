@@ -265,7 +265,6 @@ def setup_single_workspace(workspace, project="anvil-datastorage"):
     workspace_dict["input_workspace_name"] = workspace_name
 
     # create workspace
-    # create_ws_status_code, create_ws_json, create_ws_message = create_workspace(workspace_name, auth_domain_name, project)
     create_ws_success, create_ws_message = create_workspace(workspace_name, auth_domain_name, project)
 
     if not create_ws_success:
