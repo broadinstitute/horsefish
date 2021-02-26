@@ -209,8 +209,7 @@ def create_auth_domain(auth_domain_name):
         return False, response.text
 
     print(f"Successfully setup Authorization Domain with name: {auth_domain_name}.")
-    # return status_code, None, None           # add member to AD success - 204
-    return True, None
+    return True, None                               # create AD success - 204
 
 
 def setup_auth_domain(auth_domain_name):
