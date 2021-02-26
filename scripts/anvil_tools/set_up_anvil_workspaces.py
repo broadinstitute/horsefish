@@ -11,6 +11,8 @@ import requests
 
 from oauth2client.client import GoogleCredentials
 
+ADMIN_ANVIL_EMAIL = "anvil_admins@firecloud.org"
+
 
 def get_access_token():
     """Get access token."""
@@ -65,10 +67,11 @@ def add_members_to_workspace(workspace_name, auth_domain_name, project="anvil_da
     if status_code != 200:
         print(f"WARNING: Failed to update {project}/{workspace_name} with the following user(s)/group(s): {emails}.")
         print("Check output file for error details.")
-        return status_code, response.json(), None
+        return False, response.text
 
     print(f"Successfully updated {project}/{workspace_name} with the following user(s)/group(s): {emails}.")
-    return status_code, None, emails
+    emails_str = ("\n".join(emails))  # write list of emails as strings on new lines
+    return True, emails_str
 
 
 def check_workspace_exists(workspace_name, project="anvil-datastorage"):
@@ -85,45 +88,47 @@ def check_workspace_exists(workspace_name, project="anvil-datastorage"):
     response = requests.get(uri, headers=headers)
     status_code = response.status_code
 
-    if status_code == 404:              # if workspace does not exist
-        return False, None, None
-    if status_code == 200:              # if workspace already exists
-        return True, status_code, response
+    if status_code == 404:              # workspace does not exist
+        return False, None
 
-    return None, None, response.json()  # if other workspace exists error
+    if status_code != 200:              # additional errors - 403, 500
+        return None, response.text
+
+    return True, response.text       # workspace exists
 
 
 def create_workspace(workspace_name, auth_domain_name, project="anvil-datastorage"):
     """Create the Terra workspace with given authorization domain."""
 
     # check if workspace already exists
-    ws_exists, ws_exists_status_code, ws_exists_response = check_workspace_exists(workspace_name, project)
+    ws_exists, ws_exists_response = check_workspace_exists(workspace_name, project)
 
-    if not ws_exists:  # if workspace doesn't exist, create workspace
-        # create request JSON
-        create_ws_json = make_create_workspace_request(workspace_name, auth_domain_name, project)  # json for API request
+    if ws_exists is not None:
+        if not ws_exists:  # workspace doesn't exist (404), create workspace
+            # create request JSON
+            create_ws_json = make_create_workspace_request(workspace_name, auth_domain_name, project)  # json for API request
 
-        # request URL for createWorkspace
-        uri = f"https://api.firecloud.org/api/workspaces"
+            # request URL for createWorkspace
+            uri = f"https://api.firecloud.org/api/workspaces"
 
-        # Get access token and and add to headers for requests.
-        # -H  "accept: application/json" -H  "Authorization: Bearer [token] -H  "Content-Type: application/json"
-        headers = {"Authorization": "Bearer " + get_access_token(), "accept": "application/json", "Content-Type": "application/json"}
+            # Get access token and and add to headers for requests.
+            # -H  "accept: application/json" -H  "Authorization: Bearer [token] -H  "Content-Type: application/json"
+            headers = {"Authorization": "Bearer " + get_access_token(), "accept": "application/json", "Content-Type": "application/json"}
 
-        # capture response from API and parse out status code
-        response = requests.post(uri, headers=headers, data=json.dumps(create_ws_json))
-        status_code = response.status_code
+            # capture response from API and parse out status code
+            response = requests.post(uri, headers=headers, data=json.dumps(create_ws_json))
+            status_code = response.status_code
 
-        if status_code != 201:  # ws creation fail
-            print(f"WARNING: Failed to create workspace with name: {workspace_name}. Check output file for error details.")
-            return None, response.json(), None
-        # workspace creation success
-        print(f"Successfully created workspace with name: {workspace_name}.")
-        return status_code, None, None
+            if status_code != 201:  # ws creation fail
+                print(f"WARNING: Failed to create workspace with name: {workspace_name}. Check output file for error details.")
+                return False, response.text
+            # workspace creation success
+            print(f"Successfully created workspace with name: {workspace_name}.")
+            return True, None
 
-    if ws_exists:  # if workspace already exists
+        # workspace already exists
         print(f"Workspace already exists with name: {project}/{workspace_name}.")
-        print(f"Existing workspace details: {json.dumps(ws_exists_response.json(), indent=2)}")
+        print(f"Existing workspace details: {json.dumps(json.loads(ws_exists_response), indent=2)}")
         # make user decide if they want to update/overwrite existing workspace
         while True:  # try until user inputs valid response
             update_existing_ws = input("Would you like to continue modifying the existing workspace? (Y/N)" + "\n")
@@ -133,11 +138,11 @@ def create_workspace(workspace_name, auth_domain_name, project="anvil-datastorag
                 print("Not a valid option. Choose: Y/N")
         if update_existing_ws.upper() == "N":       # don't overwrite existing workspace
             already_exists_message = f"{project}/{workspace_name} already exists. User selected not to overwrite. Try again with unique workspace name."
-            return None, None, already_exists_message
+            return None, already_exists_message
 
-        return ws_exists_status_code, None, None    # overwrite existing workspace - 200 status code for "Y"
+        return True, None    # overwrite existing workspace - 200 status code for "Y"
 
-    return None, ws_exists_response.json(), None
+    return False, ws_exists_response
 
 
 def make_create_workspace_request(workspace_name, auth_domain_name, project="anvil-datastorage"):
@@ -156,7 +161,7 @@ def make_create_workspace_request(workspace_name, auth_domain_name, project="anv
     return create_ws_request
 
 
-def add_member_to_auth_domain(auth_domain_name, email, permission):
+def add_user_to_auth_domain(auth_domain_name, email, permission):
     """Add group with given permissions to authorization domain."""
 
     # request URL for addUserToGroup
@@ -173,21 +178,15 @@ def add_member_to_auth_domain(auth_domain_name, email, permission):
     if status_code != 204:  # AD update with member fail
         print(f"WARNING: Failed to update Authorization Domain, {auth_domain_name}, with group: {email}.")
         print("Check output file for error details.")
-        # return None, response.json()
-        return False, status_code, response.json()
+        return False, response.text
 
     # AD update with member success
     print(f"Successfully updated Authorization Domain, {auth_domain_name}, with group: {email}.")
-    return True, status_code, None
+    return True, None
 
 
-def setup_auth_domain(auth_domain_name):
-    """Set up Terra group - create group and add members to group - used as auth domain on workspaces.
-        Returned values -
-        status_code: from create AD and add member to AD requests
-        json_response: if not success, json with error details
-        string_message: unique error message when group already exists
-        boolean: True/False based on success/fail of add member to AD."""
+def create_auth_domain(auth_domain_name):
+    """Create authorization domain with given name."""
 
     # request URL for createGroup
     uri = f"https://api.firecloud.org/api/groups/{auth_domain_name}"
@@ -200,23 +199,37 @@ def setup_auth_domain(auth_domain_name):
     response = requests.post(uri, headers=headers)
     status_code = response.status_code
 
-    if status_code in [403, 409]:                    # if AD already exists
-        ad_exists_message = "Authorization Domain with name already exists. Try again with unique group name."
-        print(f"WARNING: Failed to setup Authorization Domain with name: {auth_domain_name}.")
-        return status_code, None, ad_exists_message, None  # 403 or 409
-    if status_code != 201:                           # other error (500)
+    if status_code in [403, 409]:                    # if AD already exists - 403, 409
+        ad_exists_message = "Authorization Domain with name already exists. Select unique name."
+        print(f"WARNING: Failed to setup Authorization Domain with name: {auth_domain_name}. Check output file for error details.")
+        # return status_code, None, ad_exists_message
+        return False, ad_exists_message
+    if status_code != 201:                           # other error - 500
         print(f"WARNING: Failed to create Authorization Domain with name: {auth_domain_name}. Check output file for error details.")
-        return status_code, response.json(), None, None
-
-    # if AD creation success - status_code == 201
-    anvil_admin_group_name = "anvil-admins@firecloud.org"
-    is_add_mem, add_mem_status_code, add_mem_response = add_member_to_auth_domain(auth_domain_name, anvil_admin_group_name, "ADMIN")  # 204 - success otherwise fail
-
-    if not is_add_mem:           # add member to AD fail
-        return None, add_mem_response, None, False
+        return False, response.text
 
     print(f"Successfully setup Authorization Domain with name: {auth_domain_name}.")
-    return add_mem_status_code, None, None, True   # add member to AD success - 204
+    # return status_code, None, None           # add member to AD success - 204
+    return True, None
+
+
+def setup_auth_domain(auth_domain_name):
+    """Create authorization domain (google group) and add user."""
+
+    # create AD with given name
+    ad_success, ad_message = create_auth_domain(auth_domain_name)
+
+    if not ad_success:  # AD create fail
+        return False, ad_message
+
+    # AD create successful
+    permission = "ADMIN"
+    is_add_user, add_user_message = add_user_to_auth_domain(auth_domain_name, ADMIN_ANVIL_EMAIL, permission)
+
+    if not is_add_user:  # add user to AD fail - create AD success
+        return False, add_user_message
+
+    return True, None  # add user to AD success - create AD success
 
 
 def setup_single_workspace(workspace, project="anvil-datastorage"):
@@ -226,9 +239,8 @@ def setup_single_workspace(workspace, project="anvil-datastorage"):
     workspace_dict = {"input_workspace_name": "NA",
                       "input_auth_domain_name": "NA",
                       "auth_domain_email": "Incomplete",
-                      "auth_domain_creation_error": "NA",
+                      "auth_domain_setup_error": "NA",
                       "email_added_to_AD": "Incomplete",
-                      "add_email_to_AD_error": "NA",
                       "workspace_link": "Incomplete",
                       "workspace_creation_error": "NA",
                       "workspace_ACLs": "Incomplete",
@@ -238,51 +250,40 @@ def setup_single_workspace(workspace, project="anvil-datastorage"):
     # start authorization domain
     auth_domain_name = workspace['auth_domain_name']
     workspace_dict["input_auth_domain_name"] = auth_domain_name
-    setup_ad_status_code, setup_ad_response, setup_ad_message, is_add_mem = setup_auth_domain(auth_domain_name)
+    setup_ad_success, setup_ad_message = setup_auth_domain(auth_domain_name)
 
-    if setup_ad_status_code in [403, 409]:  # AD already exists
-        workspace_dict["auth_domain_creation_error"] = setup_ad_message         # update dict with AD exists error
-        return workspace_dict
-
-    if setup_ad_status_code != 204:  # AD creation fail codes (can be from setup_AD() or add_members_to_AD())
-        # if fail from add_members_to_AD() - can return error codes 403, 404, 500
-        if is_add_mem:
-            workspace_dict["add_email_to_AD_error"] = setup_ad_response         # update dict with add member to AD error
-            return workspace_dict
-        # if error fail from setup_AD() - 500
-        workspace_dict["auth_domain_creation_error"] = setup_ad_response        # update dict with other error for AD creation
+    if not setup_ad_success:
+        workspace_dict["auth_domain_setup_error"] = setup_ad_message
         return workspace_dict
 
     # AD creation and add member to AD success
     workspace_dict["auth_domain_email"] = f"{auth_domain_name}@firecloud.org"   # update dict with created AD email
-    workspace_dict["email_added_to_AD"] = "anvil_admins@firecloud.org"          # update dict with member added to AD
+    workspace_dict["email_added_to_AD"] = ADMIN_ANVIL_EMAIL                     # update dict with member added to AD
 
     # workspace creation if AD set up succeeds
     workspace_name = workspace["workspace_name"]
     workspace_dict["input_workspace_name"] = workspace_name
 
     # create workspace
-    create_ws_status_code, create_ws_json, create_ws_message = create_workspace(workspace_name, auth_domain_name, project)
+    # create_ws_status_code, create_ws_json, create_ws_message = create_workspace(workspace_name, auth_domain_name, project)
+    create_ws_success, create_ws_message = create_workspace(workspace_name, auth_domain_name, project)
 
-    if create_ws_status_code not in [201, 200]:                             # ws creation fail
-        if not create_ws_json:                                              # "N" (don't overwrite with existing workspace)
-            workspace_dict["workspace_creation_error"] = create_ws_message  # update dict with workspace creation status
-            return workspace_dict
-
-        workspace_dict["workspace_creation_error"] = create_ws_json         # other ws creation error
+    if not create_ws_success:
+        workspace_dict["workspace_creation_error"] = create_ws_message
         return workspace_dict
 
     # ws creation success
     workspace_dict["workspace_link"] = (f"https://app.terra.bio/#workspaces/{project}/{workspace_name}").replace(" ", "%20")
-    # add ACLs to workspace
-    member_status_code, member_response, member_emails = add_members_to_workspace(workspace_name, auth_domain_name, project)
 
-    if member_status_code != 200:  # adding ACLs to workspace fail
-        workspace_dict["workspace_ACLs_error"] = member_response
+    # add ACLs to workspace if workspace creation success
+    add_member_success, add_member_message = add_members_to_workspace(workspace_name, auth_domain_name, project)
+
+    if not add_member_success:
+        workspace_dict["workspace_ACLs_error"] = add_member_message
         return workspace_dict
 
     # adding ACLs to workspace success
-    workspace_dict["workspace_ACLs"] = member_emails  # update dict with ACL emails
+    workspace_dict["workspace_ACLs"] = add_member_message  # update dict with ACL emails
     workspace_dict["workspace_setup_status"] = "Success"  # final workspace setup step
 
     return workspace_dict
@@ -296,8 +297,8 @@ def setup_workspaces(tsv, project="anvil-datastorage"):
 
     # create df for output tsv file
     col_names = ["input_workspace_name", "input_auth_domain_name",
-                 "auth_domain_email", "auth_domain_creation_error",
-                 "email_added_to_AD", "add_email_to_AD_error",
+                 "auth_domain_email", "auth_domain_setup_error",
+                 "email_added_to_AD",
                  "workspace_link", "workspace_creation_error",
                  "workspace_ACLs", "workspace_ACLs_error",
                  "workspace_setup_status"]
