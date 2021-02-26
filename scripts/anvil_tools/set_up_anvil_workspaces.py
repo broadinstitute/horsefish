@@ -182,7 +182,12 @@ def add_member_to_auth_domain(auth_domain_name, email, permission):
 
 
 def setup_auth_domain(auth_domain_name):
-    """Create the Terra goolge group to be used as auth domain on workspaces."""
+    """Set up Terra group - create group and add members to group - used as auth domain on workspaces.
+        Returned values -
+        status_code: from create AD and add member to AD requests
+        json_response: if not success, json with error details
+        string_message: unique error message when group already exists
+        boolean: True/False based on success/fail of add member to AD."""
 
     # request URL for createGroup
     uri = f"https://api.firecloud.org/api/groups/{auth_domain_name}"
