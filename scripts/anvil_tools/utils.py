@@ -67,9 +67,9 @@ def publish_workspace_to_data_library(workspace_name, project="anvil-datastorage
 
 # function to add dataset/library metadata to a workspace
 def add_library_metadata_to_workspace(request, workspace_name, workspace_project="anvil-datastorage"):
-    """PUT request to the putLibraryMetadata API."""
+    """Add/update Dataset/library attributes in a workspace."""
 
-    # request URL for putLibraryMetadata
+    # Library/putLibraryMetadata
     uri = f"https://api.firecloud.org/api/library/{workspace_project}/{workspace_name}/metadata"
 
     # Get access token and and add to headers for requests.
@@ -80,12 +80,13 @@ def add_library_metadata_to_workspace(request, workspace_name, workspace_project
     response = requests.put(uri, headers=headers, data=request)
     status_code = response.status_code
 
-    # print success or fail message based on status code
+    # adding metadata fail
     if status_code != 200:
         print(f"WARNING: Failed to add/update Dataset attributes to {workspace_project}/{workspace_name}")
         print("Please see full response for error:")
         print(response.text)
         return False, response.text
 
+    # adding metadata success
     print(f"Successfully added/updated {workspace_project}/{workspace_name} with Dataset attributes.")
     return True, response.text
