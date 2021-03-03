@@ -4,7 +4,6 @@ Usage:
     > python3 set_up_anvil_workspace.py -t TSV_FILE [-p BILLING-PROJECT] """
 
 import argparse
-import datetime
 import json
 import pandas as pd
 import requests
