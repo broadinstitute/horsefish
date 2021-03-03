@@ -70,7 +70,7 @@
         1. "workspace_name"
         2. "auth_domain_name"
     Output is a .tsv file with name:
-        1. `timestamp_workspaces_setup_status.tsv`
+        1. `{timestamp}_workspaces_setup_status.tsv`
 ##### Usage
     Locally
         `python3 /scripts/anvil_tools/set_up_anvil_workspace.py -t TSV_FILE [-p WORKSPACE_PROJECT]
@@ -107,7 +107,7 @@
     Input is a .tsv file with column:
         1. `workspace_name`
     Output is a .tsv file with name:
-        1. `timestamp_workspaces_published_status.tsv`
+        1. `{timestamp}_workspaces_published_status.tsv`
 ##### Usage
     Locally
         `python3 publish_workspaces_to_data_library.py -t TSV_FILE [-p BILLING-PROJECT]`
