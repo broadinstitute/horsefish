@@ -19,7 +19,7 @@ def setup_single_data_delivery_workspace(request, project="anvil-datastorage"):
                       "workspace_link": "NA",
                       "dataset_attributes_status": "NA",
                       "publish_workspace_status": "Incomplete",
-                      "workspace_setup_status": "Failed"}
+                      "final_workspace_status": "Failed"}
 
     # update the workspace's dataset attributes per request in list of requests
     workspace_name = request["name"]
@@ -61,7 +61,7 @@ def setup_data_delivery_workspaces(tsv):
     col_names = ["input_workspace_name", "input_project_name",
                  "workspace_link",
                  "post_dataset_attributes_status", "publish_workspace_error",
-                 "workspace_setup_status"]
+                 "final_workspace_status"]
     published_workspace_statuses = pd.DataFrame(columns=col_names)
 
     # make json request for each workspace and append json request to list of requests

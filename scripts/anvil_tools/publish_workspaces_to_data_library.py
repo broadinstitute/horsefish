@@ -18,7 +18,7 @@ def publish_single_workspace(workspace_info, project="anvil-datastorage"):
                       "input_workspace_project": "NA",
                       "workspace_link": "NA",
                       "publish_workspace_error": "NA",
-                      "publish_workspace_status": "Failed"}
+                      "final_workspace_status": "Failed"}
 
     workspace_name = workspace_info["workspace_name"]
     workspace_dict["input_workspace_name"] = workspace_name
@@ -45,7 +45,7 @@ def setup_workspaces_for_publication(tsv, project="anvil-datastorage"):
     # create df for output tsv file
     col_names = ["input_workspace_name", "input_workspace_project",
                  "workspace_link",
-                 "publish_workspace_error", "publish_workspace_status"]
+                 "publish_workspace_error", "final_workspace_status"]
 
     published_workspace_statuses = pd.DataFrame(columns=col_names)
 
