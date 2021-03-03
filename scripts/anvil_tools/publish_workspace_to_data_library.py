@@ -30,8 +30,8 @@ def write_output_report(workspace_status_dataframe):
     workspace_status_dataframe.to_csv(output_filename, sep="\t", index=False)
 
     # count success and failed workspaces and report to stdout
-    successes = workspace_status_dataframe.workspace_setup_status.str.count("Success").sum()
-    fails = workspace_status_dataframe.workspace_setup_status.str.count("Failed").sum()
+    successes = workspace_status_dataframe.publish_workspace_status.str.count("Success").sum()
+    fails = workspace_status_dataframe.publish_workspace_status.str.count("Failed").sum()
     total = successes + fails
     print(f"Number of workspaces passed set-up: {successes}/{total}")
     print(f"Number of workspaces failed set-up: {fails}/{total}")
@@ -58,10 +58,10 @@ def call_publish_library_workspace_api(workspace_name, project="anvil-datastorag
         print(f"WARNING: Failed to publish workspace to Data Library: {project}/{workspace_name}.")
         print("Please see full response for error:")
         print(response.text)
-        return False, response
+        return False, response.text
 
     print(f"Successfully published {project}/{workspace_name} to Data Library.")
-    return True, response
+    return True, response.text
 
 
 def publish_single_workspace(workspace_info, project="anvil-datastorage"):
@@ -69,23 +69,24 @@ def publish_single_workspace(workspace_info, project="anvil-datastorage"):
 
     # create dictionary to populate for output tsv file
     workspace_dict = {"input_workspace_name": "NA",
-                      "input_project_name": "NA",
+                      "input_workspace_project": "NA",
                       "workspace_link": "NA",
                       "publish_workspace_error": "NA",
                       "publish_workspace_status": "Failed"}
 
     workspace_name = workspace_info["workspace_name"]
-    workspace_dict["input_project_name"] = "Success"
-    workspace_dict["workspace_link"] = (f"https://portal.firecloud.org/#workspaces/{project}/{workspace_name}").replace(" ", "%20")
+    workspace_dict["input_workspace_name"] = workspace_name
+    workspace_dict["input_workspace_project"] = project
 
     # call api to publish workspace and get response
     success, response = call_publish_library_workspace_api(workspace_name, project)
 
     if not success:                                         # publish fail
-        workspace_dict["workspace_publish_error"] = response
+        workspace_dict["publish_workspace_error"] = response
         return workspace_dict
 
-    workspace_dict["workspace_publish_status"] = "Success"  # publish success
+    workspace_dict["workspace_link"] = (f"https://portal.firecloud.org/#workspaces/{project}/{workspace_name}").replace(" ", "%20")
+    workspace_dict["publish_workspace_status"] = "Success"  # publish success
     return workspace_dict
 
 
@@ -96,9 +97,10 @@ def setup_all_workspaces_to_publish(tsv, project="anvil-datastorage"):
     to_publish_workspaces = pd.read_csv(tsv, sep="\t")
 
     # create df for output tsv file
-    col_names = ["input_workspace_name", "input_project_name",
-                 "workspace_link", "publish_workspace_error",
-                 "publish_workspace_error"]
+    col_names = ["input_workspace_name", "input_workspace_project",
+                 "workspace_link",
+                 "publish_workspace_error", "publish_workspace_status"]
+
     published_workspace_statuses = pd.DataFrame(columns=col_names)
 
     # per row in input tsv/df
@@ -115,7 +117,7 @@ def setup_all_workspaces_to_publish(tsv, project="anvil-datastorage"):
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description='')
+    parser = argparse.ArgumentParser(description='Publish workspaces to Dataset Library.')
 
     parser.add_argument('-t', '--tsv', required=True, type=str, help='tsv file with attributes to post to workspaces.')
     parser.add_argument('-p', '--workspace_project', type=str, default="anvil-datastorage", help='Workspace Project/Namespace')
