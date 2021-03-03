@@ -26,7 +26,7 @@ def write_output_report(workspace_status_dataframe):
 
     # create timestamp and use to label output file
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    output_filename = f"{timestamp}_workspaces_setup_status.tsv"
+    output_filename = f"{timestamp}_workspaces_published_status.tsv"
     workspace_status_dataframe.to_csv(output_filename, sep="\t", index=False)
 
     # count success and failed workspaces and report to stdout
