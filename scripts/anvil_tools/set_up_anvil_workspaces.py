@@ -10,6 +10,7 @@ import pandas as pd
 import requests
 
 from oauth2client.client import GoogleCredentials
+from utils import write_output_report
 
 ADMIN_ANVIL_EMAIL = "anvil_admins@firecloud.org"
 
@@ -22,23 +23,6 @@ def get_access_token():
     credentials = credentials.create_scoped(scopes)
 
     return credentials.get_access_token().access_token
-
-
-def write_output_report(report_df):
-    """Report workspace set-up stats and create output tsv file from provided dataframe."""
-
-    # create timestamp and use to label output file
-    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    output_filename = f"{timestamp}_workspaces_setup_status.tsv"
-    report_df.to_csv(output_filename, sep="\t", index=False)
-
-    # count success and failed workspaces and report to stdout
-    successes = report_df.workspace_setup_status.str.count("Success").sum()
-    fails = report_df.workspace_setup_status.str.count("Failed").sum()
-    total = successes + fails
-    print(f"Number of workspaces passed set-up: {successes}/{total}")
-    print(f"Number of workspaces failed set-up: {fails}/{total}")
-    print(f"All workspace set-up (success or fail) details available in output file: {output_filename}")
 
 
 def add_members_to_workspace(workspace_name, auth_domain_name, project="anvil_datastorage"):
@@ -315,12 +299,12 @@ def setup_workspaces(tsv, project="anvil-datastorage"):
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description='')
+    parser = argparse.ArgumentParser(description='Set-up AnVIL external data delivery workspaces.')
 
     parser.add_argument('-t', '--tsv', required=True, type=str, help='tsv file with workspace name and auth domains to create.')
     parser.add_argument('-p', '--workspace_project', type=str, default="anvil-datastorage", help='workspace project/namespace. default: anvil-datastorage')
 
     args = parser.parse_args()
 
-    # call to create request body PER row and make API call to update attributes
+    # call to create and set up external data delivery workspaces
     setup_workspaces(args.tsv, args.workspace_project)

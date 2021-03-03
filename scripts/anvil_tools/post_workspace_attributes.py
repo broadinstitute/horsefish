@@ -5,7 +5,6 @@ Usage:
 
 import argparse
 import pandas as pd
-import requests
 
 from utils import add_library_metadata_to_workspace, \
     publish_workspace_to_data_library, \
