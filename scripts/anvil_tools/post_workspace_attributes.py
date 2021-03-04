@@ -11,7 +11,7 @@ from utils import add_library_metadata_to_workspace, \
     write_output_report
 
 
-def setup_single_data_delivery_workspace(request, project="anvil-datastorage"):
+def setup_single_data_delivery_workspace(request, workspace_name, project="anvil-datastorage"):
     """Update workspace with Dataset Attributes and publish to Data Library."""
 
     workspace_dict = {"input_workspace_name": "NA",
@@ -22,7 +22,7 @@ def setup_single_data_delivery_workspace(request, project="anvil-datastorage"):
                       "final_workspace_status": "Failed"}
 
     # update the workspace's dataset attributes per request in list of requests
-    workspace_name = request["name"]
+    # workspace_name = request["name"]
     workspace_dict["input_workspace_name"] = workspace_name
     workspace_dict["input_project_name"] = project
     workspace_dict["workspace_link"] = (f"https://app.terra.bio/#workspaces/{project}/{workspace_name}").replace(" ", "%20")
@@ -47,8 +47,8 @@ def setup_single_data_delivery_workspace(request, project="anvil-datastorage"):
     return workspace_dict
 
 
-def setup_data_delivery_workspaces(tsv):
-    """Create array of json requests per row in tsv file."""
+def setup_data_delivery_workspaces(tsv, project="anvil-datastorage"):
+    """Post dataset attributes to workspace and publish workspace to Data Library (FireCloud)."""
 
     # read input tsv into dataframe, workspace name = index and edit dataframe
     all_workspaces = pd.read_csv(tsv, sep="\t", index_col="name")
@@ -65,13 +65,14 @@ def setup_data_delivery_workspaces(tsv):
     published_workspace_statuses = pd.DataFrame(columns=col_names)
 
     # make json request for each workspace and append json request to list of requests
-    row_requests = []
+    # row_requests = []
+    # for index, row in all_workspaces_modified.iterrows():
     for workspace in all_workspaces_modified.index:
         row_json_request = all_workspaces_modified.loc[workspace].to_json()
-        row_requests.append(row_json_request)
+        # row_requests.append(row_json_request)
 
-    for request in row_requests:
-        row_dict = setup_single_data_delivery_workspace(request)
+    # for request in row_requests:
+        row_dict = setup_single_data_delivery_workspace(row_json_request, workspace, project)
 
         # append single workspace's dictionary of statuses to output dataframe
         published_workspace_statuses = published_workspace_statuses.append(row_dict, ignore_index=True)

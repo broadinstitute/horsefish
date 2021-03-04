@@ -32,7 +32,7 @@ def publish_single_workspace(workspace_info, project="anvil-datastorage"):
         return workspace_dict
 
     workspace_dict["workspace_link"] = (f"https://portal.firecloud.org/#workspaces/{project}/{workspace_name}").replace(" ", "%20")
-    workspace_dict["publish_workspace_status"] = "Success"  # publish success
+    workspace_dict["final_workspace_status"] = "Success"  # publish success
     return workspace_dict
 
 
