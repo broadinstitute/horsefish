@@ -8,6 +8,16 @@ DEFAULT_MESSAGE = "We are currently investigating an issue impacting the platfor
 DEFAULT_LINK = "https://support.terra.bio/hc/en-us/sections/360003692231-Service-Notifications"
 
 
+def convert_service_banner_json(json):
+    """Convert json file to string if supplied with custom banner json file."""
+
+    # open json file
+    with open(json, "r") as j:
+        json_string = j.read()
+
+    return json_string
+
+
 def build_service_banner(title, message, link):
     """Create a json banner using args if they exist, else implement default values."""
 
@@ -73,6 +83,8 @@ if __name__ == '__main__':
                         help='custom message for service banner')
     parser.add_argument('--link', required=False, default=DEFAULT_LINK,
                         help='custom link to service incident alerts page')
+    parser.add_argument('--json', type=str, required=False,
+                        help='path to json file with banner details.')
 
     args = parser.parse_args()
 
@@ -86,6 +98,11 @@ if __name__ == '__main__':
 
     if args.delete:
         clear_service_banner(args.env)
+
+    # if user passes in a json file instead of individual string inputs
+    if args.json:
+        banner = convert_service_banner_json(args.json)
     else:
         banner = build_service_banner(args.title, args.message, args.link)
-        update_service_banner(args.env, banner)
+
+    update_service_banner(args.env, banner)
