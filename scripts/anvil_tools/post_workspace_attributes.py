@@ -47,7 +47,7 @@ def setup_single_data_delivery_workspace(request, workspace_name, project="anvil
     return workspace_dict
 
 
-def format_dataframe(workspace_row):
+def format_workspace_attributes(workspace_row):
     """Format workspace row Series object and convert to json."""
 
     list_dtype_cols = ["library:consentCodes",
@@ -94,7 +94,7 @@ def setup_data_delivery_workspaces(tsv, project="anvil-datastorage"):
         row_json_request = all_workspaces_modified_df.loc[workspace]
 
         # create validated json
-        validated_json = format_dataframe(row_json_request)
+        validated_json = format_workspace_attributes(row_json_request)
 
         row_dict = setup_single_data_delivery_workspace(validated_json, workspace, project)
 
