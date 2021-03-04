@@ -50,6 +50,8 @@ def setup_single_data_delivery_workspace(request, workspace_name, project="anvil
 def format_workspace_attributes(workspace_row):
     """Format workspace row Series object and convert to json."""
 
+    # col names in this list taken from attribute-definitions.json. Check link for details and possible updates to list:
+    # https://github.com/broadinstitute/firecloud-orchestration/blob/develop/src/main/resources/library/attribute-definitions.json
     list_dtype_cols = ["library:consentCodes",
                        "library:dataCategory",
                        "library:dataFileFormats",
