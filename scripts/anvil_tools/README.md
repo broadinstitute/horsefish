@@ -70,7 +70,7 @@
         1. "workspace_name"
         2. "auth_domain_name"
     Output is a .tsv file with name:
-        1. `timestamp_workspaces_setup_status.tsv`
+        1. `{timestamp}_workspaces_setup_status.tsv`
 ##### Usage
     Locally
         `python3 /scripts/anvil_tools/set_up_anvil_workspace.py -t TSV_FILE [-p WORKSPACE_PROJECT]
@@ -94,6 +94,25 @@
         `python3 post_workspace_attributes.py -t TSV_FILE [-p BILLING-PROJECT]`
     Docker
         `docker run --rm -it -v "$HOME"/.config:/.config -v "$HOME"/local_data_directory/:/data broadinstitute/horsefish:anvil_tools bash -c "cd data; python3 /scripts/anvil_tools/post_workspace_attributes.py -t /data/INPUT.tsv [-p WORKSPACE_PROJECT]"`
+
+        Note: local_data_directory should be the path to the folder where your input .tsv file is located.
+##### Flags
+    1. `--tsv`, `-t`: input .tsv file (required)
+    2. `--project`, `-p`: workspace project/namespace for listed workspaces in tsv (default = anvil_datastorage)
+
+#### **publish_workspaces_to_data_library.py**
+##### Description
+    Post workspaces listed in input tsv file to the Firecloud Data Library. Must run post_workspace_attributes.py first.
+    
+    Input is a .tsv file with column:
+        1. `workspace_name`
+    Output is a .tsv file with name:
+        1. `{timestamp}_workspaces_published_status.tsv`
+##### Usage
+    Locally
+        `python3 publish_workspaces_to_data_library.py -t TSV_FILE [-p BILLING-PROJECT]`
+    Docker
+        `docker run --rm -it -v "$HOME"/.config:/.config -v "$HOME"/local_data_directory/:/data broadinstitute/horsefish:anvil_tools bash -c "cd data; python3 /scripts/anvil_tools/publish_workspaces_to_data_library.py -t /data/INPUT.tsv [-p WORKSPACE_PROJECT]"`
 
         Note: local_data_directory should be the path to the folder where your input .tsv file is located.
 ##### Flags

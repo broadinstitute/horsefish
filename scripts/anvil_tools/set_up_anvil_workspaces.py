@@ -4,41 +4,18 @@ Usage:
     > python3 set_up_anvil_workspace.py -t TSV_FILE [-p BILLING-PROJECT] """
 
 import argparse
-import datetime
 import json
 import pandas as pd
 import requests
 
-from oauth2client.client import GoogleCredentials
+from utils import add_user_to_authorization_domain, \
+    check_workspace_exists, \
+    create_authorization_domain, \
+    get_access_token, \
+    write_output_report
+
 
 ADMIN_ANVIL_EMAIL = "anvil_admins@firecloud.org"
-
-
-def get_access_token():
-    """Get access token."""
-
-    scopes = ["https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/userinfo.email"]
-    credentials = GoogleCredentials.get_application_default()
-    credentials = credentials.create_scoped(scopes)
-
-    return credentials.get_access_token().access_token
-
-
-def write_output_report(report_df):
-    """Report workspace set-up stats and create output tsv file from provided dataframe."""
-
-    # create timestamp and use to label output file
-    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    output_filename = f"{timestamp}_workspaces_setup_status.tsv"
-    report_df.to_csv(output_filename, sep="\t", index=False)
-
-    # count success and failed workspaces and report to stdout
-    successes = report_df.workspace_setup_status.str.count("Success").sum()
-    fails = report_df.workspace_setup_status.str.count("Failed").sum()
-    total = successes + fails
-    print(f"Number of workspaces passed set-up: {successes}/{total}")
-    print(f"Number of workspaces failed set-up: {fails}/{total}")
-    print(f"All workspace set-up (success or fail) details available in output file: {output_filename}")
 
 
 def add_members_to_workspace(workspace_name, auth_domain_name, project="anvil_datastorage"):
@@ -72,29 +49,6 @@ def add_members_to_workspace(workspace_name, auth_domain_name, project="anvil_da
     print(f"Successfully updated {project}/{workspace_name} with the following user(s)/group(s): {emails}.")
     emails_str = ("\n".join(emails))  # write list of emails as strings on new lines
     return True, emails_str
-
-
-def check_workspace_exists(workspace_name, project="anvil-datastorage"):
-    """Determine if a workspace of given namespace/name already exists."""
-
-    # don't need full response - could be very large and time consuming
-    uri = f"https://api.firecloud.org/api/workspaces/{project}/{workspace_name}?fields=owners,workspace.createdBy,workspace.authorizationDomain"
-
-    # Get access token and and add to headers for requests.
-    # -H  "accept: application/json" -H  "Authorization: Bearer [token]
-    headers = {"Authorization": "Bearer " + get_access_token(), "accept": "application/json"}
-
-    # capture response from API and parse out status code
-    response = requests.get(uri, headers=headers)
-    status_code = response.status_code
-
-    if status_code == 404:              # workspace does not exist
-        return False, None
-
-    if status_code != 200:              # additional errors - 403, 500
-        return None, response.text
-
-    return True, response.text       # workspace exists
 
 
 def create_workspace(workspace_name, auth_domain_name, project="anvil-datastorage"):
@@ -162,69 +116,18 @@ def make_create_workspace_request(workspace_name, auth_domain_name, project="anv
     return create_ws_request
 
 
-def add_user_to_auth_domain(auth_domain_name, email, permission):
-    """Add group with given permissions to authorization domain."""
-
-    # request URL for addUserToGroup
-    uri = f"https://api.firecloud.org/api/groups/{auth_domain_name}/{permission}/{email}"
-
-    # Get access token and and add to headers for requests.
-    # -H  "accept: */*" -H  "Authorization: Bearer [token]"
-    headers = {"Authorization": "Bearer " + get_access_token(), "accept": "*/*"}
-
-    # capture response from API and parse out status code
-    response = requests.put(uri, headers=headers)
-    status_code = response.status_code
-
-    if status_code != 204:  # AD update with member fail
-        print(f"WARNING: Failed to update Authorization Domain, {auth_domain_name}, with group: {email}.")
-        print("Check output file for error details.")
-        return False, response.text
-
-    # AD update with member success
-    print(f"Successfully updated Authorization Domain, {auth_domain_name}, with group: {email}.")
-    return True, None
-
-
-def create_auth_domain(auth_domain_name):
-    """Create authorization domain with given name."""
-
-    # request URL for createGroup
-    uri = f"https://api.firecloud.org/api/groups/{auth_domain_name}"
-
-    # Get access token and and add to headers for requests.
-    # -H  "accept: application/json" -H  "Authorization: Bearer [token]"
-    headers = {"Authorization": "Bearer " + get_access_token(), "accept": "application/json"}
-
-    # capture response from API and parse out status code
-    response = requests.post(uri, headers=headers)
-    status_code = response.status_code
-
-    if status_code in [403, 409]:                    # if AD already exists - 403, 409
-        ad_exists_message = "Authorization Domain with name already exists. Select unique name."
-        print(f"WARNING: Failed to setup Authorization Domain with name: {auth_domain_name}. Check output file for error details.")
-        # return status_code, None, ad_exists_message
-        return False, ad_exists_message
-    if status_code != 201:                           # other error - 500
-        print(f"WARNING: Failed to create Authorization Domain with name: {auth_domain_name}. Check output file for error details.")
-        return False, response.text
-
-    print(f"Successfully setup Authorization Domain with name: {auth_domain_name}.")
-    return True, None                               # create AD success - 204
-
-
 def setup_auth_domain(auth_domain_name):
     """Create authorization domain (google group) and add user."""
 
     # create AD with given name
-    ad_success, ad_message = create_auth_domain(auth_domain_name)
+    ad_success, ad_message = create_authorization_domain(auth_domain_name)
 
     if not ad_success:  # AD create fail
         return False, ad_message
 
     # AD create successful
     permission = "ADMIN"
-    is_add_user, add_user_message = add_user_to_auth_domain(auth_domain_name, ADMIN_ANVIL_EMAIL, permission)
+    is_add_user, add_user_message = add_user_to_authorization_domain(auth_domain_name, ADMIN_ANVIL_EMAIL, permission)
 
     if not is_add_user:  # add user to AD fail - create AD success
         return False, add_user_message
@@ -245,7 +148,7 @@ def setup_single_workspace(workspace, project="anvil-datastorage"):
                       "workspace_creation_error": "NA",
                       "workspace_ACLs": "Incomplete",
                       "workspace_ACLs_error": "NA",
-                      "workspace_setup_status": "Failed"}
+                      "final_workspace_status": "Failed"}
 
     # start authorization domain
     auth_domain_name = workspace['auth_domain_name']
@@ -301,7 +204,7 @@ def setup_workspaces(tsv, project="anvil-datastorage"):
                  "email_added_to_AD",
                  "workspace_link", "workspace_creation_error",
                  "workspace_ACLs", "workspace_ACLs_error",
-                 "workspace_setup_status"]
+                 "final_workspace_status"]
     all_row_df = pd.DataFrame(columns=col_names)
 
     # per row in tsv/df
@@ -315,12 +218,12 @@ def setup_workspaces(tsv, project="anvil-datastorage"):
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description='')
+    parser = argparse.ArgumentParser(description='Set-up AnVIL external data delivery workspaces.')
 
     parser.add_argument('-t', '--tsv', required=True, type=str, help='tsv file with workspace name and auth domains to create.')
     parser.add_argument('-p', '--workspace_project', type=str, default="anvil-datastorage", help='workspace project/namespace. default: anvil-datastorage')
 
     args = parser.parse_args()
 
-    # call to create request body PER row and make API call to update attributes
+    # call to create and set up external data delivery workspaces
     setup_workspaces(args.tsv, args.workspace_project)
