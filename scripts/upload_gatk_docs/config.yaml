@@ -1,0 +1,4 @@
+username: # Enter Zendesk Username (Ex: ...@gmail.com)
+token: # Enter Zendesk Token (Ex: a1b2c3)
+gatk_team_id: # Enter Gatk Team id (Ex: 1234)
+permission_group_id: # Enter Permission Group Id (Ex: 1234)
