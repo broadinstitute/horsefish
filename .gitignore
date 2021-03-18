@@ -129,3 +129,6 @@ dmypy.json
 .pyre/
 
 .DS_Store
+
+# Upload GATK Docs Config
+scripts/upload_gatk_docs/config.yaml
