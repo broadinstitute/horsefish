@@ -27,10 +27,12 @@ class TestUploadGATKToolsDocs(unittest.TestCase):
                            "scripts/upload_gatk_docs/test_clean_html/clean_GenotypeSummaries.html"]
         index = 0
         for gatk_doc in gatk_docs:
-            if index != -1:
-                self.assertEqual(list(io.open(gatk_doc.local_path)), list(io.open(test_file_paths[index])), "The " + gatk_doc.title + " file don't match")
-                # print(filecmp(gatk_doc.local_path, test_file_paths[index], shallow=False))
-                # self.assertTrue(filecmp(gatk_doc.local_path, test_file_paths[index], shallow=False), "The " + gatk_doc.title + " file don't match")
+            with io.open(gatk_doc.local_path) as actual_lines:
+                actual_file = list(actual_lines)
+
+            with io.open(test_file_paths[index]) as expected_lines:
+                expected_file = list(expected_lines)
+            self.assertEqual(actual_file, expected_file, "The " + gatk_doc.title + " file don't match")
             index = index + 1
 
 

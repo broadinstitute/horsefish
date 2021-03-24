@@ -40,9 +40,14 @@ def clean_html_file(gatkdoc_version, gatkdoc_path, cleanfolder=None):
 
     # Get clean GATK docs folders
     copied_files = os.listdir(cleanfolder)
+    
+    # Remove ".DS_Store"
+    if ".DS_Store" in copied_files:
+        copied_files.remove(".DS_Store")
 
     # Run through all the gatk docs and remove unnecessary sections
     for copied_file in copied_files:
+        print(copied_file)
         # Get new path of clean file
         full_path = os.path.join(cleanfolder, copied_file)
 
@@ -51,7 +56,7 @@ def clean_html_file(gatkdoc_version, gatkdoc_path, cleanfolder=None):
 
         # Get all the lines in a gatk doc
         with open(full_path, 'r') as unfiltered_file:
-            lines = lines = iter(unfiltered_file)
+            lines = iter(unfiltered_file)
             try:
                 while True:
                     # Get the next line in the file
@@ -100,10 +105,12 @@ def clean_html_file(gatkdoc_version, gatkdoc_path, cleanfolder=None):
                             line = next(lines)
                         line = next(lines)
             except StopIteration:
-                # Create the dictionary of updated gatkdoc
-                article_dict[copied_file] = GatkDocs(title=article_title,
-                                                     file_name=copied_file,
-                                                     local_path=full_path)
+                print(f"Done Cleaning {article_title} File")
+
+        # Create the dictionary of updated gatkdoc
+        article_dict[copied_file] = GatkDocs(title=article_title,
+                                             file_name=copied_file,
+                                             local_path=full_path)
 
         # Write to a clean gatk doc
         with open(full_path, 'w') as clean_file:
@@ -119,38 +126,46 @@ def clean_html_file(gatkdoc_version, gatkdoc_path, cleanfolder=None):
     return article_dict
 
 
-def post_section(gatk_version, username, token, headers):
-    """Get the url to post an article to the zendesk folder for this gatk release."""
+def create_section(gatk_version, username, token, headers):
+    """Create a Zendesk section."""
+    url_Tool_Index = 'https://gatk.zendesk.com/api/v2/help_center/en-us/categories/360002369672/sections.json'
+
+    json_file = {"section": {"position": 2,
+                             "sorting": "title",  # will sort contents alphabetically by article title
+                             "locale": "en-us",
+                             "name": gatk_version,
+                             "description": "Tool documentation for GATK release " + gatk_version
+                             }}
+
+    data = json.dumps(json_file)
+
+    try:
+        # create the folder
+        response = requests.post(url_Tool_Index, headers=headers, data=data, auth=(username + '/token', token))
+        url = response.json()['section']['url']  # folder url
+    except Exception as e:
+        exit(f"Error: Can't Make Section {gatk_version} : {e.strerror}")
+
+    return url
+
+
+def get_section_url(gatk_version, username, token, headers):
+    """Get the url to of section."""
     url = 'https://gatk.zendesk.com/api/v2/help_center/en-us/sections.json'
     response = requests.get(url, auth=(username + '/token', token))
     response = response.json()
 
+    # Check if section exist
     section_exists = False
-    for section in response['sections']:  # look for an existing folder with this gatk version name
+    for section in response['sections']:  
         if section['name'] == gatk_version:
             url = section['url']
             section_exists = True
-    if not section_exists:  # if it doesn't already exist, create a folder for this gatk version in Tool Index
-        url_Tool_Index = 'https://gatk.zendesk.com/api/v2/help_center/en-us/categories/360002369672/sections.json'
+    # if section doesn't already exist, create a Zendesk section
+    if not section_exists:
+        url = create_section(gatk_version, username, token, headers)
 
-        json_file = {"section": {"position": 2,
-                                 "sorting": "title",  # will sort contents alphabetically by article title
-                                 "locale": "en-us",
-                                 "name": gatk_version,
-                                 "description": "Tool documentation for GATK release " + gatk_version
-                                 }}
-
-        data = json.dumps(json_file)
-
-        try:
-            # create the folder
-            response = requests.post(url_Tool_Index, headers=headers, data=data, auth=(username + '/token', token))
-        except: 
-            exit("ERROR: Can't make section")
-
-        url = response.json()['section']['url']  # folder url
-
-    # edit url to be the API call to post an article inside
+    # Edit url to be the API call to post an article inside
     post_section_url = url.replace('.json', '/articles.json')
 
     return post_section_url
@@ -159,12 +174,12 @@ def post_section(gatk_version, username, token, headers):
 def post_articles(gatk_version, article_dict, username, token, headers, gatk_team_id, permission_group_id, user_id):
     """Post articles to Zendesk."""
     # get the post url (API call) for the GATK version section folder (e.g. '4.1.4.0') (create the folder if it doesn't exist yet)
-    post_section_url = post_section(gatk_version, username, token, headers)
+    section_url = get_section_url(gatk_version, username, token, headers)
 
     # first loop thorugh and post all articles, collecting their urls
     for article in article_dict.values():  # each `article` is a GatkDocs class
         # post articles in that section folder
-        article.post(post_section_url, user_id, gatk_team_id, permission_group_id, headers, username, token)  # this sets article.url as well
+        article.post(section_url, user_id, gatk_team_id, permission_group_id, headers, username, token)  # this sets article.url as well
 
 
 def update_articles(article_dict, gatkdoc_version, headers, username, token, updatefolder=None):
@@ -179,6 +194,7 @@ def update_articles(article_dict, gatkdoc_version, headers, username, token, upd
     for article in article_dict.values():
         print('in original article ' + article.file_name)
         with open(article.local_path, 'r') as clean_file:
+            # Putting file in a HTML BeautifulSoup
             clean_file_data_soup = bs(clean_file, 'html.parser')
 
         # Create Update file
@@ -193,7 +209,7 @@ def update_articles(article_dict, gatkdoc_version, headers, username, token, upd
                     fixed_url.string = article_dict[original_url].title
                     url.replace_with(fixed_url)
 
-            # Format updated GATK Doc HTML
+            # Format updated GATK Doc to standard HTML format
             format_html = clean_file_data_soup.prettify()
             update_file.write(format_html)
 
@@ -215,7 +231,6 @@ if __name__ == "__main__":
     # GATK docs file path
     gatkdoc_path = args.gatkdoc_path
 
-    # TODO ReadME
     # Get information from config file
     with open("scripts/upload_gatk_docs/config.yaml", "r") as ymlfile:
         config = yaml.load(ymlfile, Loader=yaml.FullLoader)
