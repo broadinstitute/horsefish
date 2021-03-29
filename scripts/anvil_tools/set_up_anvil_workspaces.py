@@ -187,7 +187,7 @@ def setup_single_workspace(workspace, project="anvil-datastorage"):
 
     # adding ACLs to workspace success
     workspace_dict["workspace_ACLs"] = add_member_message  # update dict with ACL emails
-    workspace_dict["workspace_setup_status"] = "Success"  # final workspace setup step
+    workspace_dict["final_workspace_status"] = "Success"  # final workspace setup step
 
     return workspace_dict
 
