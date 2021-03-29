@@ -23,7 +23,7 @@
     Locally
         `python3 /scripts/anvil_tools/set_up_vanallen_workspaces.py -t TSV_FILE [-p WORKSPACE_PROJECT]
     Docker
-        `docker run --rm -it -v "$HOME"/.config:/.config -v "$HOME"/local_data_directory/:/data broadinstitute/horsefish:anvil_tools bash -c "cd data; python3 /scripts/anvil_tools/set_up_vanallen_workspaces.py -t /data/INPUT.tsv [-p WORKSPACE_PROJECT]"`
+        `docker run --rm -it -v "$HOME"/.config:/.config -v "$HOME"/local_data_directory/:/data broadinstitute/horsefish:anvil_tools bash -c "cd data; python3 /scripts/anvil_tools/set_up_vanallen_workspaces.py -t /data/INPUT.tsv [-p NAMESPACE]"`
 
         Note: local_data_directory should be the path to the folder where your input .tsv file is located and where your output .tsv file will be placed.
 ##### Flags

@@ -1,7 +1,7 @@
 """Create workspaces, set up bucket in us-central region, add workspace access to users.
 
 Usage:
-    > python3 set_up_vanallen_workspaces.py -t TSV_FILE [-p BILLING-PROJECT] """
+    > python3 set_up_vanallen_workspaces.py -t TSV_FILE [-p NAMESPACE] """
 
 import argparse
 import json
@@ -181,7 +181,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Set-up Van Allen Lab workspaces.')
 
     parser.add_argument('-t', '--tsv', required=True, type=str, help='tsv file with workspace name to create.')
-    parser.add_argument('-p', '--workspace_project', type=str, default=NAMESPACE, help='workspace project/namespace. default: vanallen-firecloud-nih')
+    parser.add_argument('-p', '--workspace_namespace', type=str, default=NAMESPACE, help='workspace project/namespace. default: vanallen-firecloud-nih')
 
     args = parser.parse_args()
 
