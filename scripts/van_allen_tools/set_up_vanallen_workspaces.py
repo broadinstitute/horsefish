@@ -109,6 +109,8 @@ def make_create_workspace_request(workspace_name, project=NAMESPACE):
     create_ws_request["name"] = workspace_name
     create_ws_request["attributes"] = {}
     create_ws_request["noWorkspaceOwner"] = False
+    # hard coded to ensure that there are no accidental egress charges across regions
+    # specific to van allen lab resources all migrating to this region
     create_ws_request["bucketLocation"] = "us-central1"
 
     return create_ws_request
