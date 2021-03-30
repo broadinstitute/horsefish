@@ -14,6 +14,7 @@ from utils import check_workspace_exists, \
 
 
 NAMESPACE = "vanallen-firecloud-nih"
+BUCKET_REGION = "us-central1"
 
 
 def add_members_to_workspace(workspace_name, project=NAMESPACE):
@@ -109,9 +110,8 @@ def make_create_workspace_request(workspace_name, project=NAMESPACE):
     create_ws_request["name"] = workspace_name
     create_ws_request["attributes"] = {}
     create_ws_request["noWorkspaceOwner"] = False
-    # hard coded to ensure that there are no accidental egress charges across regions
-    # specific to van allen lab resources all migrating to this region
-    create_ws_request["bucketLocation"] = "us-central1"
+    # us-central1 default - all van allen resources to migrate to same region
+    create_ws_request["bucketLocation"] = BUCKET_REGION
 
     return create_ws_request
 
