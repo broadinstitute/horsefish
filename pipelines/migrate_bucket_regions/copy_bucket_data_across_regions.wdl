@@ -42,7 +42,7 @@ task copy_data {
     runtime {
         docker: "gcr.io/google.com/cloudsdktool/cloud-sdk:305.0.0"
         memory: select_first([memory, 10]) + " GB"
-        disks: "local-disk 10 HDD"
+        disks: "local-disk 100 SSD"
         zones: "us-central1-c us-central1-b"
         # us-central1-a and us-central1-f are also us-central1 zones - can we just set us-central1
         preemptible: select_first([preemptible_tries, 5])
