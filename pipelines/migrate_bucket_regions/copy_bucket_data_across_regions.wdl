@@ -46,7 +46,7 @@ task copy_data {
         zones: "us-central1-c us-central1-b"
         # us-central1-a and us-central1-f are also us-central1 zones - can we just set us-central1
         preemptible: select_first([preemptible_tries, 5])
-        cpu: 1
+        cpu: 3
     }
 
     output {
