@@ -34,7 +34,8 @@ task copy_data {
         set -x
         set -e
 
-        gsutil -m cp -R -D -p -c -L copy.log ~{source_bucket_path} ~{destination_bucket_path}
+        # -p requires OWNER access to maintain ACLs
+        gsutil -m cp -R -D -c -L copy.log ~{source_bucket_path} ~{destination_bucket_path}
 
     }
 
