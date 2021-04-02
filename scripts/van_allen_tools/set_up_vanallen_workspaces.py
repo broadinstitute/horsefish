@@ -1,7 +1,7 @@
 """Create workspaces, set up bucket in us-central region, add workspace access to users.
 
 Usage:
-    > python3 set_up_vanallen_workspaces.py -t TSV_FILE [-p NAMESPACE] """
+    > python3 set_up_vanallen_workspaces.py -t TSV_FILE [-n NAMESPACE] """
 
 import argparse
 import json
@@ -22,9 +22,9 @@ def add_members_to_workspace(workspace_name, project=NAMESPACE):
 
     acls = []
     # add van allen group as READER, B.Reardon and J.Park OWNER(s)
-    acls.append({'email': 'GROUP_vanallenlab@firecloud.org', 'accessLevel': 'READER', 'canShare': False, 'canCompute': False})
-    acls.append({'email': 'breardon@broadinstitute.org', 'accessLevel': 'OWNER', 'canShare': True, 'canCompute': True})
-    acls.append({'email': 'jpark@broadinstitute.org', 'accessLevel': 'OWNER', 'canShare': True, 'canCompute': True})
+    # acls.append({'email': 'GROUP_vanallenlab@firecloud.org', 'accessLevel': 'READER', 'canShare': False, 'canCompute': False})
+    # acls.append({'email': 'breardon@broadinstitute.org', 'accessLevel': 'OWNER', 'canShare': True, 'canCompute': True})
+    # acls.append({'email': 'jpark@broadinstitute.org', 'accessLevel': 'OWNER', 'canShare': True, 'canCompute': True})
 
     json_request = json.dumps(acls)
 
