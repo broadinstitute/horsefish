@@ -6,26 +6,33 @@ workflow migrate_data_via_local {
         String destination_bucket_path
     }
     
-    call calculate_largest_file_size {
+    call get_source_bucket_details{
         input:
             source_bucket_path = source_bucket_path
     }
 
+    call calculate_largest_file_size {
+        input:
+            source_bucket_details = get_source_bucket_details.source_bucket_details_file
+    }
+
     call copy_to_destination {
         input:
-            source_bucket_path = source_bucket_path,
+            source_bucket_details = get_source_bucket_details.source_bucket_details_file,
             destination_bucket_path = destination_bucket_path,
             disk_size = calculate_largest_file_size.max_gb
     }
 
     output {
+        File source_bucket_file_info = get_source_bucket_details.source_bucket_details_file
+        Int calculated_disk_size = calculate_largest_file_size.max_gb
         File copy_log = copy_to_destination.log
     }
 }
 
-task calculate_largest_file_size {
+task get_source_bucket_details {
     meta {
-        description: "Determine the size of the largest file in the given source bucket."
+        description: "Get a file with the list of file paths to copy and size of each file in bytes."
     }
 
     input {
@@ -33,7 +40,26 @@ task calculate_largest_file_size {
     }
 
     command {
-        largest_file_in_bytes=$(gsutil du ~{source_bucket_path} | sed "/\/$/d" | tr " " "\t" | tr -s "\t" | sort -n -k1,1nr | awk 'NR==1' | cut -f1) 
+        gsutil du ~{source_bucket_path} | sed "/\/$/d" | tr " " "\t" | tr -s "\t" | sort -n -k1,1nr > source_bucket_details.txt
+    }
+
+    output {
+        File source_bucket_details_file = "source_bucket_details.txt"
+    }
+}
+
+
+task calculate_largest_file_size {
+    meta {
+        description: "Determine the size of the largest file in the given source bucket."
+    }
+
+    input {
+        File source_bucket_details
+    }
+
+    command {
+        largest_file_in_bytes=$(awk 'NR==1' ~{source_bucket_details}  | cut -f1) 
 
         largest_file_in_gb=$(((largest_file_in_bytes/1000000000)+1))
         echo "$largest_file_in_gb" > file_gb
@@ -44,14 +70,15 @@ task calculate_largest_file_size {
     }
 }
 
+
 task copy_to_destination {
     meta {
-        description: "Copies data from source bucket to destination bucket and creates log file."
+        description: "Copy data from source bucket to destination bucket and creates log file."
         volatile: true # do not call cache even if otherwise set at workflow level
     }
 
     input {
-        String source_bucket_path
+        File source_bucket_details
         String destination_bucket_path
         Int disk_size
         Int? preemptible_tries
@@ -62,9 +89,17 @@ task copy_to_destination {
         set -x
         set -e
 
-        # -p requires OWNER access to maintain ACLs
-        gsutil -m cp -R -D -c -L copy.log ~{source_bucket_path} ~{destination_bucket_path}
+        cut -f2 ~{source_bucket_details} > source_bucket_file_paths.txt
 
+        while IFS="\t" read -r file_path
+        do
+            # get the path minus the fc-** to copy to local disk
+            local_file_path=$(echo "$file_path" | tr "/" "\t" | cut -f4- | tr "\t" "/")
+            gsutil -m cp "$file_path" "/tmp/$local_file_path"
+
+            # use path of local copy to copy to destination bucket
+            gsutil -m cp "tmp/$local_file_path" "~{destination_bucket_path}/$local_file_path"
+        done < source_bucket_file_paths.txt
     }
 
     runtime {
@@ -72,13 +107,11 @@ task copy_to_destination {
         memory: select_first([memory, 10]) + " GB"
         disks: "local-disk " + disk_size + " SSD"
         zones: "us-central1-c us-central1-b"
-        # us-central1-a and us-central1-f are also us-central1 zones - can we just set us-central1
         preemptible: select_first([preemptible_tries, 0])
-        cpu: 3
+        cpu: 2
     }
 
     output {
-        # TODO: parse out the bucket source and destination and add into the log file name
         File log = "copy.log"
     }
 }
