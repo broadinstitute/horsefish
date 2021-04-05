@@ -112,7 +112,7 @@ task copy_to_destination {
             gsutil -m cp "$file_path" "/tmp/$local_file_path"
 
             # use path of local copy to copy to destination bucket
-            gsutil -m cp "tmp/$local_file_path" "~{destination_bucket_path}/$local_file_path"
+            gsutil -m cp "/tmp/$local_file_path" "~{destination_bucket_path}/$local_file_path"
         done < source_bucket_file_paths.txt
     }
 
