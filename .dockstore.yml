@@ -1,17 +1,13 @@
 version: 1.2
 workflows:
-   - name: copy_bucket_data_across_regions
-     subclass: WDL
-     primaryDescriptorPath: /pipelines/migrate_bucket_regions/copy_bucket_data_across_regions.wdl
-     testParameterFiles:
-<<<<<<< HEAD
-     -  empty.json
-   - name: migrate_bucket_data_via_local
-     subclass: WDL
-     primaryDescriptorPath: /pipelines/migrate_bucket_regions/migrate_bucket_data_via_local.wdl
-     testParameterFiles:
-     -  empty.json
-  
-=======
-     -  empty.json
->>>>>>> 3fca8dbec64303408a811358b0dca6b9c28d2649
+ - name: copy_bucket_data_across_regions
+   subclass: WDL
+   primaryDescriptorPath: /pipelines/migrate_bucket_regions/copy_bucket_data_across_regions.wdl
+   testParameterFiles:
+    - empty.json
+ - name: migrate_bucket_data_via_local
+   subclass: WDL
+   primaryDescriptorPath: /pipelines/migrate_bucket_regions/migrate_bucket_data_via_local.wdl
+   testParameterFiles:
+    - empty.json
+
