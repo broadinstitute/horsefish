@@ -10,4 +10,9 @@ workflows:
    primaryDescriptorPath: /pipelines/migrate_bucket_regions/migrate_bucket_data_via_local.wdl
    testParameterFiles:
     - empty.json
+ - name: migrate_bucket_data_via_stream
+   subclass: WDL
+   primaryDescriptorPath: /pipelines/migrate_bucket_regions/migrate_bucket_data_via_stream.wdl
+   testParameterFiles:
+    - empty.json
 
