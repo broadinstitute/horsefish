@@ -20,7 +20,7 @@ workflow migrate_data_via_local {
         input:
             source_bucket_details = get_source_bucket_details.source_bucket_details_file,
             destination_bucket_path = destination_bucket_path,
-            memory = calculate_largest_file_size.max_gb
+            disk_size = calculate_largest_file_size.max_gb
     }
 
     output {
@@ -94,9 +94,9 @@ task copy_to_destination {
     input {
         File source_bucket_details
         String destination_bucket_path
-        # Int disk_size
+        Int disk_size
         Int? preemptible_tries
-        Int memory
+        Int? memory
     }
 
     command {
@@ -118,8 +118,8 @@ task copy_to_destination {
 
     runtime {
         docker: "gcr.io/google.com/cloudsdktool/cloud-sdk:305.0.0"
-        memory: "70 GB"
-        disks: "local-disk 100 SSD"
+        memory: select_first([memory, 10]) + " GB"
+        disks: "local-disk " + (disk_size + 10) + " SSD"
         zones: "us-central1-c us-central1-b"
         preemptible: select_first([preemptible_tries, 0])
         cpu: 2
