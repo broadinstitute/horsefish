@@ -122,7 +122,7 @@ task copy_to_destination {
         disks: "local-disk " + disk_size + " SSD"
         zones: "us-central1-c us-central1-b"
         preemptible: select_first([preemptible_tries, 0])
-        cpu: 2
+        cpu: 4
     }
 
     output {
