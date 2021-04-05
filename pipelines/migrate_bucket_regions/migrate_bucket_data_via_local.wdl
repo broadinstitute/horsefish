@@ -43,6 +43,13 @@ task get_source_bucket_details {
         gsutil du ~{source_bucket_path} | sed "/\/$/d" | tr " " "\t" | tr -s "\t" | sort -n -k1,1nr > source_bucket_details.txt
     }
 
+    runtime {
+        docker: "gcr.io/google.com/cloudsdktool/cloud-sdk:305.0.0"
+        memory: "2 GB"
+        disks: "local-disk 10 HDD"
+        zones: "us-central1-c us-central1-b"
+    }
+
     output {
         File source_bucket_details_file = "source_bucket_details.txt"
     }
@@ -63,6 +70,13 @@ task calculate_largest_file_size {
 
         largest_file_in_gb=$(((largest_file_in_bytes/1000000000)+1))
         echo "$largest_file_in_gb" > file_gb
+    }
+
+    runtime {
+        docker: "gcr.io/google.com/cloudsdktool/cloud-sdk:305.0.0"
+        memory: "2 GB"
+        disks: "local-disk 10 HDD"
+        zones: "us-central1-c us-central1-b"
     }
 
     output {
