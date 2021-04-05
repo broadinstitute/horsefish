@@ -109,7 +109,7 @@ task copy_to_destination {
         do
             # get the path minus the fc-**
             local_file_path=$(echo "$file_path" | tr "/" "\t" | cut -f4- | tr "\t" "/")
-            gsutil cat $file_path | gsutil -m cp - "~{destination_bucket_path}/$local_file_path"
+            gsutil cat $file_path | gsutil cp - "~{destination_bucket_path}/$local_file_path"
 
         done < source_bucket_file_paths.txt
     }
