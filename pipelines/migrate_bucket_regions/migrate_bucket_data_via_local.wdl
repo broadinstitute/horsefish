@@ -26,7 +26,8 @@ workflow migrate_data_via_local {
     output {
         File source_bucket_file_info = get_source_bucket_details.source_bucket_details_file
         Int calculated_memory_size = calculate_largest_file_size.max_gb
-        File copy_log = copy_to_destination.log
+        File log_copy_from_src_to_local = copy_to_destination.copy_to_local_log
+        File log_copy_from_local_to_dest = copy_to_destination.copy_from_local_log
     }
 }
 
@@ -109,10 +110,10 @@ task copy_to_destination {
         do
             # get the path minus the fc-** to copy to local disk
             local_file_path=$(echo "$file_path" | tr "/" "\t" | cut -f4- | tr "\t" "/")
-            gsutil -m cp "$file_path" "/tmp/$local_file_path"
+            gsutil -m cp -L copy_to_local.log "$file_path" "/tmp/$local_file_path"
 
             # use path of local copy to copy to destination bucket
-            gsutil -m cp "/tmp/$local_file_path" "~{destination_bucket_path}/$local_file_path"
+            gsutil -m cp -L copy_from_local.log "/tmp/$local_file_path" "~{destination_bucket_path}/$local_file_path"
 
             rm "/tmp/$local_file_path"
         done < source_bucket_file_paths.txt
@@ -129,6 +130,7 @@ task copy_to_destination {
     }
 
     output {
-        File log = "copy.log"
+        File copy_to_local_log = "copy_to_local.log"
+        File copy_from_local_log = "copy_from_local.log"
     }
 }
