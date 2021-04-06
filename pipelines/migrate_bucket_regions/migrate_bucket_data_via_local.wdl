@@ -115,7 +115,7 @@ task copy_to_destination {
             # use path of local copy to copy to destination bucket
             gsutil cp -L copy_from_local.log "/cromwell_root/$local_file_path" "~{destination_bucket_path}/$local_file_path"
 
-            rm "/tmp/$local_file_path"
+            rm "/cromwell_root/$local_file_path"
         done < source_bucket_file_paths.txt
     }
 
