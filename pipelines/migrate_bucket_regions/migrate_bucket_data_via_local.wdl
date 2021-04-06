@@ -122,11 +122,10 @@ task copy_to_destination {
 
     runtime {
         docker: "gcr.io/google.com/cloudsdktool/cloud-sdk:305.0.0"
-        memory: select_first([memory, 10]) + " GB"
-        # disks: "local-disk " + (disk_size + 10) + " SSD"
-        disks: "local-disk 100 SSD"
+        memory: select_first([memory, 2]) + " GB"
+        disks: "local-disk " + (disk_size + 5) + " SSD"
         zones: "us-central1-c us-central1-b"
-        preemptible: select_first([preemptible_tries, 0])
+        preemptible: select_first([preemptible_tries, 1])
         cpu: 2
     }
 
