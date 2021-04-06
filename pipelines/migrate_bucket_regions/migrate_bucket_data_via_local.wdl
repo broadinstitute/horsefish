@@ -110,10 +110,10 @@ task copy_to_destination {
         do
             # get the path minus the fc-** to copy to local disk
             local_file_path=$(echo "$file_path" | tr "/" "\t" | cut -f4- | tr "\t" "/")
-            gsutil cp -L copy_to_local.log "$file_path" "/tmp/$local_file_path"
+            gsutil cp -L copy_to_local.log "$file_path" "/cromwell_root/$local_file_path"
 
             # use path of local copy to copy to destination bucket
-            gsutil cp -L copy_from_local.log "/tmp/$local_file_path" "~{destination_bucket_path}/$local_file_path"
+            gsutil cp -L copy_from_local.log "/cromwell_root/$local_file_path" "~{destination_bucket_path}/$local_file_path"
 
             rm "/tmp/$local_file_path"
         done < source_bucket_file_paths.txt
@@ -123,7 +123,7 @@ task copy_to_destination {
         docker: "gcr.io/google.com/cloudsdktool/cloud-sdk:305.0.0"
         memory: select_first([memory, 10]) + " GB"
         # disks: "local-disk " + (disk_size + 10) + " SSD"
-        disks: "local-disk 500 SSD"
+        disks: "local-disk 100 SSD"
         zones: "us-central1-c us-central1-b"
         preemptible: select_first([preemptible_tries, 0])
         cpu: 2
