@@ -96,7 +96,6 @@ task copy_to_destination {
         File source_bucket_details
         String destination_bucket_path
         Int disk_size
-        Int? preemptible_tries
         Int? memory
     }
 
@@ -125,7 +124,6 @@ task copy_to_destination {
         memory: select_first([memory, 2]) + " GB"
         disks: "local-disk " + (disk_size + 2) + " SSD"
         zones: "us-central1-c us-central1-b"
-        preemptible: select_first([preemptible_tries, 1])
         cpu: 2
     }
 
