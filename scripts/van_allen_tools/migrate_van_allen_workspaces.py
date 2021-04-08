@@ -242,7 +242,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Set-up Van Allen Lab workspaces.')
 
     parser.add_argument('-t', '--tsv', required=True, type=str, help='tsv file with original and new workspace details.')
-    # parser.add_argument('-n', '--workspace_namespace', type=str, default=NAMESPACE, help='workspace project/namespace. default: vanallen-firecloud-nih')
 
     args = parser.parse_args()
 
