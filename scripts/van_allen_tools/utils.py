@@ -47,7 +47,7 @@ def add_tags_to_workspace(workspace_name, tags, project):
     headers = {"Authorization": "Bearer " + get_access_token(), "accept": "application/json", "Content-Type": "application/json"}
 
     # capture response from API and parse out status code
-    response = requests.post(uri, headers=headers, data=tags)
+    response = requests.patch(uri, headers=headers, data=tags)
     status_code = response.status_code
 
     if status_code != 200:  # could not add tags

@@ -21,14 +21,6 @@ BUCKET_REGION = "us-central1"
 def add_members_to_workspace(workspace_name, acls, namespace=NAMESPACE):
     """Add members to workspace permissions."""
 
-    # TODO: remove this commented out code if testing works successfully
-    # acls = []
-    # add van allen group as READER, B.Reardon and J.Park OWNER(s)
-    # acls.append({'email': 'GROUP_vanallenlab@firecloud.org', 'accessLevel': 'READER', 'canShare': False, 'canCompute': False})
-    # acls.append({'email': 'breardon@broadinstitute.org', 'accessLevel': 'OWNER', 'canShare': True, 'canCompute': True})
-    # acls.append({'email': 'jpark@broadinstitute.org', 'accessLevel': 'OWNER', 'canShare': True, 'canCompute': True})
-
-    # json_request = json.dumps(acls)
     json_request = make_add_members_to_workspace_request(acls)
 
     # request URL for updateWorkspaceACL
@@ -206,12 +198,13 @@ def setup_single_workspace(workspace):
         workspace_dict["workspace_tags_error"] = get_tags_message
         return workspace_dict
 
-    add_tags_success, add_tags_message = add_tags_to_workspace(new_workspace_name, json.loads(get_tags_message), new_workspace_namespace)
+    add_tags_success, add_tags_message = add_tags_to_workspace(new_workspace_name, get_tags_message, new_workspace_namespace)
 
     if not add_tags_success:  # if add tags fails
         workspace_dict["workspace_tags_error"] = add_tags_message
         return workspace_dict
 
+    print(f"Successfully updated {new_workspace_namespace}/{new_workspace_namespace} with the following tags: {add_tags_message}")
     workspace_dict["workspace_tags"] = add_tags_message
     workspace_dict["final_workspace_status"] = "Success"  # final workspace setup step
 
@@ -249,7 +242,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Set-up Van Allen Lab workspaces.')
 
     parser.add_argument('-t', '--tsv', required=True, type=str, help='tsv file with original and new workspace details.')
-    parser.add_argument('-n', '--workspace_namespace', type=str, default=NAMESPACE, help='workspace project/namespace. default: vanallen-firecloud-nih')
+    # parser.add_argument('-n', '--workspace_namespace', type=str, default=NAMESPACE, help='workspace project/namespace. default: vanallen-firecloud-nih')
 
     args = parser.parse_args()
 
