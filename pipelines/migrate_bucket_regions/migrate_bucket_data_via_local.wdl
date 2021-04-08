@@ -108,11 +108,11 @@ task copy_to_destination {
         while IFS="\t" read -r file_path
         do
             # get the path minus the fc-** to copy to local disk
-            local_file_path=$(echo "$file_path" | tr "/" "\t" | cut -f4- | tr "\t" "/")
-            gsutil cp -L copy_to_local.log "$file_path" "/cromwell_root/$local_file_path"
+            local_file_path=$(echo "$file_path" | tr "/" "\t" | cut -f3- | tr "\t" "/")
+            gsutil cp -L copy_to_local_log.csv "$file_path" "/cromwell_root/$local_file_path"
 
             # use path of local copy to copy to destination bucket
-            gsutil cp -L copy_from_local.log "/cromwell_root/$local_file_path" "~{destination_bucket_path}/$local_file_path"
+            gsutil cp -L copy_from_local_log.csv "/cromwell_root/$local_file_path" "~{destination_bucket_path}/$local_file_path"
 
             # remove the file before copying next one
             rm "/cromwell_root/$local_file_path"
@@ -128,7 +128,7 @@ task copy_to_destination {
     }
 
     output {
-        File copy_to_local_log = "copy_to_local.log"
-        File copy_from_local_log = "copy_from_local.log"
+        File copy_to_local_log = "copy_to_local_log.csv"
+        File copy_from_local_log = "copy_from_local_log.csv"
     }
 }
