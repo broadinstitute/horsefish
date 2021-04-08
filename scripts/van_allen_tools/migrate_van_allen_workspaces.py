@@ -10,7 +10,7 @@ import requests
 
 from utils import add_tags_to_workspace, check_workspace_exists, \
     get_access_token, get_workspace_authorization_domain, \
-    get_workspace_members, get_workspace_tags, \
+    get_workspace_bucket, get_workspace_members, get_workspace_tags, \
     write_output_report
 
 
@@ -172,6 +172,16 @@ def setup_single_workspace(workspace):
 
     # ws creation success
     workspace_dict["workspace_link"] = (f"https://app.terra.bio/#workspaces/{new_workspace_namespace}/{new_workspace_name}").replace(" ", "%20")
+
+    # get the newly created workspace bucket
+    get_bucket_success, get_bucket_message = get_workspace_bucket(new_workspace_name, new_workspace_namespace)
+
+    if not get_bucket_success:
+        workspace_dict["workspace_bucket"] = get_bucket_message
+        return workspace_dict
+
+    bucket_id = "gs://" + json.loads(get_bucket_message)["workspace"]["bucketName"]
+    workspace_dict["workspace_bucket"] = bucket_id
 
     # get original workspace ACLs json - not including auth domain
     get_workspace_members_success, workspace_members_message = get_workspace_members(original_workspace_name, original_workspace_namespace)

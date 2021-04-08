@@ -103,6 +103,27 @@ def get_workspace_authorization_domain(workspace_name, project):
     return True, response.text
 
 
+def get_workspace_bucket(workspace_name, project):
+    """Get workspace bucket id (gs://fc-) of workspace."""
+
+    uri = f"https://api.firecloud.org/api/workspaces/{project}/{workspace_name}?fields=workspace.bucketName"
+
+    # Get access token and and add to headers for requests.
+    # -H  "accept: application/json" -H  "Authorization: Bearer [token]
+    headers = {"Authorization": "Bearer " + get_access_token(), "accept": "application/json"}
+
+    # capture response from API and parse out status code
+    response = requests.get(uri, headers=headers)
+    status_code = response.status_code
+
+    if status_code != 200:  # could not get bucket id
+        print(f"WARNING: Failed to get bucket id for workspace with name: {project}/{workspace_name}.")
+        print("Check output file for error details.")
+        return False, response.text
+
+    return True, response.text
+
+
 def get_workspace_members(workspace_name, project):
     """Get ACLs of workspace."""
 
