@@ -7,7 +7,7 @@ import argparse
 import json
 import pandas as pd
 import requests
-
+from firecloud import api as fapi
 from utils import add_tags_to_workspace, check_workspace_exists, \
     get_access_token, get_workspace_authorization_domain, \
     get_workspace_bucket, get_workspace_members, get_workspace_tags, \
@@ -20,7 +20,6 @@ BUCKET_REGION = "us-central1"
 
 def add_members_to_workspace(workspace_name, acls, namespace=NAMESPACE):
     """Add members to workspace permissions."""
-
     json_request = make_add_members_to_workspace_request(acls)
 
     # request URL for updateWorkspaceACL
@@ -48,7 +47,6 @@ def add_members_to_workspace(workspace_name, acls, namespace=NAMESPACE):
 
 def create_workspace(workspace_name, auth_domains, namespace=NAMESPACE):
     """Create the Terra workspace."""
-
     # check if workspace already exists
     ws_exists, ws_exists_response = check_workspace_exists(workspace_name, namespace)
 
@@ -99,7 +97,6 @@ def create_workspace(workspace_name, auth_domains, namespace=NAMESPACE):
 
 def make_add_members_to_workspace_request(response_text):
     """Make the json request to pass into add_members_to_workspace()."""
-
     # load response from getWorkslaceACLs
     workspace_members = json.loads(response_text)
 
@@ -116,7 +113,6 @@ def make_add_members_to_workspace_request(response_text):
 
 def make_create_workspace_request(workspace_name, auth_domains, namespace=NAMESPACE):
     """Make the json request to pass into create_workspace()."""
-
     # initialize empty dictionary
     create_ws_request = {}
 
@@ -133,7 +129,6 @@ def make_create_workspace_request(workspace_name, auth_domains, namespace=NAMESP
 
 def setup_single_workspace(workspace):
     """Create one workspace and set ACLs."""
-
     # initialize workspace dictionary with default values assuming failure
     workspace_dict = {"original_workspace_name": "NA", "original_workspace_namespace": "NA",
                       "new_workspace_name": "NA", "new_workspace_namespace": "NA",
@@ -220,10 +215,178 @@ def setup_single_workspace(workspace):
 
     return workspace_dict
 
+def find_and_replace(attr, value, replace_this, with_this):
 
-def setup_workspaces(tsv):
-    """Get the workspace name from input tsv file."""
+    updated_attr = None
+    if isinstance(value, str):  # if value is just a string
+        if replace_this in value:
+            new_value = value.replace(replace_this, with_this)
+            updated_attr = fapi._attr_set(attr, new_value)
+    elif isinstance(value, dict):
+        if replace_this in str(value):
+            value_str = str(value)
+            value_str_new = value_str.replace(replace_this, with_this)
+            value_new = ast.literal_eval(value_str_new)
+            updated_attr = fapi._attr_set(attr, value_new)
+    elif isinstance(value, (bool, int, float, complex)):
+        pass
+    elif value is None:
+        pass
+    else:  # some other type, hopefully this doesn't exist
+        print('unknown type of attribute')
+        print('attr: ' + attr)
+        print('value: ' + str(value))
 
+    return updated_attr
+
+def update_entities(workspace_name, workspace_project, replace_this, with_this):
+    """Update Data Table"""
+    ## update workspace entities
+    print("Updating DATA ENTITIES for " + workspace_name)
+
+    # get data attributes
+    response = fapi.get_entities_with_type(workspace_project, workspace_name)
+    entities = response.json()
+
+    for ent in entities:
+        ent_name = ent['name']
+        ent_type = ent['entityType']
+        ent_attrs = ent['attributes']
+        attrs_list = []
+        for attr in ent_attrs.keys():
+            value = ent_attrs[attr]
+            updated_attr = find_and_replace(attr, value, replace_this, with_this)
+            if updated_attr:
+                attrs_list.append(updated_attr)
+
+        if len(attrs_list) > 0:
+            response = fapi.update_entity(workspace_project, workspace_name, ent_type, ent_name, attrs_list)
+            if response.status_code == 200:
+                print('Updated entities:')
+                for attr in attrs_list:
+                    print('   '+str(attr['attributeName'])+' : '+str(attr['addUpdateAttribute']))
+
+
+def copy_workspace_entities(migration_data):
+    """Copy Van Allen Lab workspaces Data Table."""
+    # update workspace entities
+    original_workspace_name = migration_data["original_workspace_name"]
+    original_workspace_namespace = migration_data["original_workspace_namespace"]
+    new_workspace_name = migration_data["new_workspace_name"]
+    new_workspace_namespace = migration_data["new_workspace_namespace"]
+
+    # Set up the migration_data dict
+    migration_data_with_dt = migration_data
+
+    # Default copy_successful
+    copy_successful = True
+
+    # Default Error
+    error = "NA"
+
+    # get data attributes and copy non-set data table to workspace
+    try:
+        response = fapi.get_entities_with_type(original_workspace_namespace, original_workspace_name)
+        entities = response.json()
+        ent_type_before = None
+        ent_names = []
+        set_list = {}
+        for ent in entities:
+            ent_name = ent['name']
+            ent_type = ent['entityType']
+            if ent == entities[-1] or (ent_type_before and ent_type != ent_type_before):
+                if ent == entities[-1]:
+                    ent_names.append(ent_name)
+                    ent_type_before = ent_type
+                if "_set" in ent_type_before:
+                    set_list[ent_type_before] = ent_names
+                else:
+                    fapi.copy_entities(original_workspace_namespace, original_workspace_name, new_workspace_namespace, new_workspace_name, ent_type_before, ent_names, link_existing_entities=True)
+                    print(f"Copied {ent_type_before} data table: over to {new_workspace_namespace}/{new_workspace_name}")
+                ent_names = []
+            ent_names.append(ent_name)
+            ent_type_before = ent_type
+
+        # copy set Data Table to workspace
+        for etype, enames in set_list.items():
+            fapi.copy_entities(original_workspace_namespace, original_workspace_name, new_workspace_namespace, new_workspace_name, etype, enames, link_existing_entities=True)
+            print(f"Copied {etype} data table: over to {new_workspace_namespace}/{new_workspace_name}")
+
+        # Check if data tables match
+        new_workspace_response = fapi.get_entities_with_type(new_workspace_namespace, new_workspace_name)
+        new_entities = new_workspace_response.json()
+        if entities != new_entities:
+            print(f"Error: Data Tables don't match")
+            error = f"Error: Data Tables don't match"
+
+        # Get original workpace bucket
+        get_bucket_success, get_bucket_message = get_workspace_bucket(original_workspace_name, original_workspace_namespace)
+        original_bucket = json.loads(get_bucket_message)["workspace"]["bucketName"]
+        print(f"Original Bucket: {original_bucket}")
+
+        # Get new workpace bucket
+        new_bucket = migration_data["workspace_bucket"].replace("gs://", "")
+        print(f"New Bucket: {new_bucket}")
+
+        # update bucket links
+        update_entities(new_workspace_name, new_workspace_namespace, replace_this=original_bucket, with_this=new_bucket)
+        print("Updated Data Table with new bucket path")
+    except Exception as e:
+        copy_successful = False
+        print(f"Error: {e}")
+        error = f"Error: {e}"
+
+    migration_data_with_dt["copy_data_table"] = copy_successful
+    migration_data_with_dt["data_table_error"] = error
+
+    return migration_data_with_dt
+
+
+def copy_workspaces_workflows(migration_data):
+    """Copy Van Allen Lab workspaces Workflows."""
+    # set workspace and namespace
+    original_workspace_name = migration_data["original_workspace_name"]
+    original_workspace_namespace = migration_data["original_workspace_namespace"]
+    new_workspace_name = migration_data["new_workspace_name"]
+    new_workspace_namespace = migration_data["new_workspace_namespace"]
+
+    # Set up the migration_data dict
+    migration_data_full = migration_data
+
+    # Default copy_successful
+    copy_successful = True
+
+    # Default Error
+    error = "NA"
+
+    # Get the list of all the workflows
+    try:
+        workflow_list = fapi.list_workspace_configs(original_workspace_namespace, original_workspace_name)
+
+        for workflow in workflow_list.json():
+            # Get workflow config (overview config)
+            workflow_config = workflow['methodRepoMethod']
+
+            # Get workspace config (Detailed config with inputs, oututs, etc)
+            workspace_config = fapi.get_workspace_config(original_workspace_namespace, original_workspace_name, workflow_config['methodNamespace'], workflow_config['methodName'])
+
+            # Create a workflow based on Detailed config
+            fapi.create_workspace_config(new_workspace_namespace, new_workspace_name, workspace_config.json())
+            print(f"Copied {workflow_config['methodName']} workflow : over to {new_workspace_namespace}/{new_workspace_name}")
+    except Exception as e:
+        copy_successful = False
+        print(f"Error: {e}")
+        error = f"Error: {e}"
+
+    # Adding column to tsv
+    migration_data_full["copy_workflow"] = copy_successful
+    migration_data_full["workflow_error"] = error
+
+    return migration_data_full
+
+
+def migrate_workspaces(tsv):
+    """Create and set up migrated workspaces."""
     # read full tsv into dataframe
     setup_info_df = pd.read_csv(tsv, sep="\t")
 
@@ -234,17 +397,28 @@ def setup_workspaces(tsv):
                  "workspace_creation_error",
                  "workspace_ACLs", "workspace_ACLs_error",
                  "workspace_tags", "workspace_tags_error",
-                 "final_workspace_status"]
+                 "final_workspace_status", "copy_data_table", 
+                 "data_table_error", "copy_workflow", "workflow_error"]
 
     all_row_df = pd.DataFrame(columns=col_names)
 
     # per row in tsv/df
     for index, row in setup_info_df.iterrows():
 
-        row_dict = setup_single_workspace(row)
-        all_row_df = all_row_df.append(row_dict, ignore_index=True)
+        # Create Workspace
+        migration_data = setup_single_workspace(row)
 
-    write_output_report(all_row_df)
+        # Copy over data table
+        migration_data_with_dt = copy_workspace_entities(migration_data)
+
+        # Copy over workflows
+        migration_data_full = copy_workspaces_workflows(migration_data_with_dt)
+
+        # Create output tsv
+        migration_data_df = all_row_df.append(migration_data_full, ignore_index=True)
+
+    # Create the report
+    write_output_report(migration_data_df)
 
 
 if __name__ == "__main__":
@@ -256,4 +430,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # call to create and set up workspaces
-    setup_workspaces(args.tsv)
+    migrate_workspaces(args.tsv)
