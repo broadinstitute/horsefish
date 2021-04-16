@@ -96,13 +96,13 @@ if __name__ == '__main__':
     if args.link == '':
         args.link = DEFAULT_LINK
 
-    if args.delete:
-        clear_service_banner(args.env)
-
     # if user passes in a json file instead of individual string inputs
     if args.json:
         banner = convert_service_banner_json(args.json)
     else:
         banner = build_service_banner(args.title, args.message, args.link)
 
-    update_service_banner(args.env, banner)
+    if args.delete:
+        clear_service_banner(args.env)
+    else:
+        update_service_banner(args.env, banner)
