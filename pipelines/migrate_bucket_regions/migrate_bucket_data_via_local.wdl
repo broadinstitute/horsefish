@@ -4,27 +4,29 @@ workflow migrate_data_via_local {
     input {
         String source_bucket_path
         String destination_bucket_path
+
+        File   source_bucket_object_inventory
     }
     
-    call get_source_bucket_details{
-        input:
-            source_bucket_path = source_bucket_path
-    }
+    # call get_source_bucket_details{
+    #     input:
+    #         source_bucket_path = source_bucket_path
+    # }
 
     call calculate_largest_file_size {
         input:
-            source_bucket_details = get_source_bucket_details.source_bucket_details_file
+            source_bucket_details = source_bucket_object_inventory
     }
 
     call copy_to_destination {
         input:
-            source_bucket_details = get_source_bucket_details.source_bucket_details_file,
+            source_bucket_details = source_bucket_object_inventory,
             destination_bucket_path = destination_bucket_path,
             disk_size = calculate_largest_file_size.max_gb
     }
 
     output {
-        File source_bucket_file_info = get_source_bucket_details.source_bucket_details_file
+        # File source_bucket_file_info = get_source_bucket_details.source_bucket_details_file
         Int calculated_memory_size = calculate_largest_file_size.max_gb
         File log_copy_from_src_to_local = copy_to_destination.copy_to_local_log
         File log_copy_from_local_to_dest = copy_to_destination.copy_from_local_log
@@ -67,7 +69,7 @@ task calculate_largest_file_size {
     }
 
     command {
-        largest_file_in_bytes=$(awk 'NR==1' ~{source_bucket_details}  | cut -f1) 
+        largest_file_in_bytes=$(awk 'NR==2' ~{source_bucket_details} | tr "," "\t" | cut -f1) 
 
         largest_file_in_gb=$(((largest_file_in_bytes/1000000000)+1))
         echo "$largest_file_in_gb" > file_gb
@@ -103,7 +105,8 @@ task copy_to_destination {
         set -x
         set -e
 
-        cut -f2 ~{source_bucket_details} > source_bucket_file_paths.txt
+        # comma --> tab | skip header line | get second col (gs paths) > write to new file
+        tr "," "\t" < ~{source_bucket_details} | sed -e 1d | cut -f2 > source_bucket_file_paths.txt
 
         while IFS="\t" read -r file_path
         do
