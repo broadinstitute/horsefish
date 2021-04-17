@@ -69,7 +69,7 @@ task calculate_largest_file_size {
     }
 
     command {
-        largest_file_in_bytes=$(awk 'NR==2' ~{source_bucket_details} | tr "," "\t" | cut -f1) 
+        largest_file_in_bytes=$(tr "," "\t" < ~{source_bucket_details} | sed -e 1d | sort -n -k1,1nr | awk 'NR==1' | cut -f1)
 
         largest_file_in_gb=$(((largest_file_in_bytes/1000000000)+1))
         echo "$largest_file_in_gb" > file_gb
