@@ -116,7 +116,7 @@ task copy_to_destination {
             gsutil cp -c -L copy_to_local_log.csv "$file_path" "/cromwell_root/$local_file_path"
 
             # use path of local copy to copy to destination bucket
-            gsutil cp -L copy_from_local_log.csv "/cromwell_root/$local_file_path" "~{destination_bucket_path}/$local_file_path"
+            gsutil cp -c -L copy_from_local_log.csv "/cromwell_root/$local_file_path" "~{destination_bucket_path}/$local_file_path"
 
             # remove the file before copying next one
             rm "/cromwell_root/$local_file_path"
