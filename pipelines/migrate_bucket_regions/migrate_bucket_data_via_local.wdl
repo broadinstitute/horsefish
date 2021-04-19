@@ -108,10 +108,11 @@ task copy_to_destination {
         # comma --> tab | skip header line | get second col (gs paths) > write to new file
         tr "," "\t" < ~{source_bucket_details} | sed -e 1d | cut -f2 > source_bucket_file_paths.txt
 
-        while IFS="\t" read -r file_path
+        while IFS="" read -r file_path
         do
             # get the path minus the fc-** to copy to local disk
-            local_file_path=$(echo "$file_path" | tr "/" "\t" | cut -f3- | tr "\t" "/")
+            # cut out first 5 characters (gs://)
+            local_file_path=$(echo "$file_path" | cut -c 6-)
             gsutil cp -L copy_to_local_log.csv "$file_path" "/cromwell_root/$local_file_path"
 
             # use path of local copy to copy to destination bucket
