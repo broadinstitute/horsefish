@@ -113,13 +113,13 @@ task copy_to_destination {
             # get the path minus the fc-** to copy to local disk
             # cut out first 5 characters (gs://)
             local_file_path=$(echo "$file_path" | cut -c 6-)
-            gsutil cp -c -L copy_to_local_log.csv "$file_path" "/cromwell_root/$local_file_path"
+            gsutil cp -c -L copy_to_local_log.csv "$file_path" "/cromwell_root/$local_file_path" || true
 
             # use path of local copy to copy to destination bucket
-            gsutil cp -c -L copy_from_local_log.csv "/cromwell_root/$local_file_path" "~{destination_bucket_path}/$local_file_path"
+            gsutil cp -c -L copy_from_local_log.csv "/cromwell_root/$local_file_path" "~{destination_bucket_path}/$local_file_path" || true
 
             # remove the file before copying next one
-            rm "/cromwell_root/$local_file_path"
+            rm "/cromwell_root/$local_file_path" || true
         done < source_bucket_file_paths.txt
     }
 
