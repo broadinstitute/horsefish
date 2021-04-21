@@ -5,6 +5,7 @@ Usage:
 
 import argparse
 import json
+import ast
 import pandas as pd
 import requests
 from firecloud import api as fapi
@@ -130,10 +131,10 @@ def make_create_workspace_request(workspace_name, auth_domains, namespace=NAMESP
 def setup_single_workspace(workspace):
     """Create one workspace and set ACLs."""
     # initialize workspace dictionary with default values assuming failure
-    workspace_dict = {"original_workspace_name": "NA", "original_workspace_namespace": "NA",
-                      "new_workspace_name": "NA", "new_workspace_namespace": "NA",
-                      "workspace_link": "Incomplete", "destination_workspace_bucket": "Incomplete",
+    workspace_dict = {"source_workspace_name": "NA", "source_workspace_namespace": "NA",
                       "source_workspace_bucket": "Incomplete",
+                      "destination_workspace_name": "NA", "destination_workspace_namespace": "NA",
+                      "workspace_link": "Incomplete", "destination_workspace_bucket": "Incomplete",
                       "workspace_creation_error": "NA",
                       "workspace_ACLs": "Incomplete", "workspace_ACLs_error": "NA",
                       "workspace_tags": "Incomplete", "workspace_tags_error": "NA",
@@ -141,25 +142,25 @@ def setup_single_workspace(workspace):
 
     # workspace creation
     # capture original workspace details
-    original_workspace_name = workspace["original_workspace_name"]
-    original_workspace_namespace = workspace["original_workspace_namespace"]
-    workspace_dict["original_workspace_name"] = original_workspace_name
-    workspace_dict["original_workspace_namespace"] = original_workspace_namespace
+    source_workspace_name = workspace["source_workspace_name"]
+    source_workspace_namespace = workspace["source_workspace_namespace"]
+    workspace_dict["source_workspace_name"] = source_workspace_name
+    workspace_dict["source_workspace_namespace"] = source_workspace_namespace
 
     # capture new workspace details
-    new_workspace_name = workspace["new_workspace_name"]
-    new_workspace_namespace = workspace["new_workspace_namespace"]
-    workspace_dict["new_workspace_name"] = new_workspace_name
-    workspace_dict["new_workspace_namespace"] = new_workspace_namespace
+    destination_workspace_name = workspace["destination_workspace_name"]
+    destination_workspace_namespace = workspace["destination_workspace_namespace"]
+    workspace_dict["destination_workspace_name"] = destination_workspace_name
+    workspace_dict["destination_workspace_namespace"] = destination_workspace_namespace
 
     # get original workspace authorization domain
-    get_ad_success, get_ad_message = get_workspace_authorization_domain(original_workspace_name, original_workspace_namespace)
+    get_ad_success, get_ad_message = get_workspace_authorization_domain(source_workspace_name, source_workspace_namespace)
 
     if not get_ad_success:
         return workspace_dict
 
     # create workspace (pass in auth domain response.text)
-    create_ws_success, create_ws_message = create_workspace(new_workspace_name, get_ad_message, new_workspace_namespace)
+    create_ws_success, create_ws_message = create_workspace(destination_workspace_name, get_ad_message, destination_workspace_namespace)
 
     workspace_dict["workspace_creation_error"] = create_ws_message
 
@@ -167,10 +168,10 @@ def setup_single_workspace(workspace):
         return workspace_dict
 
     # ws creation success
-    workspace_dict["workspace_link"] = (f"https://app.terra.bio/#workspaces/{new_workspace_namespace}/{new_workspace_name}").replace(" ", "%20")
+    workspace_dict["workspace_link"] = (f"https://app.terra.bio/#workspaces/{destination_workspace_namespace}/{destination_workspace_name}").replace(" ", "%20")
 
     # get the newly created workspace bucket
-    get_bucket_success, get_bucket_message = get_workspace_bucket(new_workspace_name, new_workspace_namespace)
+    get_bucket_success, get_bucket_message = get_workspace_bucket(destination_workspace_name, destination_workspace_namespace)
 
     if not get_bucket_success:
         workspace_dict["destination_workspace_bucket"] = get_bucket_message
@@ -180,7 +181,7 @@ def setup_single_workspace(workspace):
     workspace_dict["destination_workspace_bucket"] = bucket_id
 
     # get original workspace ACLs json - not including auth domain
-    get_workspace_members_success, workspace_members_message = get_workspace_members(original_workspace_name, original_workspace_namespace)
+    get_workspace_members_success, workspace_members_message = get_workspace_members(source_workspace_name, source_workspace_namespace)
 
     # if original workspace ACLs could not be retrieved - stop workspace setup
     if not get_workspace_members_success:
@@ -188,7 +189,7 @@ def setup_single_workspace(workspace):
         return workspace_dict
 
     # add ACLs to workspace if workspace creation success
-    add_member_success, add_member_message = add_members_to_workspace(new_workspace_name, workspace_members_message, new_workspace_namespace)
+    add_member_success, add_member_message = add_members_to_workspace(destination_workspace_name, workspace_members_message, destination_workspace_namespace)
 
     if not add_member_success:
         workspace_dict["workspace_ACLs_error"] = add_member_message
@@ -198,19 +199,19 @@ def setup_single_workspace(workspace):
     workspace_dict["workspace_ACLs"] = add_member_message  # update dict with ACL emails
 
     # add tags from original workspace to new workspace
-    get_tags_success, get_tags_message = get_workspace_tags(original_workspace_name, original_workspace_namespace)
+    get_tags_success, get_tags_message = get_workspace_tags(source_workspace_name, source_workspace_namespace)
 
     if not get_tags_success:  # if get tags fails
         workspace_dict["workspace_tags_error"] = get_tags_message
         return workspace_dict
 
-    add_tags_success, add_tags_message = add_tags_to_workspace(new_workspace_name, get_tags_message, new_workspace_namespace)
+    add_tags_success, add_tags_message = add_tags_to_workspace(destination_workspace_name, get_tags_message, destination_workspace_namespace)
 
     if not add_tags_success:  # if add tags fails
         workspace_dict["workspace_tags_error"] = add_tags_message
         return workspace_dict
 
-    print(f"Successfully updated {new_workspace_namespace}/{new_workspace_namespace} with the following tags: {add_tags_message}")
+    print(f"Successfully updated {destination_workspace_namespace}/{destination_workspace_namespace} with the following tags: {add_tags_message}")
     workspace_dict["workspace_tags"] = add_tags_message
     workspace_dict["final_workspace_status"] = "Success"  # final workspace setup step
 
@@ -272,10 +273,10 @@ def update_entities(workspace_name, workspace_project, replace_this, with_this):
 def copy_workspace_entities(migration_data):
     """Copy Van Allen Lab workspaces Data Table."""
     # update workspace entities
-    original_workspace_name = migration_data["original_workspace_name"]
-    original_workspace_namespace = migration_data["original_workspace_namespace"]
-    new_workspace_name = migration_data["new_workspace_name"]
-    new_workspace_namespace = migration_data["new_workspace_namespace"]
+    source_workspace_name = migration_data["source_workspace_name"]
+    source_workspace_namespace = migration_data["source_workspace_namespace"]
+    destination_workspace_name = migration_data["destination_workspace_name"]
+    destination_workspace_namespace = migration_data["destination_workspace_namespace"]
 
     # Set up the migration_data dict
     migration_data_with_dt = migration_data
@@ -288,7 +289,7 @@ def copy_workspace_entities(migration_data):
 
     # get data attributes and copy non-set data table to workspace
     try:
-        response = fapi.get_entities_with_type(original_workspace_namespace, original_workspace_name)
+        response = fapi.get_entities_with_type(source_workspace_namespace, source_workspace_name)
         entities = response.json()
         ent_type_before = None
         ent_names = []
@@ -303,26 +304,26 @@ def copy_workspace_entities(migration_data):
                 if "_set" in ent_type_before:
                     set_list[ent_type_before] = ent_names
                 else:
-                    fapi.copy_entities(original_workspace_namespace, original_workspace_name, new_workspace_namespace, new_workspace_name, ent_type_before, ent_names, link_existing_entities=True)
-                    print(f"Copied {ent_type_before} data table: over to {new_workspace_namespace}/{new_workspace_name}")
+                    fapi.copy_entities(source_workspace_namespace, source_workspace_name, destination_workspace_namespace, destination_workspace_name, ent_type_before, ent_names, link_existing_entities=True)
+                    print(f"Copied {ent_type_before} data table over to: {destination_workspace_namespace}/{destination_workspace_name}")
                 ent_names = []
             ent_names.append(ent_name)
             ent_type_before = ent_type
 
         # copy set Data Table to workspace
         for etype, enames in set_list.items():
-            fapi.copy_entities(original_workspace_namespace, original_workspace_name, new_workspace_namespace, new_workspace_name, etype, enames, link_existing_entities=True)
-            print(f"Copied {etype} data table: over to {new_workspace_namespace}/{new_workspace_name}")
+            fapi.copy_entities(source_workspace_namespace, source_workspace_name, destination_workspace_namespace, destination_workspace_name, etype, enames, link_existing_entities=True)
+            print(f"Copied {etype} data table over to: {destination_workspace_namespace}/{destination_workspace_name}")
 
         # Check if data tables match
-        new_workspace_response = fapi.get_entities_with_type(new_workspace_namespace, new_workspace_name)
+        new_workspace_response = fapi.get_entities_with_type(destination_workspace_namespace, destination_workspace_name)
         new_entities = new_workspace_response.json()
         if entities != new_entities:
             print(f"Error: Data Tables don't match")
             error = f"Error: Data Tables don't match"
 
         # Get original workpace bucket
-        get_bucket_success, get_bucket_message = get_workspace_bucket(original_workspace_name, original_workspace_namespace)
+        get_bucket_success, get_bucket_message = get_workspace_bucket(source_workspace_name, source_workspace_namespace)
         original_bucket = json.loads(get_bucket_message)["workspace"]["bucketName"]
         print(f"Original Bucket: {original_bucket}")
 
@@ -331,7 +332,7 @@ def copy_workspace_entities(migration_data):
         print(f"New Bucket: {new_bucket}")
 
         # update bucket links
-        update_entities(new_workspace_name, new_workspace_namespace, replace_this=original_bucket, with_this=f"{new_bucket}/{original_bucket}")
+        update_entities(destination_workspace_name, destination_workspace_namespace, replace_this=original_bucket, with_this=f"{new_bucket}/{original_bucket}")
         print("Updated Data Table with new bucket path")
     except Exception as e:
         copy_successful = False
@@ -349,10 +350,10 @@ def copy_workspace_entities(migration_data):
 def copy_workspaces_workflows(migration_data):
     """Copy Van Allen Lab workspaces Workflows."""
     # set workspace and namespace
-    original_workspace_name = migration_data["original_workspace_name"]
-    original_workspace_namespace = migration_data["original_workspace_namespace"]
-    new_workspace_name = migration_data["new_workspace_name"]
-    new_workspace_namespace = migration_data["new_workspace_namespace"]
+    source_workspace_name = migration_data["source_workspace_name"]
+    source_workspace_namespace = migration_data["source_workspace_namespace"]
+    destination_workspace_name = migration_data["destination_workspace_name"]
+    destination_workspace_namespace = migration_data["destination_workspace_namespace"]
 
     # Set up the migration_data dict
     migration_data_full = migration_data
@@ -365,18 +366,18 @@ def copy_workspaces_workflows(migration_data):
 
     # Get the list of all the workflows
     try:
-        workflow_list = fapi.list_workspace_configs(original_workspace_namespace, original_workspace_name)
+        workflow_list = fapi.list_workspace_configs(source_workspace_namespace, source_workspace_name)
 
         for workflow in workflow_list.json():
             # Get workflow config (overview config)
             workflow_config = workflow['methodRepoMethod']
 
             # Get workspace config (Detailed config with inputs, oututs, etc)
-            workspace_config = fapi.get_workspace_config(original_workspace_namespace, original_workspace_name, workflow_config['methodNamespace'], workflow_config['methodName'])
+            workspace_config = fapi.get_workspace_config(source_workspace_namespace, source_workspace_name, workflow_config['methodNamespace'], workflow_config['methodName'])
 
             # Create a workflow based on Detailed config
-            fapi.create_workspace_config(new_workspace_namespace, new_workspace_name, workspace_config.json())
-            print(f"Copied {workflow_config['methodName']} workflow : over to {new_workspace_namespace}/{new_workspace_name}")
+            fapi.create_workspace_config(destination_workspace_namespace, destination_workspace_name, workspace_config.json())
+            print(f"Copied {workflow_config['methodName']} workflow : over to {destination_workspace_namespace}/{destination_workspace_name}")
     except Exception as e:
         copy_successful = False
         print(f"Error: {e}")
@@ -395,8 +396,8 @@ def migrate_workspaces(tsv):
     setup_info_df = pd.read_csv(tsv, sep="\t")
 
     # create df for output tsv file
-    col_names = ["original_workspace_name", "original_workspace_namespace", 
-                 "source_workspace_bucket", "new_workspace_name", "new_workspace_namespace",
+    col_names = ["source_workspace_name", "source_workspace_namespace", 
+                 "source_workspace_bucket", "destination_workspace_name", "destination_workspace_namespace",
                  "destination_workspace_bucket", "workspace_link",
                  "workspace_creation_error",
                  "workspace_ACLs", "workspace_ACLs_error",
