@@ -132,7 +132,8 @@ def setup_single_workspace(workspace):
     # initialize workspace dictionary with default values assuming failure
     workspace_dict = {"original_workspace_name": "NA", "original_workspace_namespace": "NA",
                       "new_workspace_name": "NA", "new_workspace_namespace": "NA",
-                      "workspace_link": "Incomplete", "workspace_bucket": "Incomplete",
+                      "workspace_link": "Incomplete", "destination_workspace_bucket": "Incomplete",
+                      "source_workspace_bucket": "Incomplete",
                       "workspace_creation_error": "NA",
                       "workspace_ACLs": "Incomplete", "workspace_ACLs_error": "NA",
                       "workspace_tags": "Incomplete", "workspace_tags_error": "NA",
@@ -172,11 +173,11 @@ def setup_single_workspace(workspace):
     get_bucket_success, get_bucket_message = get_workspace_bucket(new_workspace_name, new_workspace_namespace)
 
     if not get_bucket_success:
-        workspace_dict["workspace_bucket"] = get_bucket_message
+        workspace_dict["destination_workspace_bucket"] = get_bucket_message
         return workspace_dict
 
     bucket_id = "gs://" + json.loads(get_bucket_message)["workspace"]["bucketName"]
-    workspace_dict["workspace_bucket"] = bucket_id
+    workspace_dict["destination_workspace_bucket"] = bucket_id
 
     # get original workspace ACLs json - not including auth domain
     get_workspace_members_success, workspace_members_message = get_workspace_members(original_workspace_name, original_workspace_namespace)
@@ -239,9 +240,10 @@ def find_and_replace(attr, value, replace_this, with_this):
 
     return updated_attr
 
+
 def update_entities(workspace_name, workspace_project, replace_this, with_this):
     """Update Data Table"""
-    ## update workspace entities
+    # update workspace entities
     print("Updating DATA ENTITIES for " + workspace_name)
 
     # get data attributes
@@ -325,17 +327,19 @@ def copy_workspace_entities(migration_data):
         print(f"Original Bucket: {original_bucket}")
 
         # Get new workpace bucket
-        new_bucket = migration_data["workspace_bucket"].replace("gs://", "")
+        new_bucket = migration_data["destination_workspace_bucket"].replace("gs://", "")
         print(f"New Bucket: {new_bucket}")
 
         # update bucket links
-        update_entities(new_workspace_name, new_workspace_namespace, replace_this=original_bucket, with_this=new_bucket)
+        update_entities(new_workspace_name, new_workspace_namespace, replace_this=original_bucket, with_this=f"{new_bucket}/{original_bucket}")
         print("Updated Data Table with new bucket path")
     except Exception as e:
         copy_successful = False
         print(f"Error: {e}")
         error = f"Error: {e}"
+        original_bucket = "ERROR"
 
+    migration_data_with_dt["source_workspace_bucket"] = original_bucket
     migration_data_with_dt["copy_data_table"] = copy_successful
     migration_data_with_dt["data_table_error"] = error
 
@@ -391,9 +395,9 @@ def migrate_workspaces(tsv):
     setup_info_df = pd.read_csv(tsv, sep="\t")
 
     # create df for output tsv file
-    col_names = ["original_workspace_name", "original_workspace_namespace",
-                 "new_workspace_name", "new_workspace_namespace",
-                 "workspace_link", "workspace_bucket",
+    col_names = ["original_workspace_name", "original_workspace_namespace", 
+                 "source_workspace_bucket", "new_workspace_name", "new_workspace_namespace",
+                 "destination_workspace_bucket", "workspace_link",
                  "workspace_creation_error",
                  "workspace_ACLs", "workspace_ACLs_error",
                  "workspace_tags", "workspace_tags_error",
