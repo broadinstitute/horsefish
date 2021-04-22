@@ -128,6 +128,150 @@ def make_create_workspace_request(workspace_name, auth_domains, namespace=NAMESP
     return create_ws_request
 
 
+def copy_workspaces_workflows(destination_workspace_namespace, destination_workspace_name, source_workspace_namespace, source_workspace_name):
+    """Copy Van Allen Lab workspaces Workflows."""
+    # Get the list of all the workflows
+    try:
+        workflow_list = fapi.list_workspace_configs(source_workspace_namespace, source_workspace_name)
+
+        # Store all the workflow names
+        workflow_name_list = []
+
+        for workflow in workflow_list.json():
+            # Get workflow config (overview config)
+            workflow_config = workflow['methodRepoMethod']
+
+            workflow_name_list.append(workflow_config['methodName'])
+
+            # Get workspace config (Detailed config with inputs, oututs, etc)
+            workspace_config = fapi.get_workspace_config(source_workspace_namespace, source_workspace_name, workflow_config['methodNamespace'], workflow_config['methodName'])
+
+            # Create a workflow based on Detailed config
+            fapi.create_workspace_config(destination_workspace_namespace, destination_workspace_name, workspace_config.json())
+            print(f"Copied {workflow_config['methodName']} workflow : over to {destination_workspace_namespace}/{destination_workspace_name}")
+
+        # Check if workflows match
+        new_workflow_list = fapi.list_workspace_configs(destination_workspace_namespace, destination_workspace_name).json()
+        if workflow_list != workflow_list:
+            print(f"Error: Data Tables don't match")
+            return False, f"Error: Data Tables don't match", None
+
+    except Exception as error:
+        return False, f"Error: {error}", None
+
+    return True, None, workflow_name_list
+
+
+def find_and_replace(attr, value, replace_this, with_this):
+    """Replace an attribute in a data table row."""
+    updated_attr = None
+    if isinstance(value, str):  # if value is just a string
+        if replace_this in value:
+            new_value = value.replace(replace_this, with_this)
+            updated_attr = fapi._attr_set(attr, new_value)
+    elif isinstance(value, dict):
+        if replace_this in str(value):
+            value_str = str(value)
+            value_str_new = value_str.replace(replace_this, with_this)
+            value_new = ast.literal_eval(value_str_new)
+            updated_attr = fapi._attr_set(attr, value_new)
+    elif isinstance(value, (bool, int, float, complex)):
+        pass
+    elif value is None:
+        pass
+    else:  # some other type, hopefully this doesn't exist
+        print('unknown type of attribute')
+        print('attr: ' + attr)
+        print('value: ' + str(value))
+
+    return updated_attr
+
+
+def update_entities(workspace_name, workspace_project, replace_this, with_this):
+    """Update Data Table"""
+    # update workspace entities
+    print("Updating DATA ENTITIES for " + workspace_name)
+
+    # get data attributes
+    response = fapi.get_entities_with_type(workspace_project, workspace_name)
+    entities = response.json()
+
+    for ent in entities:
+        ent_name = ent['name']
+        ent_type = ent['entityType']
+        ent_attrs = ent['attributes']
+        attrs_list = []
+        for attr in ent_attrs.keys():
+            value = ent_attrs[attr]
+            updated_attr = find_and_replace(attr, value, replace_this, with_this)
+            if updated_attr:
+                attrs_list.append(updated_attr)
+
+        if len(attrs_list) > 0:
+            response = fapi.update_entity(workspace_project, workspace_name, ent_type, ent_name, attrs_list)
+            if response.status_code == 200:
+                print('Updated entities:')
+                for attr in attrs_list:
+                    print('   '+str(attr['attributeName'])+' : '+str(attr['addUpdateAttribute']))
+
+
+def copy_workspace_entities(destination_workspace_namespace, destination_workspace_name, source_workspace_namespace, source_workspace_name, destination_workspace_bucket):
+    """Copy Van Allen Lab workspaces Data Table."""
+    # get data attributes and copy non-set data table to workspace
+    data_table_name_list = []
+    try:
+        response = fapi.get_entities_with_type(source_workspace_namespace, source_workspace_name)
+        entities = response.json()
+        ent_type_before = None
+        ent_names = []
+        set_list = {}
+        for ent in entities:
+            ent_name = ent['name']
+            ent_type = ent['entityType']
+            if ent == entities[-1] or (ent_type_before and ent_type != ent_type_before):
+                if ent == entities[-1]:
+                    ent_names.append(ent_name)
+                    ent_type_before = ent_type
+                if "_set" in ent_type_before:
+                    set_list[ent_type_before] = ent_names
+                else:
+                    fapi.copy_entities(source_workspace_namespace, source_workspace_name, destination_workspace_namespace, destination_workspace_name, ent_type_before, ent_names, link_existing_entities=True)
+                    print(f"Copied {ent_type_before} data table over to: {destination_workspace_namespace}/{destination_workspace_name}")
+                    data_table_name_list.append(ent_type_before)
+                ent_names = []
+            ent_names.append(ent_name)
+            ent_type_before = ent_type
+
+        # copy set Data Table to workspace
+        for etype, enames in set_list.items():
+            fapi.copy_entities(source_workspace_namespace, source_workspace_name, destination_workspace_namespace, destination_workspace_name, etype, enames, link_existing_entities=True)
+            print(f"Copied {etype} data table over to: {destination_workspace_namespace}/{destination_workspace_name}")
+            data_table_name_list.append(etype)
+
+        # Check if data tables match
+        new_entities = fapi.get_entities_with_type(destination_workspace_namespace, destination_workspace_name).json()
+        if entities != new_entities:
+            print(f"Error: Data Tables don't match")
+            return False, f"Error: Data Tables don't match", None
+
+        # Get original workpace bucket
+        get_bucket_success, get_bucket_message = get_workspace_bucket(source_workspace_name, source_workspace_namespace)
+        original_bucket = json.loads(get_bucket_message)["workspace"]["bucketName"]
+        print(f"Original Bucket: {original_bucket}")
+
+        # Get new workpace bucket
+        new_bucket = destination_workspace_bucket.replace("gs://", "")
+        print(f"New Bucket: {new_bucket}")
+
+        # update bucket links
+        update_entities(destination_workspace_name, destination_workspace_namespace, replace_this=original_bucket, with_this=f"{new_bucket}/{original_bucket}")
+        print("Updated Data Table with new bucket path")
+    except Exception as error:
+        return False, f"Error: {error}", None
+
+    return True, None, data_table_name_list
+
+
 def setup_single_workspace(workspace):
     """Create one workspace and set ACLs."""
     # initialize workspace dictionary with default values assuming failure
@@ -138,6 +282,8 @@ def setup_single_workspace(workspace):
                       "workspace_creation_error": "NA",
                       "workspace_ACLs": "Incomplete", "workspace_ACLs_error": "NA",
                       "workspace_tags": "Incomplete", "workspace_tags_error": "NA",
+                      "copy_data_table" : "Incomplete", "copy_data_table_error": "NA",
+                      "copy_workflow" : "Incomplete", "copy_workflow_error": "NA",
                       "final_workspace_status": "Failed"}
 
     # workspace creation
@@ -213,181 +359,30 @@ def setup_single_workspace(workspace):
 
     print(f"Successfully updated {destination_workspace_namespace}/{destination_workspace_namespace} with the following tags: {add_tags_message}")
     workspace_dict["workspace_tags"] = add_tags_message
+
+    # Copy over workflows
+    copy_workflow_success, copy_workflow_message, workflow_name_list = copy_workspaces_workflows(destination_workspace_namespace, destination_workspace_name, source_workspace_namespace, source_workspace_name)
+
+    if not copy_workflow_success:  # if copy workflow fails
+        workspace_dict["copy_workflow_error"] = copy_workflow_message
+        return workspace_dict
+
+    print(f"Successfully copied workflows from {source_workspace_namespace}/{source_workspace_namespace} to {destination_workspace_namespace}/{destination_workspace_namespace}")
+    workspace_dict["copy_workflow"] = workflow_name_list
+
+    # Copy over data table
+    copy_data_table_success, copy_data_table_message, data_table_name_list = copy_workspace_entities(destination_workspace_namespace, destination_workspace_name, source_workspace_namespace, source_workspace_name, bucket_id)
+
+    if not copy_data_table_success:  # if copy workflow fails
+        workspace_dict["copy_data_table_error"] = copy_data_table_message
+        return workspace_dict
+
+    print(f"Successfully copied data tables from {source_workspace_namespace}/{source_workspace_namespace} to {destination_workspace_namespace}/{destination_workspace_namespace}")
+    workspace_dict["copy_data_table"] = data_table_name_list
+
     workspace_dict["final_workspace_status"] = "Success"  # final workspace setup step
 
     return workspace_dict
-
-def find_and_replace(attr, value, replace_this, with_this):
-
-    updated_attr = None
-    if isinstance(value, str):  # if value is just a string
-        if replace_this in value:
-            new_value = value.replace(replace_this, with_this)
-            updated_attr = fapi._attr_set(attr, new_value)
-    elif isinstance(value, dict):
-        if replace_this in str(value):
-            value_str = str(value)
-            value_str_new = value_str.replace(replace_this, with_this)
-            value_new = ast.literal_eval(value_str_new)
-            updated_attr = fapi._attr_set(attr, value_new)
-    elif isinstance(value, (bool, int, float, complex)):
-        pass
-    elif value is None:
-        pass
-    else:  # some other type, hopefully this doesn't exist
-        print('unknown type of attribute')
-        print('attr: ' + attr)
-        print('value: ' + str(value))
-
-    return updated_attr
-
-
-def update_entities(workspace_name, workspace_project, replace_this, with_this):
-    """Update Data Table"""
-    # update workspace entities
-    print("Updating DATA ENTITIES for " + workspace_name)
-
-    # get data attributes
-    response = fapi.get_entities_with_type(workspace_project, workspace_name)
-    entities = response.json()
-
-    for ent in entities:
-        ent_name = ent['name']
-        ent_type = ent['entityType']
-        ent_attrs = ent['attributes']
-        attrs_list = []
-        for attr in ent_attrs.keys():
-            value = ent_attrs[attr]
-            updated_attr = find_and_replace(attr, value, replace_this, with_this)
-            if updated_attr:
-                attrs_list.append(updated_attr)
-
-        if len(attrs_list) > 0:
-            response = fapi.update_entity(workspace_project, workspace_name, ent_type, ent_name, attrs_list)
-            if response.status_code == 200:
-                print('Updated entities:')
-                for attr in attrs_list:
-                    print('   '+str(attr['attributeName'])+' : '+str(attr['addUpdateAttribute']))
-
-
-def copy_workspace_entities(migration_data):
-    """Copy Van Allen Lab workspaces Data Table."""
-    # update workspace entities
-    source_workspace_name = migration_data["source_workspace_name"]
-    source_workspace_namespace = migration_data["source_workspace_namespace"]
-    destination_workspace_name = migration_data["destination_workspace_name"]
-    destination_workspace_namespace = migration_data["destination_workspace_namespace"]
-
-    # Set up the migration_data dict
-    migration_data_with_dt = migration_data
-
-    # Default copy_successful
-    copy_successful = True
-
-    # Default Error
-    error = "NA"
-
-    # get data attributes and copy non-set data table to workspace
-    try:
-        response = fapi.get_entities_with_type(source_workspace_namespace, source_workspace_name)
-        entities = response.json()
-        ent_type_before = None
-        ent_names = []
-        set_list = {}
-        for ent in entities:
-            ent_name = ent['name']
-            ent_type = ent['entityType']
-            if ent == entities[-1] or (ent_type_before and ent_type != ent_type_before):
-                if ent == entities[-1]:
-                    ent_names.append(ent_name)
-                    ent_type_before = ent_type
-                if "_set" in ent_type_before:
-                    set_list[ent_type_before] = ent_names
-                else:
-                    fapi.copy_entities(source_workspace_namespace, source_workspace_name, destination_workspace_namespace, destination_workspace_name, ent_type_before, ent_names, link_existing_entities=True)
-                    print(f"Copied {ent_type_before} data table over to: {destination_workspace_namespace}/{destination_workspace_name}")
-                ent_names = []
-            ent_names.append(ent_name)
-            ent_type_before = ent_type
-
-        # copy set Data Table to workspace
-        for etype, enames in set_list.items():
-            fapi.copy_entities(source_workspace_namespace, source_workspace_name, destination_workspace_namespace, destination_workspace_name, etype, enames, link_existing_entities=True)
-            print(f"Copied {etype} data table over to: {destination_workspace_namespace}/{destination_workspace_name}")
-
-        # Check if data tables match
-        new_workspace_response = fapi.get_entities_with_type(destination_workspace_namespace, destination_workspace_name)
-        new_entities = new_workspace_response.json()
-        if entities != new_entities:
-            print(f"Error: Data Tables don't match")
-            error = f"Error: Data Tables don't match"
-
-        # Get original workpace bucket
-        get_bucket_success, get_bucket_message = get_workspace_bucket(source_workspace_name, source_workspace_namespace)
-        original_bucket = json.loads(get_bucket_message)["workspace"]["bucketName"]
-        print(f"Original Bucket: {original_bucket}")
-
-        # Get new workpace bucket
-        new_bucket = migration_data["destination_workspace_bucket"].replace("gs://", "")
-        print(f"New Bucket: {new_bucket}")
-
-        # update bucket links
-        update_entities(destination_workspace_name, destination_workspace_namespace, replace_this=original_bucket, with_this=f"{new_bucket}/{original_bucket}")
-        print("Updated Data Table with new bucket path")
-    except Exception as e:
-        copy_successful = False
-        print(f"Error: {e}")
-        error = f"Error: {e}"
-        original_bucket = "ERROR"
-
-    migration_data_with_dt["source_workspace_bucket"] = original_bucket
-    migration_data_with_dt["copy_data_table"] = copy_successful
-    migration_data_with_dt["data_table_error"] = error
-
-    return migration_data_with_dt
-
-
-def copy_workspaces_workflows(migration_data):
-    """Copy Van Allen Lab workspaces Workflows."""
-    # set workspace and namespace
-    source_workspace_name = migration_data["source_workspace_name"]
-    source_workspace_namespace = migration_data["source_workspace_namespace"]
-    destination_workspace_name = migration_data["destination_workspace_name"]
-    destination_workspace_namespace = migration_data["destination_workspace_namespace"]
-
-    # Set up the migration_data dict
-    migration_data_full = migration_data
-
-    # Default copy_successful
-    copy_successful = True
-
-    # Default Error
-    error = "NA"
-
-    # Get the list of all the workflows
-    try:
-        workflow_list = fapi.list_workspace_configs(source_workspace_namespace, source_workspace_name)
-
-        for workflow in workflow_list.json():
-            # Get workflow config (overview config)
-            workflow_config = workflow['methodRepoMethod']
-
-            # Get workspace config (Detailed config with inputs, oututs, etc)
-            workspace_config = fapi.get_workspace_config(source_workspace_namespace, source_workspace_name, workflow_config['methodNamespace'], workflow_config['methodName'])
-
-            # Create a workflow based on Detailed config
-            fapi.create_workspace_config(destination_workspace_namespace, destination_workspace_name, workspace_config.json())
-            print(f"Copied {workflow_config['methodName']} workflow : over to {destination_workspace_namespace}/{destination_workspace_name}")
-    except Exception as e:
-        copy_successful = False
-        print(f"Error: {e}")
-        error = f"Error: {e}"
-
-    # Adding column to tsv
-    migration_data_full["copy_workflow"] = copy_successful
-    migration_data_full["workflow_error"] = error
-
-    return migration_data_full
 
 
 def migrate_workspaces(tsv):
@@ -403,7 +398,7 @@ def migrate_workspaces(tsv):
                  "workspace_ACLs", "workspace_ACLs_error",
                  "workspace_tags", "workspace_tags_error",
                  "final_workspace_status", "copy_data_table", 
-                 "data_table_error", "copy_workflow", "workflow_error"]
+                 "copy_data_table_error", "copy_workflow", "copy_workflow_error"]
 
     all_row_df = pd.DataFrame(columns=col_names)
 
@@ -413,14 +408,8 @@ def migrate_workspaces(tsv):
         # Create Workspace
         migration_data = setup_single_workspace(row)
 
-        # Copy over data table
-        migration_data_with_dt = copy_workspace_entities(migration_data)
-
-        # Copy over workflows
-        migration_data_full = copy_workspaces_workflows(migration_data_with_dt)
-
         # Create output tsv
-        migration_data_df = all_row_df.append(migration_data_full, ignore_index=True)
+        migration_data_df = all_row_df.append(migration_data, ignore_index=True)
 
     # Create the report
     write_output_report(migration_data_df)
