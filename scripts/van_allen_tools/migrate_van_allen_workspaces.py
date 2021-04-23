@@ -261,7 +261,7 @@ def copy_workspace_entities(destination_workspace_namespace, destination_workspa
         destination_entities = fapi.get_entities_with_type(destination_workspace_namespace, destination_workspace_name).json()
         if source_entities != destination_entities:
             print(f"Error: Data Tables don't match")
-            return False, f"Error: Data Tables don't match", None
+            return False, f"Error: Data Tables don't match"
 
         # Get original workpace bucket
         get_bucket_success, get_bucket_message = get_workspace_bucket(source_workspace_name, source_workspace_namespace)
