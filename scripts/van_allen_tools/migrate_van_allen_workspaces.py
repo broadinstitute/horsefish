@@ -128,38 +128,46 @@ def make_create_workspace_request(workspace_name, auth_domains, namespace=NAMESP
     return create_ws_request
 
 
-def copy_workspaces_workflows(destination_workspace_namespace, destination_workspace_name, source_workspace_namespace, source_workspace_name):
-    """Copy Van Allen Lab workspaces Workflows."""
-    # Get the list of all the workflows
+def copy_workspace_workflows(destination_workspace_namespace, destination_workspace_name, source_workspace_namespace, source_workspace_name):
+    """Copy workflows from source workspace to a destination workspace."""
+
+    # get the list of all the workflows in source workspaces - allRepos = agora, dockstore
     try:
-        workflow_list = fapi.list_workspace_configs(source_workspace_namespace, source_workspace_name)
+        source_workflows = fapi.list_workspace_configs(source_workspace_namespace, source_workspace_name, allRepos=True)
 
         # Store all the workflow names
-        workflow_name_list = []
+        source_workflow_names = []
+        destination_workflow_names = []
+        workflow_copy_errors = []
 
-        for workflow in workflow_list.json():
-            # Get workflow config (overview config)
-            workflow_config = workflow['methodRepoMethod']
+        for workflow in source_workflows.json():
+            # get workflow name and add to source workflow names list
+            workflow_name = workflow['methodRepoMethod']['methodName']
+            workflow_namespace = workflow['methodRepoMethod']['methodNamespace']
+            source_workflow_names.append(workflow_name)
 
-            workflow_name_list.append(workflow_config['methodName'])
+            # get full workflow configuration (detailed config with inputs, oututs, etc) for single workflow
+            source_workflow_config = fapi.get_workspace_config(source_workspace_namespace, source_workspace_name, workflow_namespace, workflow_name)
 
-            # Get workspace config (Detailed config with inputs, oututs, etc)
-            workspace_config = fapi.get_workspace_config(source_workspace_namespace, source_workspace_name, workflow_config['methodNamespace'], workflow_config['methodName'])
+            # create a workflow based on source workflow config returned above
+            response = fapi.create_workspace_config(destination_workspace_namespace, destination_workspace_name, source_workflow_config.json())
 
-            # Create a workflow based on Detailed config
-            fapi.create_workspace_config(destination_workspace_namespace, destination_workspace_name, workspace_config.json())
-            print(f"Copied {workflow_config['methodName']} workflow : over to {destination_workspace_namespace}/{destination_workspace_name}")
+            # if copy failed
+            if response != 201:
+                print(f"WARNING: Failed to copy {workflow_name} over to: {destination_workspace_namespace}/{destination_workspace_name}. Check output file for details.")
+                workflow_copy_errors.append(response.text)
 
-        # Check if workflows match
-        new_workflow_list = fapi.list_workspace_configs(destination_workspace_namespace, destination_workspace_name).json()
-        if workflow_list != workflow_list:
-            print(f"Error: Data Tables don't match")
-            return False, f"Error: Data Tables don't match", None
+            # if successful, append workflow name to destination workflow list
+            destination_workflow_names.append(workflow_name)
+
+        # check if workflows in source and destination workspaces match
+        if source_workflow_names.sort() != destination_workflow_names.sort():
+            return False, workflow_copy_errors
 
     except Exception as error:
-        return False, f"Error: {error}", None
+        return False, error
 
-    return True, None, workflow_name_list
+    return True, destination_workflow_names
 
 
 def find_and_replace(attr, value, replace_this, with_this):
@@ -188,9 +196,9 @@ def find_and_replace(attr, value, replace_this, with_this):
 
 
 def update_entities(workspace_name, workspace_project, replace_this, with_this):
-    """Update Data Table"""
+    """Update data model tables with new destination workspace bucket file paths."""
     # update workspace entities
-    print("Updating DATA ENTITIES for " + workspace_name)
+    print(f"Starting update of data tables in workspace: {workspace_name}")
 
     # get data attributes
     response = fapi.get_entities_with_type(workspace_project, workspace_name)
@@ -212,24 +220,25 @@ def update_entities(workspace_name, workspace_project, replace_this, with_this):
             if response.status_code == 200:
                 print('Updated entities:')
                 for attr in attrs_list:
-                    print('   '+str(attr['attributeName'])+' : '+str(attr['addUpdateAttribute']))
+                    print('   ' + str(attr['attributeName']) + ' : ' + str(attr['addUpdateAttribute']))
 
 
 def copy_workspace_entities(destination_workspace_namespace, destination_workspace_name, source_workspace_namespace, source_workspace_name, destination_workspace_bucket):
-    """Copy Van Allen Lab workspaces Data Table."""
+    """Copy workspace data tables to destination workspace."""
+
     # get data attributes and copy non-set data table to workspace
     data_table_name_list = []
     try:
         response = fapi.get_entities_with_type(source_workspace_namespace, source_workspace_name)
-        entities = response.json()
+        source_entities = response.json()
         ent_type_before = None
         ent_names = []
         set_list = {}
-        for ent in entities:
+        for ent in source_entities:
             ent_name = ent['name']
             ent_type = ent['entityType']
-            if ent == entities[-1] or (ent_type_before and ent_type != ent_type_before):
-                if ent == entities[-1]:
+            if ent == source_entities[-1] or (ent_type_before and ent_type != ent_type_before):
+                if ent == source_entities[-1]:
                     ent_names.append(ent_name)
                     ent_type_before = ent_type
                 if "_set" in ent_type_before:
@@ -249,8 +258,8 @@ def copy_workspace_entities(destination_workspace_namespace, destination_workspa
             data_table_name_list.append(etype)
 
         # Check if data tables match
-        new_entities = fapi.get_entities_with_type(destination_workspace_namespace, destination_workspace_name).json()
-        if entities != new_entities:
+        destination_entities = fapi.get_entities_with_type(destination_workspace_namespace, destination_workspace_name).json()
+        if source_entities != destination_entities:
             print(f"Error: Data Tables don't match")
             return False, f"Error: Data Tables don't match", None
 
@@ -267,9 +276,9 @@ def copy_workspace_entities(destination_workspace_namespace, destination_workspa
         update_entities(destination_workspace_name, destination_workspace_namespace, replace_this=original_bucket, with_this=f"{new_bucket}/{original_bucket}")
         print("Updated Data Table with new bucket path")
     except Exception as error:
-        return False, f"Error: {error}", None
+        return False, error
 
-    return True, None, data_table_name_list
+    return True, data_table_name_list
 
 
 def setup_single_workspace(workspace):
