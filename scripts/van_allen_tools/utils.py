@@ -38,14 +38,12 @@ def write_output_report(dataframe):
 def write_terra_load_tsv(dataframe):
     """Subset full dataframe of workspace set up information for just attributes needed for Terra data table."""
 
-    source = dataframe.iloc[0]["source_workspace_name"]
-    destination = dataframe.iloc[0]["destination_workspace_name"]
     terra_df = dataframe[["source_workspace_name", "source_workspace_namespace", "source_workspace_bucket",
                           "destination_workspace_name", "destination_workspace_namespace", "destination_workspace_bucket",
                           "source_object_details_file"]]
 
     # add/insert terra specific col to create table in UI
-    terra_df.insert(0, "entity:migration_endpoints_vscript", f"{source}_{destination}")
+    terra_df.insert(0, "entity:migration_endpoints_vscript", terra_df["source_workspace_name"] + "_" + terra_df["destination_workspace_name"])
 
     # create timestamp and use to label output file
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
