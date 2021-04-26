@@ -13,6 +13,7 @@ from utils import add_tags_to_workspace, check_workspace_exists, \
     get_access_token, get_workspace_authorization_domain, \
     get_workspace_bucket, get_workspace_members, get_workspace_tags, \
     write_output_report
+import query_bucket_object_inventory as get_source_objects_file
 
 
 NAMESPACE = "vanallen-firecloud-nih"
@@ -142,32 +143,36 @@ def copy_workspace_workflows(destination_workspace_namespace, destination_worksp
 
         for workflow in source_workflows.json():
             # get workflow name and add to source workflow names list
-            workflow_name = workflow['methodRepoMethod']['methodName']
-            workflow_namespace = workflow['methodRepoMethod']['methodNamespace']
-            source_workflow_names.append(workflow_name)
+            source_workflow_name = workflow['name']
+            source_workflow_namespace = workflow['namespace']
+            source_workflow_names.append(source_workflow_name)
 
-            # get full workflow configuration (detailed config with inputs, oututs, etc) for single workflow
-            source_workflow_config = fapi.get_workspace_config(source_workspace_namespace, source_workspace_name, workflow_namespace, workflow_name)
+            # get full source workflow configuration (detailed config with inputs, oututs, etc) for single workflow
+            source_workflow_config = fapi.get_workspace_config(source_workspace_namespace, source_workspace_name, source_workflow_namespace, source_workflow_name)
 
             # create a workflow based on source workflow config returned above
             response = fapi.create_workspace_config(destination_workspace_namespace, destination_workspace_name, source_workflow_config.json())
+            status_code = response.status_code
 
-            # if copy failed
-            if response != 201:
-                print(f"WARNING: Failed to copy {workflow_name} over to: {destination_workspace_namespace}/{destination_workspace_name}. Check output file for details.")
+            # if copy failed (409 = already exists, does not count as failure)
+            if status_code not in [201, 409]:
                 workflow_copy_errors.append(response.text)
 
-            # if successful, append workflow name to destination workflow list
-            destination_workflow_names.append(workflow_name)
+            # if copy successful, append workflow name to destination workflow list
+            destination_workflow_names.append(source_workflow_name)
 
         # check if workflows in source and destination workspaces match
         if source_workflow_names.sort() != destination_workflow_names.sort():
+            missing_workflows = list(set(source_workflow_names) - set(destination_workflow_names))
+            print(f"WARNING: Failed to copy the following workflows to {destination_workspace_namespace}/{destination_workspace_name}: {missing_workflows}. Check output file for details.")
             return False, workflow_copy_errors
 
-    except Exception as error:
-        return False, error
+        print(f"Successfully copied all workflows from {source_workspace_namespace}/{source_workspace_namespace} to {destination_workspace_namespace}/{destination_workspace_namespace}")
+        return True, destination_workflow_names
 
-    return True, destination_workflow_names
+    except Exception as error:
+        print(f"WARNING: Workflow copying failed due to: {error}")
+        return False, error
 
 
 def find_and_replace(attr, value, replace_this, with_this):
@@ -223,6 +228,65 @@ def update_entities(workspace_name, workspace_project, replace_this, with_this):
                     print('   ' + str(attr['attributeName']) + ' : ' + str(attr['addUpdateAttribute']))
 
 
+def copy_workspace_entities_sushma(destination_workspace_namespace, destination_workspace_name, source_workspace_namespace, source_workspace_name, destination_workspace_bucket):
+    """Copy workspace data tables to destination workspace."""
+
+    source_etypes = fapi.list_entity_types(source_workspace_namespace, source_workspace_name)
+    if source_etypes.status_code != 200:  # getting list of data tables fails
+        message = f"Failed to retrieve list of data tables (entity types) from: {source_workspace_namespace}/{source_workspace_name}. API error: {source_etypes.text}."
+        print(message)
+        return False, message
+    source_set_etypes = [s for s in list(source_etypes.json().keys()) if s.endswith("_set")]
+    source_single_etypes = [s for s in list(source_etypes.json().keys()) if not s.endswith("_set")]
+
+    # for each table that is not a set
+    for etype in source_single_etypes:
+        # get entity names for etype
+        entities = fapi.get_entities(source_workspace_namespace, source_workspace_name, etype)
+        if entities.status_code != 200:  # getting an etype's entities fails
+            message = f"Failed to retrieve entities (row names) for {etype}. API error: {entities.text}"
+            print(message)
+            return False, message
+
+        entity_names = [ent["name"] for ent in entities.json()]
+        # copy single etype (with entities) to destination workspace
+        copy_response = fapi.copy_entities(source_workspace_namespace, source_workspace_name, destination_workspace_namespace, destination_workspace_name, etype, entity_names, link_existing_entities=True)
+        if copy_response.status_code not in [201, 409]:  # if copying table with entities fails
+            message = f"Failed to copy {etype} with entities({entity_names}) to {destination_workspace_namespace}/{destination_workspace_name}. API error: {copy_response.text}."
+            print(message)
+            return False, message
+
+    for set_etype in source_set_etypes:
+        # get entity names for etype
+        set_entities = fapi.get_entities(source_workspace_namespace, source_workspace_name, set_etype)
+        if set_entities.status_code != 200:  # getting a set etype's entities fails
+            message = f"Failed to retrieve entities (row names) for {set_etype}. API error: {set_entities.text}"
+            print(message)
+            return False, message
+
+        set_entity_names = [ent["name"] for ent in set_entities.json()]
+        # copy single etype (with entities) to destination workspace
+        set_copy_response = fapi.copy_entities(source_workspace_namespace, source_workspace_name, destination_workspace_namespace, destination_workspace_name, set_etype, set_entity_names, link_existing_entities=True)
+        if set_copy_response.status_code not in [201, 409]:  # if copying set table with entities fails
+            message = f"Failed to copy {set_etype} with entities({set_entity_names}) to {destination_workspace_namespace}/{destination_workspace_name}. API error: {set_copy_response.text}."
+            print(message)
+            return False, message
+
+    print(f"Successfully copied data tables to {destination_workspace_namespace}/{destination_workspace_name}: {list(source_etypes.json().keys())}")
+    # get original workpace bucket id
+    get_bucket_success, get_bucket_message = get_workspace_bucket(source_workspace_name, source_workspace_namespace)
+    # TODO: handle if getting workspace bucket fails
+    source_bucket = json.loads(get_bucket_message)["workspace"]["bucketName"]
+    destination_bucket = destination_workspace_bucket.replace("gs://", "")
+
+    # update bucket links in the destination workspace so that it matches the path structure of what the WDL generates when it migrates data
+    # gs://new_bucket_id/original_bucket_id/[original data structure]
+    update_entities(destination_workspace_name, destination_workspace_namespace, replace_this=source_bucket, with_this=f"{destination_bucket}/{source_bucket}")
+
+    print(f"Successfully updated data tables with new bucket paths data tables in {destination_workspace_namespace}/{destination_workspace_name}.")
+    return True, list(source_etypes.json().keys())
+
+
 def copy_workspace_entities(destination_workspace_namespace, destination_workspace_name, source_workspace_namespace, source_workspace_name, destination_workspace_bucket):
     """Copy workspace data tables to destination workspace."""
 
@@ -235,6 +299,7 @@ def copy_workspace_entities(destination_workspace_namespace, destination_workspa
         ent_names = []
         set_list = {}
         for ent in source_entities:
+            print(ent)
             ent_name = ent['name']
             ent_type = ent['entityType']
             if ent == source_entities[-1] or (ent_type_before and ent_type != ent_type_before):
@@ -245,36 +310,35 @@ def copy_workspace_entities(destination_workspace_namespace, destination_workspa
                     set_list[ent_type_before] = ent_names
                 else:
                     fapi.copy_entities(source_workspace_namespace, source_workspace_name, destination_workspace_namespace, destination_workspace_name, ent_type_before, ent_names, link_existing_entities=True)
-                    print(f"Copied {ent_type_before} data table over to: {destination_workspace_namespace}/{destination_workspace_name}")
+                    # print(f"Successfully copied {ent_type_before} data table over to: {destination_workspace_namespace}/{destination_workspace_name}.")
                     data_table_name_list.append(ent_type_before)
                 ent_names = []
             ent_names.append(ent_name)
             ent_type_before = ent_type
 
-        # copy set Data Table to workspace
+        # copy set type data tables to workspace
         for etype, enames in set_list.items():
             fapi.copy_entities(source_workspace_namespace, source_workspace_name, destination_workspace_namespace, destination_workspace_name, etype, enames, link_existing_entities=True)
-            print(f"Copied {etype} data table over to: {destination_workspace_namespace}/{destination_workspace_name}")
+            # print(f"Successfully copied {etype} data table over to: {destination_workspace_namespace}/{destination_workspace_name}")
             data_table_name_list.append(etype)
 
         # Check if data tables match
         destination_entities = fapi.get_entities_with_type(destination_workspace_namespace, destination_workspace_name).json()
+
         if source_entities != destination_entities:
             print(f"Error: Data Tables don't match")
-            return False, f"Error: Data Tables don't match"
+            return False, f"Error: Not all source data tables were copied over to the destination workspace."
 
         # Get original workpace bucket
         get_bucket_success, get_bucket_message = get_workspace_bucket(source_workspace_name, source_workspace_namespace)
-        original_bucket = json.loads(get_bucket_message)["workspace"]["bucketName"]
-        print(f"Original Bucket: {original_bucket}")
+        # TODO: handle if getting workspace bucket fails
+        source_bucket = json.loads(get_bucket_message)["workspace"]["bucketName"]
+        destination_bucket = destination_workspace_bucket.replace("gs://", "")
 
-        # Get new workpace bucket
-        new_bucket = destination_workspace_bucket.replace("gs://", "")
-        print(f"New Bucket: {new_bucket}")
-
-        # update bucket links
-        update_entities(destination_workspace_name, destination_workspace_namespace, replace_this=original_bucket, with_this=f"{new_bucket}/{original_bucket}")
-        print("Updated Data Table with new bucket path")
+        # update bucket links in the destination workspace so that it matches the path structure of what the WDL generates when it migrates data
+        # gs://new_bucket_id/original_bucket_id/[original data structure]
+        update_entities(destination_workspace_name, destination_workspace_namespace, replace_this=source_bucket, with_this=f"{destination_bucket}/{source_bucket}")
+        print(f"Successfully updated data tables with new bucket paths.")
     except Exception as error:
         return False, error
 
@@ -291,8 +355,9 @@ def setup_single_workspace(workspace):
                       "workspace_creation_error": "NA",
                       "workspace_ACLs": "Incomplete", "workspace_ACLs_error": "NA",
                       "workspace_tags": "Incomplete", "workspace_tags_error": "NA",
-                      "copy_data_table" : "Incomplete", "copy_data_table_error": "NA",
-                      "copy_workflow" : "Incomplete", "copy_workflow_error": "NA",
+                      "copy_data_tables": "Incomplete", "copy_data_tables_error": "NA",
+                      "copy_workflows": "Incomplete", "copy_workflows_error": "NA",
+                      "source_object_details_file": "Incomplete", "source_object_details_file_error": "NA",
                       "final_workspace_status": "Failed"}
 
     # workspace creation
@@ -301,6 +366,16 @@ def setup_single_workspace(workspace):
     source_workspace_namespace = workspace["source_workspace_namespace"]
     workspace_dict["source_workspace_name"] = source_workspace_name
     workspace_dict["source_workspace_namespace"] = source_workspace_namespace
+
+    # get the source workspace bucket
+    get_source_bucket_success, get_source_bucket_message = get_workspace_bucket(source_workspace_name, source_workspace_namespace)
+
+    if not get_source_bucket_success:
+        workspace_dict["source__workspace_bucket"] = get_source_bucket_message
+        return workspace_dict
+
+    source_bucket_id = "gs://" + json.loads(get_source_bucket_message)["workspace"]["bucketName"]
+    workspace_dict["source_workspace_bucket"] = source_bucket_id
 
     # capture new workspace details
     destination_workspace_name = workspace["destination_workspace_name"]
@@ -326,14 +401,14 @@ def setup_single_workspace(workspace):
     workspace_dict["workspace_link"] = (f"https://app.terra.bio/#workspaces/{destination_workspace_namespace}/{destination_workspace_name}").replace(" ", "%20")
 
     # get the newly created workspace bucket
-    get_bucket_success, get_bucket_message = get_workspace_bucket(destination_workspace_name, destination_workspace_namespace)
+    get_destination_bucket_success, get_destination_bucket_message = get_workspace_bucket(destination_workspace_name, destination_workspace_namespace)
 
-    if not get_bucket_success:
-        workspace_dict["destination_workspace_bucket"] = get_bucket_message
+    if not get_destination_bucket_success:
+        workspace_dict["destination_workspace_bucket"] = get_destination_bucket_message
         return workspace_dict
 
-    bucket_id = "gs://" + json.loads(get_bucket_message)["workspace"]["bucketName"]
-    workspace_dict["destination_workspace_bucket"] = bucket_id
+    destination_bucket_id = "gs://" + json.loads(get_destination_bucket_message)["workspace"]["bucketName"]
+    workspace_dict["destination_workspace_bucket"] = destination_bucket_id
 
     # get original workspace ACLs json - not including auth domain
     get_workspace_members_success, workspace_members_message = get_workspace_members(source_workspace_name, source_workspace_namespace)
@@ -369,25 +444,36 @@ def setup_single_workspace(workspace):
     print(f"Successfully updated {destination_workspace_namespace}/{destination_workspace_namespace} with the following tags: {add_tags_message}")
     workspace_dict["workspace_tags"] = add_tags_message
 
-    # Copy over workflows
-    copy_workflow_success, copy_workflow_message, workflow_name_list = copy_workspaces_workflows(destination_workspace_namespace, destination_workspace_name, source_workspace_namespace, source_workspace_name)
+    # copy over workflows from source workspace to destination workspace
+    copy_workflow_success, copy_workflow_message = copy_workspace_workflows(destination_workspace_namespace, destination_workspace_name, source_workspace_namespace, source_workspace_name)
 
     if not copy_workflow_success:  # if copy workflow fails
-        workspace_dict["copy_workflow_error"] = copy_workflow_message
+        workspace_dict["copy_workflows_error"] = copy_workflow_message
         return workspace_dict
+    workspace_dict["copy_workflows"] = f"Workflows copied: {copy_workflow_message}"
 
-    print(f"Successfully copied workflows from {source_workspace_namespace}/{source_workspace_namespace} to {destination_workspace_namespace}/{destination_workspace_namespace}")
-    workspace_dict["copy_workflow"] = workflow_name_list
-
-    # Copy over data table
-    copy_data_table_success, copy_data_table_message, data_table_name_list = copy_workspace_entities(destination_workspace_namespace, destination_workspace_name, source_workspace_namespace, source_workspace_name, bucket_id)
+    # copy over data tables from source workspace to destination workspace
+    copy_data_table_success, copy_data_table_message = copy_workspace_entities_sushma(destination_workspace_namespace, destination_workspace_name, source_workspace_namespace, source_workspace_name, destination_bucket_id)
 
     if not copy_data_table_success:  # if copy workflow fails
-        workspace_dict["copy_data_table_error"] = copy_data_table_message
+        workspace_dict["copy_data_tables_error"] = copy_data_table_message
+        return workspace_dict
+    workspace_dict["copy_data_tables"] = f"Data tables copied: {copy_data_table_message}"
+
+    # query big query tables to create, export, and get source_details.txt file uri
+    make_table_success, make_table_message = get_source_objects_file.create_bucket_inventory_table(source_bucket_id)
+
+    if not make_table_success:  # if the query results could not be put into table - don't proceed to export
+        workspace_dict["source_object_details_file_error"] = make_table_message
         return workspace_dict
 
-    print(f"Successfully copied data tables from {source_workspace_namespace}/{source_workspace_namespace} to {destination_workspace_namespace}/{destination_workspace_namespace}")
-    workspace_dict["copy_data_table"] = data_table_name_list
+    # export table to GCS
+    get_source_obj_success, get_source_obj_message = get_source_objects_file.export_bucket_inventory_table(source_bucket_id)
+
+    if not get_source_obj_success:  # if source_details.txt could not be created
+        workspace_dict["source_object_details_file_error"] = get_source_obj_message
+        return workspace_dict
+    workspace_dict["source_object_details_file"] = get_source_obj_message
 
     workspace_dict["final_workspace_status"] = "Success"  # final workspace setup step
 
@@ -400,14 +486,15 @@ def migrate_workspaces(tsv):
     setup_info_df = pd.read_csv(tsv, sep="\t")
 
     # create df for output tsv file
-    col_names = ["source_workspace_name", "source_workspace_namespace", 
-                 "source_workspace_bucket", "destination_workspace_name", "destination_workspace_namespace",
-                 "destination_workspace_bucket", "workspace_link",
-                 "workspace_creation_error",
+    col_names = ["source_workspace_name", "source_workspace_namespace", "source_workspace_bucket",
+                 "destination_workspace_name", "destination_workspace_namespace", "destination_workspace_bucket",
+                 "workspace_link", "workspace_creation_error",
                  "workspace_ACLs", "workspace_ACLs_error",
                  "workspace_tags", "workspace_tags_error",
-                 "final_workspace_status", "copy_data_table", 
-                 "copy_data_table_error", "copy_workflow", "copy_workflow_error"]
+                 "copy_data_tables", "copy_data_tables_error",
+                 "copy_workflows", "copy_workflows_error",
+                 "source_object_details_file", "source_object_details_file_error",
+                 "final_workspace_status"]
 
     all_row_df = pd.DataFrame(columns=col_names)
 

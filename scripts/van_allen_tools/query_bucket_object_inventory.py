@@ -19,7 +19,7 @@ EXPORT_TABLE_NAME = "export_bucket_to_gcs"
 SOURCE_DETAILS_CSV_BUCKET = "bigquery-billing-exports"
 
 
-def bq_setup(project):
+def bq_setup(project=GCP_PROJECT):
     """Set up credentials and BQ client."""
     credentials, your_project_id = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
 
@@ -36,7 +36,8 @@ def export_bucket_inventory_table(source_bucket_name):
     # set up bq clients
     bqclient = bq_setup(GCP_PROJECT)
 
-    source_details_filename = f"{source_bucket_name}_source_details.csv"
+    bucket_id = source_bucket_name.split("/")[2]
+    source_details_filename = f"{bucket_id}_source_details.csv"
 
     destination_uri = f"gs://{SOURCE_DETAILS_CSV_BUCKET}/bucket_inventory_files/{source_details_filename}"
     dataset_name = bigquery.DatasetReference(GCP_PROJECT, DATASET_NAME)
@@ -47,10 +48,14 @@ def export_bucket_inventory_table(source_bucket_name):
                                          destination_uri,
                                          location="US")
     # wait for job to complete
-    extract_job.result()
+    job_status = extract_job.result()
 
-    print(f"Exported bucket {source_bucket_name}'s inventory details to {destination_uri}.")
-    return destination_uri
+    if job_status.errors is not None:
+        print(f"WARNING: Failed to extract source_details.txt file for {source_bucket_name}.")
+        return False, job_status.errors
+
+    print(f"Successfully exported bucket {source_bucket_name}'s inventory details to {destination_uri}.")
+    return True, destination_uri
 
 
 def create_bucket_inventory_table(source_bucket_name):
@@ -91,11 +96,14 @@ def create_bucket_inventory_table(source_bucket_name):
     query_job = bqclient.query(query_string, job_config=job_config)
 
     # wait for the job to complete
-    query_job.result()
+    job_results = query_job.result()
 
-    print(f"Query results loaded to the table {GCP_PROJECT}.{DATASET_NAME}.{EXPORT_TABLE_NAME}.")
+    if query_job.errors is not None:
+        print(f"WARNING: Failed to extract source_details.txt file for {source_bucket_name}.")
+        return False, query_job.errors
 
-    export_bucket_inventory_table(source_bucket_name)
+    print(f"Successfully loaded query results to the table {GCP_PROJECT}.{DATASET_NAME}.{EXPORT_TABLE_NAME}.")
+    return True, None
 
 
 if __name__ == "__main__":
@@ -117,4 +125,6 @@ if __name__ == "__main__":
         source_bucket_name = args.source_workspace_bucket
 
     # call to create and set up workspaces
-    create_bucket_inventory_table(source_bucket_name)
+    table_success, table_message = create_bucket_inventory_table(source_bucket_name)
+    if table_success:
+        export_bucket_inventory_table(source_bucket_name)
