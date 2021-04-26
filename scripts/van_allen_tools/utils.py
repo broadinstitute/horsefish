@@ -34,6 +34,26 @@ def write_output_report(dataframe):
     print(f"All workspace set-up (success or fail) details available in output file: {output_filename}")
 
 
+# function to write out a a terra load tsv for van allen workspaces
+def write_terra_load_tsv(dataframe):
+    """Subset full dataframe of workspace set up information for just attributes needed for Terra data table."""
+
+    source = dataframe.iloc[0]["source_workspace_name"]
+    destination = dataframe.iloc[0]["destination_workspace_name"]
+    terra_df = dataframe[["source_workspace_name", "source_workspace_namespace", "source_workspace_bucket",
+                          "destination_workspace_name", "destination_workspace_namespace", "destination_workspace_bucket",
+                          "source_object_details_file"]]
+
+    # add/insert terra specific col to create table in UI
+    terra_df.insert(0, "entity:migration_endpoints_vscript", f"{source}_{destination}")
+
+    # create timestamp and use to label output file
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    output_filename = f"{timestamp}_workspaces_published_terra_datamodel.tsv"
+    terra_df.to_csv(output_filename, sep="\t", index=False)
+    print(f"Successfully created Terra load file with name {output_filename}.")
+
+
 # API calls #
 
 # function to add tags to a workspace (does not overwrite existing)
@@ -80,6 +100,10 @@ def check_workspace_exists(workspace_name, project):
         return None, response.text
 
     return True, response.text       # workspace exists
+
+
+def copy_workflow():
+    """Copy workflow from source to destination workspace."""
 
 
 def get_workspace_authorization_domain(workspace_name, project):

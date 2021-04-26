@@ -12,7 +12,7 @@ from firecloud import api as fapi
 from utils import add_tags_to_workspace, check_workspace_exists, \
     get_access_token, get_workspace_authorization_domain, \
     get_workspace_bucket, get_workspace_members, get_workspace_tags, \
-    write_output_report
+    write_output_report, write_terra_load_tsv
 import query_bucket_object_inventory as get_source_objects_file
 
 
@@ -507,7 +507,9 @@ def migrate_workspaces(tsv):
         # Create output tsv
         migration_data_df = all_row_df.append(migration_data, ignore_index=True)
 
-    # Create the report
+    # create terra data model load file with subset of columns from full report
+    write_terra_load_tsv(migration_data_df)
+    # create full report
     write_output_report(migration_data_df)
 
 
