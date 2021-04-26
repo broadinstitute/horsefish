@@ -12,10 +12,10 @@ from google.cloud import bigquery
 
 
 # information of the destination table to be exported to a bucket as csv
-GCP_PROJECT = "dsp-fieldeng-vanallen-gcp"
-DATASET_NAME = "dfci_nih_billing_exports"
-INVENTORY_TABLE_NAME = "dfci_nih_bucket_inventory_sc_test"
-EXPORT_TABLE_NAME = "export_bucket_to_gcs"
+GCP_PROJECT = "vanallen-gcp-nih"
+DATASET_NAME = "gcs_inventory_loader"
+INVENTORY_TABLE_NAME = "object_metadata"
+EXPORT_TABLE_NAME = "export_bucket_obj_metadata"
 SOURCE_DETAILS_CSV_BUCKET = "bigquery-billing-exports"
 
 
