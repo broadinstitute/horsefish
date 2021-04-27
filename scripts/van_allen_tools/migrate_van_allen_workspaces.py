@@ -373,7 +373,7 @@ def setup_single_workspace(workspace, ignore=[]):
     get_source_bucket_success, get_source_bucket_message = get_workspace_bucket(source_workspace_name, source_workspace_namespace)
 
     if not get_source_bucket_success:
-        workspace_dict["source__workspace_bucket"] = get_source_bucket_message
+        workspace_dict["source_workspace_bucket"] = get_source_bucket_message
         return workspace_dict
 
     source_bucket_id = "gs://" + json.loads(get_source_bucket_message)["workspace"]["bucketName"]
