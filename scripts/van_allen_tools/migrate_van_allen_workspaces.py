@@ -20,9 +20,9 @@ NAMESPACE = "vanallen-firecloud-nih"
 BUCKET_REGION = "us-central1"
 
 
-def add_members_to_workspace(workspace_name, acls, namespace=NAMESPACE):
+def add_members_to_workspace(workspace_name, acls, namespace=NAMESPACE, ignore=[]):
     """Add members to workspace permissions."""
-    json_request = make_add_members_to_workspace_request(acls)
+    json_request = make_add_members_to_workspace_request(acls, ignore=ignore)
 
     # request URL for updateWorkspaceACL
     uri = f"https://api.firecloud.org/api/workspaces/{namespace}/{workspace_name}/acl?inviteUsersNotFound=false"
@@ -97,7 +97,7 @@ def create_workspace(workspace_name, auth_domains, namespace=NAMESPACE):
     return True, accept_overwrite_message    # overwrite existing workspace - 200 status code for "Y"
 
 
-def make_add_members_to_workspace_request(response_text):
+def make_add_members_to_workspace_request(response_text, ignore):
     """Make the json request to pass into add_members_to_workspace()."""
     # load response from getWorkslaceACLs
     workspace_members = json.loads(response_text)
@@ -105,6 +105,8 @@ def make_add_members_to_workspace_request(response_text):
     # reformat it to be request format for updating ACLs on new workspace
     acls_to_add = []
     for key, value, in workspace_members["acl"].items():  # need to un-nest one level and add key as kvp into value
+        if key in ignore:
+            continue
         new_value = value
         new_value["email"] = key
         acls_to_add.append(new_value)
@@ -345,7 +347,7 @@ def copy_workspace_entities(destination_workspace_namespace, destination_workspa
     return True, data_table_name_list
 
 
-def setup_single_workspace(workspace):
+def setup_single_workspace(workspace, ignore=[]):
     """Create one workspace and set ACLs."""
     # initialize workspace dictionary with default values assuming failure
     workspace_dict = {"source_workspace_name": "NA", "source_workspace_namespace": "NA",
@@ -419,7 +421,7 @@ def setup_single_workspace(workspace):
         return workspace_dict
 
     # add ACLs to workspace if workspace creation success
-    add_member_success, add_member_message = add_members_to_workspace(destination_workspace_name, workspace_members_message, destination_workspace_namespace)
+    add_member_success, add_member_message = add_members_to_workspace(destination_workspace_name, workspace_members_message, destination_workspace_namespace, ignore=ignore)
 
     if not add_member_success:
         workspace_dict["workspace_ACLs_error"] = add_member_message
@@ -441,7 +443,7 @@ def setup_single_workspace(workspace):
         workspace_dict["workspace_tags_error"] = add_tags_message
         return workspace_dict
 
-    print(f"Successfully updated {destination_workspace_namespace}/{destination_workspace_namespace} with the following tags: {add_tags_message}")
+    print(f"Successfully updated {destination_workspace_namespace}/{destination_workspace_name} with the following tags: {add_tags_message}")
     workspace_dict["workspace_tags"] = add_tags_message
 
     # copy over workflows from source workspace to destination workspace
@@ -480,7 +482,7 @@ def setup_single_workspace(workspace):
     return workspace_dict
 
 
-def migrate_workspaces(tsv):
+def migrate_workspaces(tsv, ignore_list):
     """Create and set up migrated workspaces."""
     # read full tsv into dataframe
     setup_info_df = pd.read_csv(tsv, sep="\t")
@@ -502,7 +504,7 @@ def migrate_workspaces(tsv):
     for index, row in setup_info_df.iterrows():
 
         # Create Workspace
-        migration_data = setup_single_workspace(row)
+        migration_data = setup_single_workspace(row, ignore=ignore_list)
 
         # Create output tsv
         migration_data_df = all_row_df.append(migration_data, ignore_index=True)
@@ -518,8 +520,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Set-up Van Allen Lab workspaces.')
 
     parser.add_argument('-t', '--tsv', required=True, type=str, help='tsv file with original and new workspace details.')
-
+    parser.add_argument('-i', '--ignore', nargs='+', default=[], help='Email address to not copy ACL from.')
     args = parser.parse_args()
+    print(args)
 
     # call to create and set up workspaces
-    migrate_workspaces(args.tsv)
+    migrate_workspaces(args.tsv, args.ignore)

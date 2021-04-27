@@ -16,10 +16,10 @@
     Create workspace with authorization domain and add user/groups with appropriate workspace ACLs. 
     
     Input is a .tsv file with columns:
-        1. "original_workspace_name"
-        2. "original_workspace_namespace"
-        3. "new_workspace_name"
-        4. "new_workspace_namespace"
+        1. "source_workspace_name"
+        2. "source_workspace_namespace"
+        3. "destination_workspace_name"
+        4. "destination_workspace_namespace"
     Output is a .tsv file with name:
         1. `{timestamp}_workspaces_setup_status.tsv`
 ##### Usage
