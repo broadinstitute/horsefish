@@ -94,7 +94,7 @@ def add_library_metadata_to_workspace(request, workspace_name, project="anvil-da
 
 # function to add user to existing authorization domain
 def add_user_to_authorization_domain(auth_domain_name, email, permission):
-    """Add group with given permissions to authorization domain."""
+    """Add user/group with given permissions to authorization domain."""
 
     # request URL for addUserToGroup
     uri = f"https://api.firecloud.org/api/groups/{auth_domain_name}/{permission}/{email}"
@@ -108,7 +108,7 @@ def add_user_to_authorization_domain(auth_domain_name, email, permission):
     status_code = response.status_code
 
     if status_code != 204:  # AD update with member fail
-        print(f"WARNING: Failed to update Authorization Domain, {auth_domain_name}, with group: {email}.")
+        print(f"WARNING: Failed to update Authorization Domain, {auth_domain_name}, with user/group: {email}.")
         print("Check output file for error details.")
         return False, response.text
 
