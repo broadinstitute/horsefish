@@ -34,7 +34,47 @@ def write_output_report(dataframe):
     print(f"All workspace set-up (success or fail) details available in output file: {output_filename}")
 
 
+# function to write out a a terra load tsv for van allen workspaces
+def write_terra_load_tsv(dataframe):
+    """Subset full dataframe of workspace set up information for just attributes needed for Terra data table."""
+
+    terra_df = dataframe[["source_workspace_name", "source_workspace_namespace", "source_workspace_bucket",
+                          "destination_workspace_name", "destination_workspace_namespace", "destination_workspace_bucket",
+                          "source_object_details_file"]]
+
+    # add/insert terra specific col to create table in UI
+    terra_df.insert(0, "entity:migration_endpoints_vscript", terra_df["source_workspace_name"] + "_" + terra_df["destination_workspace_name"])
+
+    # create timestamp and use to label output file
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    output_filename = f"{timestamp}_workspaces_published_terra_datamodel.tsv"
+    terra_df.to_csv(output_filename, sep="\t", index=False)
+    print(f"Successfully created Terra load file with name {output_filename}.")
+
+
 # API calls #
+
+# function to add tags to a workspace (does not overwrite existing)
+def add_tags_to_workspace(workspace_name, tags, project):
+    """Add tags to workspace."""
+
+    uri = f"https://api.firecloud.org/api/workspaces/{project}/{workspace_name}/tags"
+
+    # Get access token and and add to headers for requests.
+    # -H  "accept: application/json" -H  "Authorization: Bearer [token] -H  "Content-Type: application/json"
+    headers = {"Authorization": "Bearer " + get_access_token(), "accept": "application/json", "Content-Type": "application/json"}
+
+    # capture response from API and parse out status code
+    response = requests.patch(uri, headers=headers, data=tags)
+    status_code = response.status_code
+
+    if status_code != 200:  # could not add tags
+        print(f"WARNING: Failed to add tags for workspace with name: {project}/{workspace_name}.")
+        print("Check output file for error details.")
+        return False, response.text
+
+    return True, response.text
+
 
 # function to determine if a workspace already exists
 def check_workspace_exists(workspace_name, project):
@@ -58,3 +98,91 @@ def check_workspace_exists(workspace_name, project):
         return None, response.text
 
     return True, response.text       # workspace exists
+
+
+def copy_workflow():
+    """Copy workflow from source to destination workspace."""
+
+
+def get_workspace_authorization_domain(workspace_name, project):
+    """Get list of authorization domain/s of workspace."""
+
+    uri = f"https://api.firecloud.org/api/workspaces/{project}/{workspace_name}?fields=workspace.authorizationDomain"
+
+    # Get access token and and add to headers for requests.
+    # -H  "accept: application/json" -H  "Authorization: Bearer [token]
+    headers = {"Authorization": "Bearer " + get_access_token(), "accept": "application/json"}
+
+    # capture response from API and parse out status code
+    response = requests.get(uri, headers=headers)
+    status_code = response.status_code
+
+    if status_code != 200:  # could not get authorization domain
+        print(f"WARNING: Failed to get authorization domain for workspace with name: {project}/{workspace_name}.")
+        print("Check output file for error details.")
+        return False, response.text
+
+    return True, response.text
+
+
+def get_workspace_bucket(workspace_name, project):
+    """Get workspace bucket id (gs://fc-) of workspace."""
+
+    uri = f"https://api.firecloud.org/api/workspaces/{project}/{workspace_name}?fields=workspace.bucketName"
+
+    # Get access token and and add to headers for requests.
+    # -H  "accept: application/json" -H  "Authorization: Bearer [token]
+    headers = {"Authorization": "Bearer " + get_access_token(), "accept": "application/json"}
+
+    # capture response from API and parse out status code
+    response = requests.get(uri, headers=headers)
+    status_code = response.status_code
+
+    if status_code != 200:  # could not get bucket id
+        print(f"WARNING: Failed to get bucket id for workspace with name: {project}/{workspace_name}.")
+        print("Check output file for error details.")
+        return False, response.text
+
+    return True, response.text
+
+
+def get_workspace_members(workspace_name, project):
+    """Get ACLs of workspace."""
+
+    uri = f"https://api.firecloud.org/api/workspaces/{project}/{workspace_name}/acl"
+
+    # Get access token and and add to headers for requests.
+    # -H  "accept: application/json" -H  "Authorization: Bearer [token]
+    headers = {"Authorization": "Bearer " + get_access_token(), "accept": "application/json"}
+
+    # capture response from API and parse out status code
+    response = requests.get(uri, headers=headers)
+    status_code = response.status_code
+
+    if status_code != 200:  # could not get acls
+        print(f"WARNING: Failed to get ACLs for workspace with name: {project}/{workspace_name}.")
+        print("Check output file for error details.")
+        return False, response.text
+
+    return True, response.text
+
+
+def get_workspace_tags(workspace_name, project):
+    """Get tags of workspace."""
+
+    uri = f"https://api.firecloud.org/api/workspaces/{project}/{workspace_name}/tags"
+
+    # Get access token and and add to headers for requests.
+    # -H  "accept: application/json" -H  "Authorization: Bearer [token]
+    headers = {"Authorization": "Bearer " + get_access_token(), "accept": "application/json"}
+
+    # capture response from API and parse out status code
+    response = requests.get(uri, headers=headers)
+    status_code = response.status_code
+
+    if status_code != 200:  # could not get acls
+        print(f"WARNING: Failed to get tags for workspace with name: {project}/{workspace_name}.")
+        print("Check output file for error details.")
+        return False, response.text
+
+    return True, response.text

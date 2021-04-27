@@ -11,6 +11,28 @@
 
 ### Scripts
 
+#### **migrate_van_allen_workspaces.py**
+##### Description
+    Create workspace with authorization domain and add user/groups with appropriate workspace ACLs. 
+    
+    Input is a .tsv file with columns:
+        1. "original_workspace_name"
+        2. "original_workspace_namespace"
+        3. "new_workspace_name"
+        4. "new_workspace_namespace"
+    Output is a .tsv file with name:
+        1. `{timestamp}_workspaces_setup_status.tsv`
+##### Usage
+    Locally
+        `python3 /scripts/van_allen_tools/set_up_vanallen_workspaces.py -t TSV_FILE
+    Docker
+        `docker run --rm -it -v "$HOME"/.config:/.config -v "$HOME"/local_data_directory/:/data broadinstitute/horsefish:latest bash -c "cd data; python3 /scripts/van_allen_tools/set_up_vanallen_workspaces.py -t /data/INPUT.tsv"`
+
+        Note: local_data_directory should be the path to the folder where your input .tsv file is located and where your output .tsv file will be placed.
+##### Flags
+    1. `--tsv`, `-t`: input .tsv file (required)
+
+
 #### **set_up_vanallen_workspaces.py**
 ##### Description
     Create workspace with authorization domain and add user/groups with appropriate workspace ACLs. 
@@ -21,11 +43,11 @@
         1. `{timestamp}_workspaces_setup_status.tsv`
 ##### Usage
     Locally
-        `python3 /scripts/anvil_tools/set_up_vanallen_workspaces.py -t TSV_FILE [-p WORKSPACE_PROJECT]
+        `python3 /scripts/van_allen_tools/set_up_vanallen_workspaces.py -t TSV_FILE [-n WORKSPACE_PROJECT]
     Docker
-        `docker run --rm -it -v "$HOME"/.config:/.config -v "$HOME"/local_data_directory/:/data broadinstitute/horsefish:anvil_tools bash -c "cd data; python3 /scripts/anvil_tools/set_up_vanallen_workspaces.py -t /data/INPUT.tsv [-p NAMESPACE]"`
+        `docker run --rm -it -v "$HOME"/.config:/.config -v "$HOME"/local_data_directory/:/data broadinstitute/horsefish:latest bash -c "cd data; python3 /scripts/van_allen_tools/set_up_vanallen_workspaces.py -t /data/INPUT.tsv [-n NAMESPACE]"`
 
         Note: local_data_directory should be the path to the folder where your input .tsv file is located and where your output .tsv file will be placed.
 ##### Flags
     1. `--tsv`, `-t`: input .tsv file (required)
-    2. `--project`, `-p`: workspace project/namespace for listed workspaces in tsv (default = vanallen-firecloud-nih)
+    2. `--workspace_namespace`, `-n`: workspace project/namespace for listed workspaces in tsv (default = vanallen-firecloud-nih)
