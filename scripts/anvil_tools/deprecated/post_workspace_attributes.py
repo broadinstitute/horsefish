@@ -77,7 +77,8 @@ def setup_data_delivery_workspaces(tsv, project="anvil-datastorage"):
     """Post dataset attributes to workspace and publish workspace to Data Library (FireCloud)."""
 
     # read input tsv into dataframe, workspace name = index and edit dataframe
-    all_workspaces_df = pd.read_csv(tsv, sep=",", index_col="name", keep_default_na=False)
+    all_workspaces_df = pd.read_csv(tsv, sep="\t", index_col="name", keep_default_na=False)
+
     # remove cols w ".itemsType" in col name - values are "AttributeValue"
     all_workspaces_modified_df = all_workspaces_df[all_workspaces_df.columns.drop(list(all_workspaces_df.filter(regex='.itemsType')))]
     # remove the ".items" string from column names

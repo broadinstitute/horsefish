@@ -18,9 +18,9 @@ def add_users_to_auth_domain(tsv):
     # per row in tsv/df
     for index, row in df_auth.iterrows():
 
-        user_email = df_auth.iloc[0]["user_email"]
+        user_email = df_auth.iloc[0]["email"]
         auth_domain = df_auth.iloc[0]["auth_domain_name"]
-        permission = df_auth.iloc[0]["access_level"]
+        permission = df_auth.iloc[0]["accessLevel"]
 
         success, error = add_user_to_authorization_domain(auth_domain, user_email, permission)
         if not success:

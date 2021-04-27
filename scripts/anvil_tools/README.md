@@ -6,11 +6,30 @@
 
 ### Setup
     Follow the steps below to set up permissions prior to running any of the listed scripts:
-    1. `gcloud auth login username@broadinstitute.org`
-    2. `gcloud auth application-default login`
+    1. `gcloud auth login --update-adc`
         Select your broadinstitute.org email address when window opens.
 
 ### Scripts
+
+#### **add_user_to_authorization_domain.py**
+##### Description
+    Update/add user/group to authorization domain (as ADMIN, MEMBER). To run this script, you must be an ADMIN on the authorization domain(s). 
+    
+    Input is a .tsv file with 3 columns:
+        1. "auth_domain_name" - no `@firecloud.org`
+        2. "email"
+        3. "accessLevel" - (MEMBER or ADMIN)
+##### Usage
+    Locally
+        `python3 /scripts/anvil_tools/add_user_to_authorization_domain.py -t TSV_FILE [-p WORKSPACE_PROJECT]`
+    Docker
+        `docker run --rm -it -v "$HOME"/.config:/.config -v "$HOME"/local_data_directory/:/data broadinstitute/horsefish:anvil_tools bash -c "cd data; python3 /scripts/anvil_tools/add_user_to_authorization_domain.py -t /data/INPUT.tsv [-p WORKSPACE_PROJECT]"`
+
+        Note: `local_data_directory` should be the path to the folder where your desired input .tsv file is located.
+##### Flags
+    1. `--tsv`, `-t`: input .tsv file (required)
+    2. `--project`, `-p`: workspace project/namespace for listed workspaces in tsv (default = anvil_datastorage)
+
 
 #### **add_user_to_workspace.py**
 ##### Description
@@ -70,7 +89,7 @@
         1. "workspace_name"
         2. "auth_domain_name"
     Output is a .tsv file with name:
-        1. `{timestamp}_workspaces_setup_status.tsv`
+        1. `{timestamp}_workspaces_full_setup_status.tsv`
 ##### Usage
     Locally
         `python3 /scripts/anvil_tools/set_up_anvil_workspace.py -t TSV_FILE [-p WORKSPACE_PROJECT]
@@ -83,31 +102,34 @@
     2. `--project`, `-p`: workspace project/namespace for listed workspaces in tsv (default = anvil_datastorage)
 
 
-#### **post_workspace_attributes.py**
+#### **publish_dataset_attributes_to_workspace.py**
 ##### Description
-    Post dataset attributes to workspaces.
+    Publish dataset attributes to workspaces. workspaces listed in input tsv file to the Firecloud Data Library. Must run first before publish_workspaces_to_data_library.py.
     
     Input is a .tsv file:
         1. Template input.tsv linked [here](https://docs.google.com/spreadsheets/d/1k6fTGJL9j0p5ROsrxHIKObBwwVJFfHLpoWocZ2p8jPM/edit?usp=sharing). This document also contains definitions and examples for each column/attribute.
+    Output is a .tsv file with name:
+        1. `{timestamp}_workspaces_dataset_attributes_published_status.tsv`
 ##### Usage
     Locally
-        `python3 post_workspace_attributes.py -t TSV_FILE [-p BILLING-PROJECT]`
+        `python3 publish_dataset_attributes_to_workspace.py -t TSV_FILE [-p BILLING-PROJECT]`
     Docker
-        `docker run --rm -it -v "$HOME"/.config:/.config -v "$HOME"/local_data_directory/:/data broadinstitute/horsefish:anvil_tools bash -c "cd data; python3 /scripts/anvil_tools/post_workspace_attributes.py -t /data/INPUT.tsv [-p WORKSPACE_PROJECT]"`
+        `docker run --rm -it -v "$HOME"/.config:/.config -v "$HOME"/local_data_directory/:/data broadinstitute/horsefish:anvil_tools bash -c "cd data; python3 /scripts/anvil_tools/publish_dataset_attributes_to_workspace.py -t /data/INPUT.tsv [-p WORKSPACE_PROJECT]"`
 
         Note: local_data_directory should be the path to the folder where your input .tsv file is located.
 ##### Flags
     1. `--tsv`, `-t`: input .tsv file (required)
     2. `--project`, `-p`: workspace project/namespace for listed workspaces in tsv (default = anvil_datastorage)
 
+
 #### **publish_workspaces_to_data_library.py**
 ##### Description
-    Post workspaces listed in input tsv file to the Firecloud Data Library. Must run post_workspace_attributes.py first.
+    Post workspaces listed in input tsv file to the Firecloud Data Library. Must run publish_dataset_attributes_to_workspace.py first.
     
     Input is a .tsv file with column:
         1. `workspace_name`
     Output is a .tsv file with name:
-        1. `{timestamp}_workspaces_published_status.tsv`
+        1. `{timestamp}_workspaces_published_to_data_library_status.tsv`
 ##### Usage
     Locally
         `python3 publish_workspaces_to_data_library.py -t TSV_FILE [-p BILLING-PROJECT]`

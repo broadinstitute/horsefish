@@ -19,12 +19,12 @@ def get_access_token():
 
 
 # function to write output tsv file and success/fail statistics with dataframe as input
-def write_output_report(dataframe):
+def write_output_report(dataframe, description):
     """Report workspace set-up statuses and create output tsv file from provided dataframe."""
 
     # create timestamp and use to label output file
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    output_filename = f"{timestamp}_workspaces_published_status.tsv"
+    output_filename = f"{timestamp}_workspaces_{description}_status.tsv"
     dataframe.to_csv(output_filename, sep="\t", index=False)
 
     # count success and failed workspaces and report to stdout

@@ -213,7 +213,7 @@ def setup_workspaces(tsv, project="anvil-datastorage"):
         row_dict = setup_single_workspace(row, project)
         all_row_df = all_row_df.append(row_dict, ignore_index=True)
 
-    write_output_report(all_row_df)
+    write_output_report(all_row_df, "full_setup")
 
 
 if __name__ == "__main__":
