@@ -43,7 +43,7 @@ def write_terra_load_tsv(dataframe):
                           "source_object_details_file"]]
 
     # add/insert terra specific col to create table in UI
-    terra_df.insert(0, "entity:migration_endpoints_vscript", terra_df["source_workspace_name"] + "_" + terra_df["destination_workspace_name"])
+    terra_df.insert(0, "entity:migration_endpoints_vscript_id", terra_df["source_workspace_name"] + "_" + terra_df["destination_workspace_name"])
 
     # create timestamp and use to label output file
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
