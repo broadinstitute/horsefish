@@ -376,8 +376,9 @@ def setup_single_workspace(workspace, ignore=[]):
         workspace_dict["source_workspace_bucket"] = get_source_bucket_message
         return workspace_dict
 
-    source_bucket_id = "gs://" + json.loads(get_source_bucket_message)["workspace"]["bucketName"]
-    workspace_dict["source_workspace_bucket"] = source_bucket_id
+    # get source bucket path (including gs://)
+    source_bucket_path = "gs://" + json.loads(get_source_bucket_message)["workspace"]["bucketName"]
+    workspace_dict["source_workspace_bucket"] = source_bucket_path
 
     # capture new workspace details
     destination_workspace_name = workspace["destination_workspace_name"]
@@ -463,13 +464,15 @@ def setup_single_workspace(workspace, ignore=[]):
     workspace_dict["copy_data_tables"] = f"Data tables copied: {copy_data_table_message}"
 
     # query big query tables to create, export, and get source_details.txt file uri
+    source_bucket_id = source_bucket_path.split("/")[2]  # remove gs:// to get only bucket id
+
     make_table_success, make_table_message = get_source_objects_file.create_bucket_inventory_table(source_bucket_id)
 
     if not make_table_success:  # if the query results could not be put into table - don't proceed to export
         workspace_dict["source_object_details_file_error"] = make_table_message
         return workspace_dict
 
-    # export table to GCS
+    # export query results table to GCS
     get_source_obj_success, get_source_obj_message = get_source_objects_file.export_bucket_inventory_table(source_bucket_id)
 
     if not get_source_obj_success:  # if source_details.txt could not be created

@@ -31,13 +31,12 @@ def bq_setup(project=GCP_PROJECT):
 
 
 def export_bucket_inventory_table(source_bucket_name):
-    """Export table to GCS storage location as csv file."""
+    """Export query results table to GCS storage location as csv file."""
 
     # set up bq clients
     bqclient = bq_setup(GCP_PROJECT)
 
-    bucket_id = source_bucket_name.split("/")[2]
-    source_details_filename = f"{bucket_id}_source_details.csv"
+    source_details_filename = f"{source_bucket_name}_source_details.csv"
 
     destination_uri = f"gs://{SOURCE_DETAILS_CSV_BUCKET}/bucket_inventory_files/{source_details_filename}"
     dataset_name = bigquery.DatasetReference(GCP_PROJECT, DATASET_NAME)
