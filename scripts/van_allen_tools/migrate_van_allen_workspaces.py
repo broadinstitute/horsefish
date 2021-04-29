@@ -498,7 +498,7 @@ def migrate_workspaces(tsv, ignore_list):
                  "source_object_details_file", "source_object_details_file_error",
                  "final_workspace_status"]
 
-    all_row_df = pd.DataFrame(columns=col_names)
+    migration_data_df = pd.DataFrame(columns=col_names)
 
     # per row in tsv/df
     for index, row in setup_info_df.iterrows():
@@ -507,7 +507,7 @@ def migrate_workspaces(tsv, ignore_list):
         migration_data = setup_single_workspace(row, ignore=ignore_list)
 
         # Create output tsv
-        migration_data_df = all_row_df.append(migration_data, ignore_index=True)
+        migration_data_df = migration_data_df.append(migration_data, ignore_index=True)
 
     # create terra data model load file with subset of columns from full report
     write_terra_load_tsv(migration_data_df)
