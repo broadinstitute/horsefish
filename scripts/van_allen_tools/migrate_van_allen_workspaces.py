@@ -312,7 +312,6 @@ def copy_workspace_entities(destination_workspace_namespace, destination_workspa
                     set_list[ent_type_before] = ent_names
                 else:
                     fapi.copy_entities(source_workspace_namespace, source_workspace_name, destination_workspace_namespace, destination_workspace_name, ent_type_before, ent_names, link_existing_entities=True)
-                    # print(f"Successfully copied {ent_type_before} data table over to: {destination_workspace_namespace}/{destination_workspace_name}.")
                     data_table_name_list.append(ent_type_before)
                 ent_names = []
             ent_names.append(ent_name)
@@ -321,7 +320,6 @@ def copy_workspace_entities(destination_workspace_namespace, destination_workspa
         # copy set type data tables to workspace
         for etype, enames in set_list.items():
             fapi.copy_entities(source_workspace_namespace, source_workspace_name, destination_workspace_namespace, destination_workspace_name, etype, enames, link_existing_entities=True)
-            # print(f"Successfully copied {etype} data table over to: {destination_workspace_namespace}/{destination_workspace_name}")
             data_table_name_list.append(etype)
 
         # Check if data tables match
