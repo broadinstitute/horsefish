@@ -7,11 +7,6 @@ workflow migrate_data_via_local {
 
         File   source_bucket_object_inventory
     }
-    
-    # call get_source_bucket_details{
-    #     input:
-    #         source_bucket_path = source_bucket_path
-    # }
 
     call calculate_largest_file_size {
         input:
