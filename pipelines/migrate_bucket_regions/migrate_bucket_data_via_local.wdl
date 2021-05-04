@@ -2,9 +2,7 @@ version 1.0
 
 workflow migrate_data_via_local {
     input {
-        String source_bucket_path
         String destination_bucket_path
-
         File   source_bucket_object_inventory
     }
 
@@ -21,38 +19,11 @@ workflow migrate_data_via_local {
     }
 
     output {
-        # File source_bucket_file_info = get_source_bucket_details.source_bucket_details_file
         Int calculated_memory_size = calculate_largest_file_size.max_gb
         File log_copy_from_src_to_local = copy_to_destination.copy_to_local_log
         File log_copy_from_local_to_dest = copy_to_destination.copy_from_local_log
     }
 }
-
-task get_source_bucket_details {
-    meta {
-        description: "Get a file with the list of file paths to copy and size of each file in bytes."
-    }
-
-    input {
-        String source_bucket_path
-    }
-
-    command {
-        gsutil du ~{source_bucket_path} | sed "/\/$/d" | tr " " "\t" | tr -s "\t" | sort -n -k1,1nr > source_bucket_details.txt
-    }
-
-    runtime {
-        docker: "gcr.io/google.com/cloudsdktool/cloud-sdk:305.0.0"
-        memory: "2 GB"
-        disks: "local-disk 10 HDD"
-        zones: "us-central1-c us-central1-b"
-    }
-
-    output {
-        File source_bucket_details_file = "source_bucket_details.txt"
-    }
-}
-
 
 task calculate_largest_file_size {
     meta {
@@ -81,7 +52,6 @@ task calculate_largest_file_size {
         Int max_gb = read_int("file_gb")
     }
 }
-
 
 task copy_to_destination {
     meta {
