@@ -5,4 +5,8 @@ workflows:
    primaryDescriptorPath: /pipelines/migrate_bucket_regions/migrate_bucket_data_via_local.wdl
    testParameterFiles:
     - empty.json
-
+ - name: delete_bucket_data
+   subclass: WDL
+   primaryDescriptorPath: /pipelines/migrate_bucket_regions/delete_bucket_data.wdl
+   testParameterFiles:
+    - empty.json
