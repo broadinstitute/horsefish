@@ -25,8 +25,12 @@ task delete_migrated_data_from_source {
 
     command {
 
+        # match final copy from local VM to destination log with original input file with files to migrate
+        # match with "destination" col in log (parse out extra folder structure we manually inject in migrate WDL)
+        # only delete objects where copy status is set to "OK"
+
         awk NR\>1  ~{copy_from_local_log} | tr "," "\t" | \  # remove header, set tab delimiter
-            awk -F"\t" '{$2 = substr($2, 46); print "gs://"$2, $9}' OFS="\t" | \  # get obj dest path, parse out extra folder
+            awk -F"\t" '{$2 = substr($2, 46); print "gs://"$2, $9}' OFS="\t" | \  # get obj dest path, parse out extra folder (46 chars from start)
             awk 'NR==FNR{a[$1]=$0;next}{$3=a[$2]}1' OFS="\t" - ~{source_bucket_details} | \  # match with input source details file
             awk -F"\t" '$4 == "OK"' | cut -f2 > objects_to_delete.txt  # only get rows where copy was successful ( = "OK")
 
