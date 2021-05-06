@@ -101,8 +101,8 @@ task copy_to_destination {
         String source_bucket_path
         Int disk_size
 
-        File? resume_copy_to_local_log
-        File? resume_copy_from_local_log
+        File? resumeable_copy_to_local_log
+        File? resumeable_copy_from_local_log
         Int? memory
     }
 
@@ -113,6 +113,14 @@ task copy_to_destination {
         # comma --> tab | skip header line | get second col (gs paths) > write to new file
         tr "," "\t" < ~{source_bucket_details} | sed -e 1d | cut -f2 > source_bucket_file_paths.txt
         
+        if ~{resumeable_copy_to_local_log} && ~{resumeable_copy_from_local_log}
+        then
+            gsutil cp ~{resumeable_copy_to_local_log} .
+            gsutil cp ~{resumeable_copy_from_local_log} .
+        else
+            echo "No resumable upload. No copy logs from previous runs will be copied."
+        fi
+
         while IFS="" read -r file_path
         do
             # get the path minus the fc-** to copy to local disk
