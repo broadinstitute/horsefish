@@ -22,6 +22,7 @@ workflow migrate_data_via_local {
         input:
             source_bucket_details = source_bucket_object_inventory,
             destination_bucket_path = destination_bucket_path,
+            source_bucket_path = source_bucket_path,
             disk_size = calculate_largest_file_size.max_gb
     }
 
@@ -97,6 +98,7 @@ task copy_to_destination {
     input {
         File source_bucket_details
         String destination_bucket_path
+        String source_bucket_path
         Int disk_size
 
         File? resume_copy_to_local_log
@@ -129,8 +131,9 @@ task copy_to_destination {
                 # remove the file before copying next one
                 rm "/cromwell_root/$local_file_path" || true
                 
-                gsutil cp copy_to_local_log.csv "gs://fc-965d7092-c329-4b56-b9ef-fa6b83e92de2/van_allen_copy_logs/source_to_$(echo ~{destination_bucket_path} | cut -c 6-)_copy_to_local_log.csv"
-                gsutil cp copy_from_local_log.csv "gs://fc-965d7092-c329-4b56-b9ef-fa6b83e92de2/van_allen_copy_logs/source_to_~{destination_bucket_path}_copy_from_local_log.csv"
+                ~{destination_bucket_path}
+                gsutil cp copy_to_local_log.csv "gs://fc-965d7092-c329-4b56-b9ef-fa6b83e92de2/van_allen_copy_logs/src_$(echo ~{source_bucket_path} | cut -c 6-)_to_dest_$(echo ~{destination_bucket_path} | cut -c 6-)_copy_to_local_log.csv"
+                gsutil cp copy_from_local_log.csv "gs://fc-965d7092-c329-4b56-b9ef-fa6b83e92de2/van_allen_copy_logs/src_$(echo ~{source_bucket_path} | cut -c 6-)_to_dest_$(echo ~{destination_bucket_path} | cut -c 6-)_copy_from_local_log.csv"
             else
                 echo "File already exists in destination bucket."
             fi
