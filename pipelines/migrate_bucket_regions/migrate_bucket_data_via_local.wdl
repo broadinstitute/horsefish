@@ -99,8 +99,8 @@ task copy_to_destination {
         String destination_bucket_path
         Int disk_size
 
-        File? copy_to_local_log
-        File? copy_from_local_log
+        File? resume_copy_to_local_log
+        File? resume_copy_from_local_log
         Int? memory
     }
 
