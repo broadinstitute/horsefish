@@ -98,6 +98,9 @@ task copy_to_destination {
         File source_bucket_details
         String destination_bucket_path
         Int disk_size
+
+        File? copy_to_local_log
+        File? copy_from_local_log
         Int? memory
     }
 
@@ -117,6 +120,7 @@ task copy_to_destination {
             # if file does not already exist in destination bucket
             if ! gsutil -q stat "~{destination_bucket_path}/$local_file_path"
             then
+                echo "File does not already exist in destination bucket. Starting copy."
                 gsutil cp -c -L copy_to_local_log.csv "$file_path" "/cromwell_root/$local_file_path" || true
 
                 # use path of local copy to copy to destination bucket
@@ -124,6 +128,11 @@ task copy_to_destination {
 
                 # remove the file before copying next one
                 rm "/cromwell_root/$local_file_path" || true
+                
+                gsutil cp copy_to_local_log.csv "gs://fc-965d7092-c329-4b56-b9ef-fa6b83e92de2/van_allen_copy_logs/source_to_~{destination_bucket_path}_copy_to_local_log.csv"
+                gsutil cp copy_from_local_log.csv "gs://fc-965d7092-c329-4b56-b9ef-fa6b83e92de2/van_allen_copy_logs/source_to_~{destination_bucket_path}_copy_from_local_log.csv"
+            else
+                echo "File already exists in destination bucket."
             fi
         done < source_bucket_file_paths.txt
     }
