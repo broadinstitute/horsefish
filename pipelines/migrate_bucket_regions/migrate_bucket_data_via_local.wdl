@@ -106,7 +106,7 @@ task copy_to_destination {
         Int? memory
     }
 
-    command {
+    command <<<
         set -x
         set -e
 
@@ -147,7 +147,7 @@ task copy_to_destination {
                 echo "File already exists in destination bucket."
             fi
         done < source_bucket_file_paths.txt
-    }
+    >>>
 
     runtime {
         docker: "gcr.io/google.com/cloudsdktool/cloud-sdk:305.0.0"
