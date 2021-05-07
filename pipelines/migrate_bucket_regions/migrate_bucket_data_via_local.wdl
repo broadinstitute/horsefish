@@ -113,6 +113,7 @@ task copy_to_destination {
         # comma --> tab | skip header line | get second col (gs paths) > write to new file
         tr "," "\t" < ~{source_bucket_details} | sed -e 1d | cut -f2 > source_bucket_file_paths.txt
         
+        # if log paths were given to instantiate resumable upload, copy them to local
         if [ ~{resumeable_copy_to_local_log} != "copy_to_local_log.csv" ] && [ ~{resumeable_copy_from_local_log} != "copy_from_local_log.csv" ]
         then
             gsutil cp ~{resumeable_copy_to_local_log} .
