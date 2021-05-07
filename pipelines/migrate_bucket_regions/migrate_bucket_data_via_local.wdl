@@ -23,9 +23,7 @@ workflow migrate_data_via_local {
             source_bucket_details = source_bucket_object_inventory,
             destination_bucket_path = destination_bucket_path,
             source_bucket_path = source_bucket_path,
-            disk_size = calculate_largest_file_size.max_gb,
-            resumeable_copy_to_local_log = resumeable_copy_to_local_log,
-            resumeable_copy_from_local_log = resumeable_copy_from_local_log
+            disk_size = calculate_largest_file_size.max_gb
     }
 
     output {
