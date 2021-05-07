@@ -6,9 +6,6 @@ workflow migrate_data_via_local {
         String destination_bucket_path
 
         File   source_bucket_object_inventory
-
-        File? resumeable_copy_to_local_log
-        File? resumeable_copy_from_local_log
     }
     
     # call get_source_bucket_details{
@@ -106,8 +103,8 @@ task copy_to_destination {
         String source_bucket_path
         Int disk_size
 
-        File? resumeable_copy_to_local_log
-        File? resumeable_copy_from_local_log
+        String? resumeable_copy_to_local_log = "copy_to_local_log.csv"
+        String? resumeable_copy_from_local_log = "copy_from_local_log.csv"
         Int? memory
     }
 
@@ -118,7 +115,7 @@ task copy_to_destination {
         # comma --> tab | skip header line | get second col (gs paths) > write to new file
         tr "," "\t" < ~{source_bucket_details} | sed -e 1d | cut -f2 > source_bucket_file_paths.txt
         
-        if [ -f ~{resumeable_copy_to_local_log} ] && [ -f ~{resumeable_copy_from_local_log} ]
+        if [ ~{resumeable_copy_to_local_log} != "copy_to_local_log.csv" ] && [ ~{resumeable_copy_from_local_log} != "copy_from_local_log.csv" ]
         then
             gsutil cp ~{resumeable_copy_to_local_log} .
             gsutil cp ~{resumeable_copy_from_local_log} .
