@@ -113,7 +113,7 @@ task copy_to_destination {
         # comma --> tab | skip header line | get second col (gs paths) > write to new file
         tr "," "\t" < ~{source_bucket_details} | sed -e 1d | cut -f2 > source_bucket_file_paths.txt
         
-        if ~{resumeable_copy_to_local_log} && ~{resumeable_copy_from_local_log}
+        if [ ~{resumeable_copy_to_local_log} ] && [ ~{resumeable_copy_from_local_log} ]
         then
             gsutil cp ~{resumeable_copy_to_local_log} .
             gsutil cp ~{resumeable_copy_from_local_log} .
