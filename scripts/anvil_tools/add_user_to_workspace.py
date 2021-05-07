@@ -44,7 +44,7 @@ def call_updateWorkspaceACL_api(request, workspace_name, workspace_project, emai
         print(response.text)
 
 
-def add_workspace_user(tsv, workspace_project="anvil-datastorage"):
+def add_workspace_user(tsv):
     """Create individual request body per workspace and user/group listed in tsv file."""
 
     # read full tsv into dataframe, workspace name = index
@@ -57,6 +57,7 @@ def add_workspace_user(tsv, workspace_project="anvil-datastorage"):
     for row in tsv_all.index:
         # get workspace name from row (Series)
         workspace_name = tsv_all.loc[row].get(key='workspace_name')
+        workspace_project = tsv_all.loc[row].get(key='workspace_project')
         email = tsv_all.loc[row].get(key='email')
         # create json request (remove workspace_name)
         row_json_request = "[" + tsv_all.loc[row].drop(labels='workspace_name').to_json() + "]"
@@ -70,9 +71,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='')
 
     parser.add_argument('-t', '--tsv', required=True, type=str, help='tsv file with workspace and matching authdomains.')
-    parser.add_argument('-p', '--project', type=str, default="anvil-datastorage", help='workspace project/namespace')
 
     args = parser.parse_args()
 
     # call to create request body PER row and make API call to update attributes
-    add_workspace_user(args.tsv, args.project)
+    add_workspace_user(args.tsv)
