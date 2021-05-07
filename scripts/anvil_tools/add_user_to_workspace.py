@@ -71,7 +71,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='')
 
     parser.add_argument('-t', '--tsv', required=True, type=str, help='tsv file with workspace and matching authdomains.')
-    parser.add_argument('-p', '--project', type=str, default="anvil-datastorage", help='workspace project/namespace')
 
     args = parser.parse_args()
 
