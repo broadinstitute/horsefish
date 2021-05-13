@@ -47,7 +47,7 @@ def add_members_to_workspace(workspace_name, acls, namespace=NAMESPACE, ignore=[
     return True, emails_str
 
 
-def create_workspace(workspace_name, auth_domains, namespace=NAMESPACE):
+def create_workspace(workspace_name, auth_domains, attributes, namespace=NAMESPACE):
     """Create the Terra workspace."""
     # check if workspace already exists
     ws_exists, ws_exists_response = check_workspace_exists(workspace_name, namespace)
@@ -59,7 +59,7 @@ def create_workspace(workspace_name, auth_domains, namespace=NAMESPACE):
         # format auth_domain_response
         auth_domain_names = json.loads(auth_domains)["workspace"]["authorizationDomain"]
         # create request JSON
-        create_ws_json = make_create_workspace_request(workspace_name, auth_domain_names, namespace)  # json for API request
+        create_ws_json = make_create_workspace_request(workspace_name, auth_domain_names, attributes, namespace)  # json for API request
 
         # request URL for createWorkspace (rawls) - bucketLocation not supported in orchestration
         uri = f"https://rawls.dsde-prod.broadinstitute.org/api/workspaces"
@@ -115,7 +115,7 @@ def make_add_members_to_workspace_request(response_text, ignore):
     return add_acls_request
 
 
-def make_create_workspace_request(workspace_name, auth_domains, namespace=NAMESPACE):
+def make_create_workspace_request(workspace_name, auth_domains, attributes, namespace=NAMESPACE):
     """Make the json request to pass into create_workspace()."""
     # initialize empty dictionary
     create_ws_request = {}
@@ -123,7 +123,7 @@ def make_create_workspace_request(workspace_name, auth_domains, namespace=NAMESP
     create_ws_request["namespace"] = namespace
     create_ws_request["name"] = workspace_name
     create_ws_request["authorizationDomain"] = auth_domains
-    create_ws_request["attributes"] = {}
+    create_ws_request["attributes"] = attributes
     create_ws_request["noWorkspaceOwner"] = False
     # specific to van allen lab - migrating to this region
     create_ws_request["bucketLocation"] = BUCKET_REGION
@@ -347,6 +347,24 @@ def copy_workspace_entities(destination_workspace_namespace, destination_workspa
     return True, data_table_name_list
 
 
+def get_workspace_attributes(source_workspace_namespace, source_workspace_name):
+    """Copy attributes from source workspace to a destination workspace."""
+    # get the list of all the attributes in source workspaces - workspace data
+    try:
+        workspace_data = fapi.get_workspace(source_workspace_namespace, source_workspace_name)
+        workspace_data_json = workspace_data.json()
+        attributes = workspace_data_json["workspace"]["attributes"]
+        for key in list(attributes.keys()):
+            if ":" in key or "description" in key:
+                del attributes[key]
+        print(f"Successfully copy over workspace attributes.")
+    except Exception as error:
+        print(f"WARNING: attributes copying failed due to: {error}")
+        return False, error
+
+    return True, attributes
+
+
 def setup_single_workspace(workspace, ignore=[]):
     """Create one workspace and set ACLs."""
     # initialize workspace dictionary with default values assuming failure
@@ -392,8 +410,14 @@ def setup_single_workspace(workspace, ignore=[]):
     if not get_ad_success:
         return workspace_dict
 
+    # get workspace attributes including workspace data from source workspace to destination workspace
+    get_workspace_success, get_workspace_message = get_workspace_attributes(source_workspace_namespace, source_workspace_name)
+
+    if not get_workspace_success:
+        return workspace_dict
+
     # create workspace (pass in auth domain response.text)
-    create_ws_success, create_ws_message = create_workspace(destination_workspace_name, get_ad_message, destination_workspace_namespace)
+    create_ws_success, create_ws_message = create_workspace(destination_workspace_name, get_ad_message, get_workspace_message, destination_workspace_namespace)
 
     workspace_dict["workspace_creation_error"] = create_ws_message
 
