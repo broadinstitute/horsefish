@@ -12,7 +12,7 @@ from firecloud import api as fapi
 from utils import add_tags_to_workspace, check_workspace_exists, \
     get_access_token, get_workspace_authorization_domain, \
     get_workspace_bucket, get_workspace_members, get_workspace_tags, \
-    write_output_report, write_terra_load_tsv
+    write_output_report, write_terra_load_tsv, get_workspace_attributes
 import query_bucket_object_inventory as get_source_objects_file
 
 
@@ -347,24 +347,6 @@ def copy_workspace_entities(destination_workspace_namespace, destination_workspa
     return True, data_table_name_list
 
 
-def get_workspace_attributes(source_workspace_namespace, source_workspace_name):
-    """Copy attributes from source workspace to a destination workspace."""
-    # get the list of all the attributes in source workspaces - workspace data
-    try:
-        workspace_data = fapi.get_workspace(source_workspace_namespace, source_workspace_name)
-        workspace_data_json = workspace_data.json()
-        attributes = workspace_data_json["workspace"]["attributes"]
-        for key in list(attributes.keys()):
-            if ":" in key or "description" in key:
-                del attributes[key]
-        print(f"Successfully copy over workspace attributes.")
-    except Exception as error:
-        print(f"WARNING: attributes copying failed due to: {error}")
-        return False, error
-
-    return True, attributes
-
-
 def setup_single_workspace(workspace, ignore=[]):
     """Create one workspace and set ACLs."""
     # initialize workspace dictionary with default values assuming failure
@@ -411,13 +393,13 @@ def setup_single_workspace(workspace, ignore=[]):
         return workspace_dict
 
     # get workspace attributes including workspace data from source workspace to destination workspace
-    get_workspace_success, get_workspace_message = get_workspace_attributes(source_workspace_namespace, source_workspace_name)
+    get_ws_attributes_success, get_ws_attributes_success = get_workspace_attributes(source_workspace_namespace, source_workspace_name)
 
-    if not get_workspace_success:
+    if not get_ws_attributes_success:
         return workspace_dict
 
     # create workspace (pass in auth domain response.text)
-    create_ws_success, create_ws_message = create_workspace(destination_workspace_name, get_ad_message, get_workspace_message, destination_workspace_namespace)
+    create_ws_success, create_ws_message = create_workspace(destination_workspace_name, get_ad_message, get_ws_attributes_success, destination_workspace_namespace)
 
     workspace_dict["workspace_creation_error"] = create_ws_message
 
