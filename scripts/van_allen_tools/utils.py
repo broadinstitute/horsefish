@@ -207,7 +207,8 @@ def get_workspace_attributes(project, workspace_name):
         return False, response.text
 
     # Remove tags, description, and library attributes
-    attributes = response.json()
+    attribute = response.json()
+    attributes = attribute['workspace']['attributes']
     for key in list(attributes.keys()):
         if ":" in key or "description" in key:
             del attributes[key]
