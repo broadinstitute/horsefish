@@ -186,32 +186,3 @@ def get_workspace_tags(workspace_name, project):
         return False, response.text
 
     return True, response.text
-
-
-def get_workspace_attributes(project, workspace_name):
-    """Get attributes of workspace"""
-    # get the list of all the attributes in source workspaces - workspace data
-    uri = f"https://api.firecloud.org/api/workspaces/{project}/{workspace_name}?fields=workspace.attributes"
-
-    # Get access token and and add to headers for requests.
-    # -H  "accept: application/json" -H  "Authorization: Bearer [token]
-    headers = {"Authorization": "Bearer " + get_access_token(), "accept": "application/json"}
-
-    # capture response from API and parse out status code
-    response = requests.get(uri, headers=headers)
-    status_code = response.status_code
-
-    if status_code != 200:  # could not get bucket id
-        print(f"WARNING: Failed to get attributes for workspace with name: {project}/{workspace_name}.")
-        print("Check output file for error details.")
-        return False, response.text
-
-    # Remove tags, description, and library attributes
-    attributes = response.json()
-    for key in list(attributes.keys()):
-        if ":" in key or "description" in key:
-            del attributes[key]
-
-    print(f"Successfully got workspace attributes.")
-
-    return True, attributes

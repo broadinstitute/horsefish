@@ -12,7 +12,7 @@ from firecloud import api as fapi
 from utils import add_tags_to_workspace, check_workspace_exists, \
     get_access_token, get_workspace_authorization_domain, \
     get_workspace_bucket, get_workspace_members, get_workspace_tags, \
-    write_output_report, write_terra_load_tsv, get_workspace_attributes
+    write_output_report, write_terra_load_tsv
 import query_bucket_object_inventory as get_source_objects_file
 
 
@@ -47,7 +47,7 @@ def add_members_to_workspace(workspace_name, acls, namespace=NAMESPACE, ignore=[
     return True, emails_str
 
 
-def create_workspace(workspace_name, auth_domains, attributes, namespace=NAMESPACE):
+def create_workspace(workspace_name, auth_domains, namespace=NAMESPACE):
     """Create the Terra workspace."""
     # check if workspace already exists
     ws_exists, ws_exists_response = check_workspace_exists(workspace_name, namespace)
@@ -59,7 +59,7 @@ def create_workspace(workspace_name, auth_domains, attributes, namespace=NAMESPA
         # format auth_domain_response
         auth_domain_names = json.loads(auth_domains)["workspace"]["authorizationDomain"]
         # create request JSON
-        create_ws_json = make_create_workspace_request(workspace_name, auth_domain_names, attributes, namespace)  # json for API request
+        create_ws_json = make_create_workspace_request(workspace_name, auth_domain_names, namespace)  # json for API request
 
         # request URL for createWorkspace (rawls) - bucketLocation not supported in orchestration
         uri = f"https://rawls.dsde-prod.broadinstitute.org/api/workspaces"
@@ -115,7 +115,7 @@ def make_add_members_to_workspace_request(response_text, ignore):
     return add_acls_request
 
 
-def make_create_workspace_request(workspace_name, auth_domains, attributes, namespace=NAMESPACE):
+def make_create_workspace_request(workspace_name, auth_domains, namespace=NAMESPACE):
     """Make the json request to pass into create_workspace()."""
     # initialize empty dictionary
     create_ws_request = {}
@@ -123,7 +123,7 @@ def make_create_workspace_request(workspace_name, auth_domains, attributes, name
     create_ws_request["namespace"] = namespace
     create_ws_request["name"] = workspace_name
     create_ws_request["authorizationDomain"] = auth_domains
-    create_ws_request["attributes"] = attributes
+    create_ws_request["attributes"] = {}
     create_ws_request["noWorkspaceOwner"] = False
     # specific to van allen lab - migrating to this region
     create_ws_request["bucketLocation"] = BUCKET_REGION
@@ -392,14 +392,8 @@ def setup_single_workspace(workspace, ignore=[]):
     if not get_ad_success:
         return workspace_dict
 
-    # get workspace attributes including workspace data from source workspace to destination workspace
-    get_ws_attributes_success, get_ws_attributes_success = get_workspace_attributes(source_workspace_namespace, source_workspace_name)
-
-    if not get_ws_attributes_success:
-        return workspace_dict
-
     # create workspace (pass in auth domain response.text)
-    create_ws_success, create_ws_message = create_workspace(destination_workspace_name, get_ad_message, get_ws_attributes_success, destination_workspace_namespace)
+    create_ws_success, create_ws_message = create_workspace(destination_workspace_name, get_ad_message, destination_workspace_namespace)
 
     workspace_dict["workspace_creation_error"] = create_ws_message
 
