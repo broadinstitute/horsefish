@@ -24,7 +24,11 @@ wait
 # gcloud beta projects get-iam-policy $PROJECT_ID | grep -A 1 -B 1 "${MEMBER}"
 
 echo ""
-echo "Gatorcounting while waiting for iam changes goes into effect"
+echo "Gatorcounting for 10 seconds while iam change goes into effect"
+echo ""
+echo "NOTE: if you get an error message saying:"
+echo "    AccessDeniedException: 403 ${USER_EMAIL} does not have storage.buckets.update access to the Google Cloud Storage bucket."
+echo "THEN don't worry, just wait until it shows 'Enabling requester pays."
 echo ""
 sleep 10
 
