@@ -34,7 +34,6 @@ ROLE="organizations/${ORG_ID}/roles/RequesterPaysToggler"
 # enable requesterpays permissions
 echo "Enabling permissions for ${USER_EMAIL} to switch on Requester Pays"
 gcloud beta projects add-iam-policy-binding $PROJECT_ID --member=$MEMBER --role=$ROLE | grep -A 1 -B 1 "${MEMBER}"
-wait
 # # if needed for troubleshooting, this command retrieves the existing policy
 # gcloud beta projects get-iam-policy $PROJECT_ID | grep -A 1 -B 1 "${MEMBER}"
 
@@ -44,7 +43,7 @@ echo ""
 echo "NOTE: if you get an error message saying AccessDeniedExeption: 403"
 echo "THEN don't worry, just wait until it shows 'Enabling requester pays."
 echo ""
-echo "retrying in 10 seconds"
+echo "waiting 10 seconds before first attempt"
 echo ""
 sleep 10
 
