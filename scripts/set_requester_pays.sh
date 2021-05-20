@@ -4,7 +4,8 @@ if (( $# < 1 )); then
   echo "Usage: $0 TERRA_PROJECT_ID PATH_TO_TERRA_BUCKET_PATH"
   echo "Unless you specify a source file or a string of buckets, the script will read buckets from a file 'buckets.txt'."
   echo "The source file must include newline-delimited Terra bucket paths of format gs://fc-XXXXX"
-  echo 'The string of Terra bucket paths must be formatted as "gs://fc-XXXXX gs://fc-XXXXX gs://fc-XXXXX"'
+  echo 'The string of Terra bucket paths can be formatted as "gs://fc-XXXXX gs://fc-XXXXX" or "fc-XXXXX fc-XXXXX"'
+  echo "i.e you can run `./set_requester_pays.sh project_id fc-12345`"
   echo "NOTE: this script requires you to be authed as your firecloud.org admin account."
   exit 0
   elif (( $# == 1 )); then
@@ -41,6 +42,8 @@ echo "Gatorcounting for 10 seconds while iam change goes into effect"
 echo ""
 echo "NOTE: if you get an error message saying AccessDeniedExeption: 403"
 echo "THEN don't worry, just wait until it shows 'Enabling requester pays."
+echo ""
+echo "retrying in 10 seconds"
 echo ""
 sleep 10
 
