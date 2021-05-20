@@ -17,6 +17,7 @@ if (( $# < 1 )); then
     else
       BUCKETS=$2
     fi
+  # If there is more that 2 arguments, check if the bucket list has qutoes around it
   elif (( $# > 2 )); then
     echo 'The Terra bucket paths must be formatted as "gs://fc-XXXXX gs://fc-XXXXX gs://fc-XXXXX"'
     echo "NOTE: this script requires you to be authed as your firecloud.org admin account."
