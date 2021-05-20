@@ -11,6 +11,7 @@ if (( $# < 1 )); then
   elif (( $# == 1 )); then
     BUCKETS=$(cat buckets.txt)
   elif (( $# == 2 )); then
+    # Checking if a file was passed in
     if [[ $2 == *"."* ]]; then
       BUCKETS=$(cat $2)
     else
@@ -50,20 +51,20 @@ sleep 10
 COUNTER=0
 
 for BUCKET in $BUCKETS; do
-  if [[ $BUCKET == *"gs://"* ]]; then
+  if [[ $BUCKET == "gs://"* ]]; then
       BUCKET_PATH=$BUCKET
     else
       BUCKET_PATH="gs://$BUCKET"
   fi
   while ! gsutil requesterpays set on ${BUCKET_PATH}
     do
-      let COUNTER=COUNTER+1
-      echo "retrying in 10 seconds - attempt ${COUNTER}/6"
-      sleep 10
       if (( $COUNTER > 5 )); then
         echo "Error - Requesterpays Timeout"
         exit 0
       fi
+      let COUNTER=COUNTER+1
+      echo "retrying in 10 seconds - attempt ${COUNTER}/6"
+      sleep 10
     done
 done
 
