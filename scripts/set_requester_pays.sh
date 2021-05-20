@@ -1,15 +1,27 @@
 #!/bin/bash
 
 if (( $# < 1 )); then
-  echo "Usage: $0 TERRA_PROJECT_ID [PATH_TO_TERRA_BUCKET_LIST_FILE]"
-  echo "Unless you specify a source file, the script will read buckets from a file 'buckets.txt'."
-  echo "The source file must include newline-delimited Terra bucket paths of format gs://fc-XXXXX"
+  echo "Usage: $0 TERRA_PROJECT_ID PATH_TO_TERRA_BUCKET_PATH"
+  echo "Unless you specify a source file or a string of buckets, the script will read buckets from a file 'buckets.txt'."
+  echo "The source file must include newline-delimited Terra bucket paths"
+  echo 'The string of Terra bucket paths can be formatted as "gs://fc-XXXXX gs://fc-XXXXX" or "fc-XXXXX fc-XXXXX"'
+  echo "i.e you can run `./set_requester_pays.sh project_id fc-12345`"
   echo "NOTE: this script requires you to be authed as your firecloud.org admin account."
   exit 0
-elif (( $# == 1 )); then
-  BUCKETS=$(cat buckets.txt)
-elif (( $# == 2 )); then
-  BUCKETS=$(cat $2)
+  elif (( $# == 1 )); then
+    BUCKETS=$(cat buckets.txt)
+  elif (( $# == 2 )); then
+    # Checking if a file was passed in
+    if [[ $2 == *"."* ]]; then
+      BUCKETS=$(cat $2)
+    else
+      BUCKETS=$2
+    fi
+  # If there is more that 2 arguments, check if the bucket list has qutoes around it
+  elif (( $# > 2 )); then
+    echo 'The Terra bucket paths can be formatted as "gs://fc-XXXXX gs://fc-XXXXX" or "fc-XXXXX fc-XXXXX"'
+    echo "NOTE: this script requires you to be authed as your firecloud.org admin account."
+    exit 0
 fi
 
 PROJECT_ID=$1
@@ -23,22 +35,37 @@ ROLE="organizations/${ORG_ID}/roles/RequesterPaysToggler"
 # enable requesterpays permissions
 echo "Enabling permissions for ${USER_EMAIL} to switch on Requester Pays"
 gcloud beta projects add-iam-policy-binding $PROJECT_ID --member=$MEMBER --role=$ROLE | grep -A 1 -B 1 "${MEMBER}"
-
 # # if needed for troubleshooting, this command retrieves the existing policy
 # gcloud beta projects get-iam-policy $PROJECT_ID | grep -A 1 -B 1 "${MEMBER}"
 
 echo ""
 echo "Gatorcounting for 10 seconds while iam change goes into effect"
 echo ""
-echo "NOTE: if you get an error message saying:"
-echo "    AccessDeniedException: 403 ${USER_EMAIL} does not have storage.buckets.update access to the Google Cloud Storage bucket."
-echo "THEN gatorcount 10 more seconds and run this again."
+echo "NOTE: if you get an error message saying AccessDeniedExeption: 403"
+echo "THEN don't worry, just wait until it shows 'Enabling requester pays."
+echo ""
+echo "waiting 10 seconds before first attempt"
 echo ""
 sleep 10
 
+COUNTER=0
+
 for BUCKET in $BUCKETS; do
-  # set requester pays
-  gsutil requesterpays set on ${BUCKET} || exit 1
+  if [[ $BUCKET == "gs://"* ]]; then
+      BUCKET_PATH=$BUCKET
+    else
+      BUCKET_PATH="gs://$BUCKET"
+  fi
+  while ! gsutil requesterpays set on ${BUCKET_PATH}
+    do
+      if (( $COUNTER > 5 )); then
+        echo "Maximum number of attempts exceeded - please check the error message and try again"
+        exit 0
+      fi
+      let COUNTER=COUNTER+1
+      echo "retrying in 10 seconds - attempt ${COUNTER}/6"
+      sleep 10
+    done
 done
 
 # revoke requesterpays permissions
