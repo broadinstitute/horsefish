@@ -2,7 +2,12 @@
 
 if (( $# < 2 )); then
   echo "Usage: $0 TERRA_PROJECT_ID PATH_TO_TERRA_BUCKET_PATH"
-  echo "The Terra bucket paths must be formatted as gs://fc-XXXXX"
+  echo 'The Terra bucket paths must be formatted as "gs://fc-XXXXX gs://fc-XXXXX gs://fc-XXXXX"'
+  echo "NOTE: this script requires you to be authed as your firecloud.org admin account."
+  exit 0
+fi
+if (( $# > 2 )); then
+  echo 'The Terra bucket paths must be formatted as "gs://fc-XXXXX gs://fc-XXXXX gs://fc-XXXXX"'
   echo "NOTE: this script requires you to be authed as your firecloud.org admin account."
   exit 0
 fi
@@ -26,16 +31,22 @@ wait
 echo ""
 echo "Gatorcounting for 10 seconds while iam change goes into effect"
 echo ""
-echo "NOTE: if you get an error message saying:"
-echo "    AccessDeniedException: 403 ${USER_EMAIL} does not have storage.buckets.update access to the Google Cloud Storage bucket."
+echo "NOTE: if you get an error message saying AccessDeniedExeption: 403"
 echo "THEN don't worry, just wait until it shows 'Enabling requester pays."
 echo ""
 sleep 10
+
+COUNTER=0
 
 for BUCKET in $BUCKETS; do
   while ! gsutil requesterpays set on ${BUCKET}
     do
       sleep 10
+      let COUNTER=COUNTER+1
+      if (( $COUNTER > 20 )); then
+        echo "Error - requesterpays Timeout"
+        exit 0
+      fi
     done
 done
 
