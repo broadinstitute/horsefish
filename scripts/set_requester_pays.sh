@@ -47,12 +47,18 @@ sleep 10
 COUNTER=0
 
 for BUCKET in $BUCKETS; do
-  while ! gsutil requesterpays set on ${BUCKET}
+  if [[ $BUCKET == *"gs://"* ]]; then
+      BUCKET_PATH=$BUCKET
+    else
+      BUCKET_PATH="gs://$BUCKET"
+  fi
+  while ! gsutil requesterpays set on ${BUCKET_PATH}
     do
-      sleep 10
       let COUNTER=COUNTER+1
-      if (( $COUNTER > 20 )); then
-        echo "Error - requesterpays Timeout"
+      echo "retrying in 10 seconds - attempt ${COUNTER}/6"
+      sleep 10
+      if (( $COUNTER > 6 )); then
+        echo "Error - Requesterpays Timeout"
         exit 0
       fi
     done
