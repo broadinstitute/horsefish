@@ -59,7 +59,7 @@ for BUCKET in $BUCKETS; do
   while ! gsutil requesterpays set on ${BUCKET_PATH}
     do
       if (( $COUNTER > 5 )); then
-        echo "Error - Requesterpays Timeout"
+        echo "Maximum number of attempts exceeded - please check the error message and try again"
         exit 0
       fi
       let COUNTER=COUNTER+1
