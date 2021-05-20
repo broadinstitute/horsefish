@@ -57,7 +57,7 @@ for BUCKET in $BUCKETS; do
       let COUNTER=COUNTER+1
       echo "retrying in 10 seconds - attempt ${COUNTER}/6"
       sleep 10
-      if (( $COUNTER > 6 )); then
+      if (( $COUNTER > 5 )); then
         echo "Error - Requesterpays Timeout"
         exit 0
       fi
