@@ -1,19 +1,27 @@
 #!/bin/bash
 
-if (( $# < 2 )); then
+if (( $# < 1 )); then
   echo "Usage: $0 TERRA_PROJECT_ID PATH_TO_TERRA_BUCKET_PATH"
-  echo 'The Terra bucket paths must be formatted as "gs://fc-XXXXX gs://fc-XXXXX gs://fc-XXXXX"'
+  echo "Unless you specify a source file or a string of buckets, the script will read buckets from a file 'buckets.txt'."
+  echo "The source file must include newline-delimited Terra bucket paths of format gs://fc-XXXXX"
+  echo 'The string of Terra bucket paths must be formatted as "gs://fc-XXXXX gs://fc-XXXXX gs://fc-XXXXX"'
   echo "NOTE: this script requires you to be authed as your firecloud.org admin account."
   exit 0
-fi
-if (( $# > 2 )); then
-  echo 'The Terra bucket paths must be formatted as "gs://fc-XXXXX gs://fc-XXXXX gs://fc-XXXXX"'
-  echo "NOTE: this script requires you to be authed as your firecloud.org admin account."
-  exit 0
+  elif (( $# == 1 )); then
+    BUCKETS=$(cat buckets.txt)
+  elif (( $# == 2 )); then
+    if [[ $2 == *"."* ]]; then
+      BUCKETS=$(cat $2)
+    else
+      BUCKETS=$2
+    fi
+  elif (( $# > 2 )); then
+    echo 'The Terra bucket paths must be formatted as "gs://fc-XXXXX gs://fc-XXXXX gs://fc-XXXXX"'
+    echo "NOTE: this script requires you to be authed as your firecloud.org admin account."
+    exit 0
 fi
 
 PROJECT_ID=$1
-BUCKETS=$2
 USER_EMAIL=$(gcloud config get-value account)
 MEMBER="user:${USER_EMAIL}"
 
