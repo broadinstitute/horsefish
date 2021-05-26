@@ -212,21 +212,21 @@ def get_parent_directory(filepath):
     return '/'.join(filepath.split('/')[:-1])
 
 
-def mop(args):
+def mop(project, workspace, include, exclude, dry_run, save_dir, yes, verbose):
     '''Clean up unreferenced data in a workspace'''
 
     # First retrieve the workspace to get bucket information
-    if args.verbose:
+    if verbose:
         print("Retrieving workspace information...")
     fields = "workspace.bucketName,workspace.name,workspace.attributes"
-    r = fapi.get_workspace(args.project, args.workspace, fields=fields)
+    r = fapi.get_workspace(project, workspace, fields=fields)
     fapi._check_response_code(r, 200)
     workspace = r.json()
     bucket = workspace['workspace']['bucketName']
     bucket_prefix = 'gs://' + bucket
     workspace_name = workspace['workspace']['name']
 
-    if args.verbose:
+    if verbose:
         print("{} -- {}".format(workspace_name, bucket_prefix))
     
     # Handle Basic Values, Compound data structures, and Nestings thereof
@@ -251,15 +251,15 @@ def mop(args):
         if isinstance(value, string_types) and value.startswith(bucket_prefix):
             referenced_files.add(value)
     # 1. Get a list of the entity types in the workspace
-    r = fapi.list_entity_types(args.project, args.workspace)
+    r = fapi.list_entity_types(project, workspace)
     fapi._check_response_code(r, 200)
     entity_types = r.json().keys()
     # 2. For each entity type, request all the entities
     for etype in entity_types:
-        if args.verbose:
+        if verbose:
             print("Getting annotations for " + etype + " entities...")
         # use the paginated version of the query
-        entities = _entity_paginator(args.project, args.workspace, etype,
+        entities = _entity_paginator(project, workspace, etype,
                               page_size=1000, filter_terms=None,
                               sort_direction="asc")
         for entity in entities:
@@ -267,12 +267,12 @@ def mop(args):
                                     entity['attributes'].values(),
                                     bucket_prefix)
 
-    if args.verbose:
+    if verbose:
         num = len(referenced_files)
         print("Found {} referenced files in workspace {}".format(num, workspace_name))
 
     # Retrieve user's submission information
-    user_submission_request = fapi.list_submissions(args.project, args.workspace)
+    user_submission_request = fapi.list_submissions(project, workspace)
     # Check if API call was successful, in the case of failure, the function will return an error 
     fapi._check_response_code(user_submission_request, 200)
     # Sort user submission ids for future bucket file verification
@@ -282,12 +282,12 @@ def mop(args):
     referenced_directories = set()
     # get all referenced directories
     referenced_directories = set([get_parent_directory(f) for f in referenced_files])
-    if args.verbose:
+    if verbose:
         num = len(referenced_directories)
         print("Found {} referenced task-level directories in workspace {}".format(num, workspace_name))
 
     # List files present in the bucket
-    bucket_dict = list_bucket_files(args.project, bucket, referenced_files, args.verbose)
+    bucket_dict = list_bucket_files(project, bucket, referenced_files, verbose)
 
     all_bucket_files = set(file_metadata['file_path'] for file_metadata in bucket_dict.values())
 
@@ -295,10 +295,9 @@ def mop(args):
     # to ensure deletion of files in the submission directories only.
     submission_bucket_files = set(file_metadata['file_path'] for file_metadata in bucket_dict.values() if file_metadata['submission_id'] in submission_ids)
 
-    if args.verbose:
+    if verbose:
         num = len(submission_bucket_files)
-        if args.verbose:
-            print("Found {} submission-related files in bucket {}".format(num, bucket))
+        print("Found {} submission-related files in bucket {}".format(num, bucket))
 
     # Set difference shows files in bucket that aren't referenced
     unreferenced_files = submission_bucket_files - referenced_files
@@ -333,14 +332,14 @@ def mop(args):
         if filename in ('stderr', 'stdout', 'output'):
             return False
         # Only delete specified unreferenced files
-        if args.include:
-            for glob in args.include:
+        if include:
+            for glob in include:
                 if fnmatchcase(filename, glob):
                     return True
             return False
         # Don't delete specified unreferenced files
-        if args.exclude:
-            for glob in args.exclude:
+        if exclude:
+            for glob in exclude:
                 if fnmatchcase(filename, glob):
                     return False
 
@@ -349,63 +348,57 @@ def mop(args):
     deletable_files = [f for f in unreferenced_files if can_delete(f)]
 
     if len(deletable_files) == 0:
-        if args.verbose:
+        if verbose:
             print("No files to mop in " + workspace_name)
         return 0
 
     deletable_size = human_readable_size(sum(bucket_dict[f]['size']
                                              for f in deletable_files))
 
-    workspace_no_spaces = args.workspace.replace(' ','_')
+    workspace_no_spaces = workspace.replace(' ','_')
 
-    if args.verbose or args.dry_run:
-        if len(deletable_files) <= 100:
-            print("Found {} files to delete:\n".format(len(deletable_files)) +
-                  "\n".join("{}  {}".format(human_readable_size(bucket_dict[f]['size']).rjust(11), f)
-                            for f in deletable_files) +
-                '\nTotal size of deletable files: {}\n'.format(deletable_size))
-        else:
-            # more than 100 files found to delete - save list to disk instead
-            print("Found {} files to delete.".format(len(deletable_files)) +
-                '\nTotal size of deletable files: {}\n'.format(deletable_size))
-            if not os.path.exists(args.save_dir):
-                os.mkdir(args.save_dir)
-            files_to_delete_list_path = "{}/files_to_delete_{}_{}.txt".format(args.save_dir, args.project, workspace_no_spaces)
-            print("Saving list of files and sizes to disk ({}) for inspection.".format(files_to_delete_list_path))
-            with open(files_to_delete_list_path, "w") as outfile:
-                outfile.write("\n".join(deletable_files))
-            print("List of files to delete saved to: {}".format(files_to_delete_list_path))
+    if verbose or dry_run:
+        # save list to disk
+        print("Found {} files to delete.".format(len(deletable_files)) +
+            '\nTotal size of deletable files: {}\n'.format(deletable_size))
+        if not os.path.exists(save_dir):
+            os.mkdir(save_dir)
+        files_to_delete_list_path = "{}/files_to_delete_{}_{}.txt".format(save_dir, project, workspace_no_spaces)
+        print("Saving list of files and sizes to disk ({}) for inspection.".format(files_to_delete_list_path))
+        with open(files_to_delete_list_path, "w") as outfile:
+            outfile.write("\n".join(deletable_files))
+        print("List of files to delete saved to: {}".format(files_to_delete_list_path))
 
 
     message = "WARNING: Delete {} files totaling {} in {} ({})".format(
         len(deletable_files), deletable_size, bucket_prefix,
         workspace['workspace']['name'])
 
-    if args.dry_run or (not args.yes and not _confirm_prompt(message)):
-        return 0
+    if dry_run or (not yes and not _confirm_prompt(message)):
+        return files_to_delete_list_path
 
     # use GCP client library to delete files
-    delete_files(bucket, deletable_files, args.verbose)
+    delete_files(bucket, deletable_files, verbose)
 
-    return 0
+    return files_to_delete_list_path
 
 
-def mop_files_from_list(args):
+def mop_files_from_list(project, workspace, delete_from_list, dry_run, yes, verbose):
     '''Clean up data in workspace from a given list of files to delete.'''
     # First retrieve the workspace to get bucket information
-    if args.verbose:
+    if verbose:
         print("Retrieving workspace information...")
     fields = "workspace.bucketName,workspace.name,workspace.attributes"
-    r = fapi.get_workspace(args.project, args.workspace, fields=fields)
+    r = fapi.get_workspace(project, workspace, fields=fields)
     fapi._check_response_code(r, 200)
     workspace = r.json()
     bucket = workspace['workspace']['bucketName']
     bucket_prefix = 'gs://' + bucket
 
-    if args.verbose:
-        print("{} -- {}".format(args.workspace, bucket_prefix))
+    if verbose:
+        print("{} -- {}".format(workspace, bucket_prefix))
 
-    with open(args.delete_from_list, 'r') as infile:
+    with open(delete_from_list, 'r') as infile:
         deletable_files_input = infile.readlines()
 
     # ensure that all the files are actually in the workspace bucket
@@ -414,11 +407,11 @@ def mop_files_from_list(args):
     message = "WARNING: Delete {} files in {} ({})".format(
         len(deletable_files), bucket_prefix, args.workspace)
 
-    if args.dry_run or (not args.yes and not _confirm_prompt(message)):
+    if dry_run or (not yes and not _confirm_prompt(message)):
         return 0
 
     # use GCP client library to delete files
-    delete_files(bucket, deletable_files, args.verbose)
+    delete_files(bucket, deletable_files, verbose)
 
     return 0
 
@@ -461,7 +454,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.delete_from_list:
-        mop_files_from_list(args)
+        mop_files_from_list(args.project, args.workspace, args.delete_from_list, args.dry_run, args.yes, args.verbose)
     else:
-        mop(args)
+        mop(args.project, args.workspace, args.include, args.exclude, args.dry_run, args.save_dir, args.yes, args.verbose)
 
