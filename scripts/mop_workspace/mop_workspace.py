@@ -190,10 +190,11 @@ def delete_files(bucket_name, files_to_delete, verbose):
     CHUNK_SIZE = 100
 
     if n_files_to_delete > CHUNK_SIZE:
-        if verbose:
-            print(f"Prepared {n_chunks} chunks, processing deletions in parallel.")
         chunked_blobs = list(partition_all(CHUNK_SIZE, blobs))
         n_chunks = len(chunked_blobs)
+
+        if verbose:
+            print(f"Prepared {n_chunks} chunks, processing deletions in parallel.")
 
         with ThreadPoolExecutor(max_workers=50) as e:
             list(tqdm(e.map(delete_files_call, [bucket_name]*n_chunks, chunked_blobs), total=n_chunks))
