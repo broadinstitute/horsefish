@@ -218,8 +218,7 @@ def mop(project, workspace, include, exclude, dry_run, save_dir, yes, verbose):
     # First retrieve the workspace to get bucket information
     if verbose:
         print("Retrieving workspace information...")
-    fields = "workspace.bucketName,workspace.name,workspace.attributes"
-    r = fapi.get_workspace(project, workspace, fields=fields)
+    r = fapi.get_workspace(project, workspace)
     fapi._check_response_code(r, 200)
     workspace = r.json()
     bucket = workspace['workspace']['bucketName']
