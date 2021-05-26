@@ -220,10 +220,10 @@ def mop(project, workspace, include, exclude, dry_run, save_dir, yes, verbose):
         print("Retrieving workspace information...")
     r = fapi.get_workspace(project, workspace)
     fapi._check_response_code(r, 200)
-    workspace = r.json()
-    bucket = workspace['workspace']['bucketName']
+    workspace_json = r.json()
+    bucket = workspace_json['workspace']['bucketName']
     bucket_prefix = 'gs://' + bucket
-    workspace_name = workspace['workspace']['name']
+    workspace_name = workspace_json['workspace']['name']
 
     if verbose:
         print("{} -- {}".format(workspace_name, bucket_prefix))
@@ -246,7 +246,7 @@ def mop(project, workspace, include, exclude, dry_run, save_dir, yes, verbose):
     # Build a set of bucket files that are referenced in the workspace attributes and data table
     referenced_files = set()
     # 0. Add any files that are in workspace attributes
-    for value in workspace['workspace']['attributes'].values():
+    for value in workspace_json['workspace']['attributes'].values():
         if isinstance(value, string_types) and value.startswith(bucket_prefix):
             referenced_files.add(value)
     # 1. Get a list of the entity types in the workspace
