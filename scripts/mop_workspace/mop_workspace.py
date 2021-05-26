@@ -387,15 +387,14 @@ def mop_files_from_list(project, workspace, delete_from_list, dry_run, yes, verb
     # First retrieve the workspace to get bucket information
     if verbose:
         print("Retrieving workspace information...")
-    fields = "workspace.bucketName,workspace.name,workspace.attributes"
-    r = fapi.get_workspace(project, workspace, fields=fields)
+    r = fapi.get_workspace(project, workspace)
     fapi._check_response_code(r, 200)
-    workspace = r.json()
-    bucket = workspace['workspace']['bucketName']
+    workspace_json = r.json()
+    bucket = workspace_json['workspace']['bucketName']
     bucket_prefix = 'gs://' + bucket
 
     if verbose:
-        print("{} -- {}".format(workspace, bucket_prefix))
+        print("{} -- {}".format(workspace_json, bucket_prefix))
 
     with open(delete_from_list, 'r') as infile:
         deletable_files_input = infile.readlines()
@@ -404,7 +403,7 @@ def mop_files_from_list(project, workspace, delete_from_list, dry_run, yes, verb
     deletable_files = [f.rstrip('\n') for f in deletable_files_input if bucket_prefix in f]
 
     message = "WARNING: Delete {} files in {} ({})".format(
-        len(deletable_files), bucket_prefix, args.workspace)
+        len(deletable_files), bucket_prefix, workspace)
 
     if dry_run or (not yes and not _confirm_prompt(message)):
         return 0
