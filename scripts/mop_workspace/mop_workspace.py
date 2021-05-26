@@ -371,7 +371,7 @@ def mop(project, workspace, include, exclude, dry_run, save_dir, yes, verbose):
 
     message = "WARNING: Delete {} files totaling {} in {} ({})".format(
         len(deletable_files), deletable_size, bucket_prefix,
-        workspace['workspace']['name'])
+        workspace_json['workspace']['name'])
 
     if dry_run or (not yes and not _confirm_prompt(message)):
         return files_to_delete_list_path
