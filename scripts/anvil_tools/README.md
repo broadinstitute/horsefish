@@ -24,12 +24,32 @@
     Locally
         `python3 /scripts/anvil_tools/add_user_to_workspace.py -t TSV_FILE [-p WORKSPACE_PROJECT]`
     Docker
-        `docker run --rm -it -v "$HOME"/.config:/.config -v "$HOME"/local_data_directory/:/data broadinstitute/horsefish:anvil_tools bash -c "cd data; python3 /scripts/anvil_tools/add_user_to_workspace.py -t /data/INPUT.tsv [-p WORKSPACE_PROJECT]"`
+        `docker run --rm -it -v "$HOME"/.config:/.config -v "$HOME"/local_data_directory/:/data broadinstitute/horsefish bash -c "cd data; python3 /scripts/anvil_tools/add_user_to_workspace.py -t /data/INPUT.tsv [-p WORKSPACE_PROJECT]"`
 
         Note: `local_data_directory` should be the path to the folder where your desired input .tsv file is located.
 ##### Flags
     1. `--tsv`, `-t`: input .tsv file (required)
     2. `--project`, `-p`: workspace project/namespace for listed workspaces in tsv (default = anvil_datastorage)
+
+#### **file_exists_checker.sh**
+##### Description
+    Check if list of files exist at denoted gs://XXXX path in GCS location.
+
+    Input is:
+        1. excel file with column of gs://XXXX file paths to validate (must end in .xlsx)
+        2. number of column with gs://XXXX file paths (must be an integer value)
+    Output is a .xlsx file with name:
+        1. `{input_excel_filenamme}_with_exists.xlsx`
+##### Usage
+    Locally
+        `./file_exists_checker EXCEL_FILE COLUMN_NUMBER_TO_CHECK`
+    Docker
+        `docker run --rm -it -v "$HOME"/.config:/.config -v "$HOME"/local_data_directory/:/data broadinstitute/horsefish:latest bash -c "cd data; ./file_exists_checker EXCEL_FILE COLUMN_NUMBER_TO_CHECK"`
+
+        Note: local_data_directory should be the path to the folder where your input .tsv file is located.
+##### Flags
+    1. `EXCEL_FILE`: input .xlsx file (required)
+    2. `COLUMN_NUMBER_TO_CHECK`: number of column to parse from excel with gs;//XXXX paths (required)
 
 
 #### **get_workspace_attributes.py**
@@ -39,7 +59,7 @@
     Locally
         `python3 /scripts/anvil_tools/get_workspace_attributes.py -wp workspace project/namespace [-v]`
     Docker
-        `docker run --rm -it -v "$HOME"/.config:/.config -v "$HOME"/local_data_directory/:/data broadinstitute/horsefish:anvil_tools bash -c "cd data; python3 /scripts/anvil_tools/get_workspace_attributes.py -wp TERRA_PROJECT [-v]"`
+        `docker run --rm -it -v "$HOME"/.config:/.config -v "$HOME"/local_data_directory/:/data broadinstitute/horsefish bash -c "cd data; python3 /scripts/anvil_tools/get_workspace_attributes.py -wp TERRA_PROJECT [-v]"`
 
         Note: `local_data_directory` should be the path to the folder where your desired output .tsv file should be placed.
 ##### Flags
@@ -54,7 +74,7 @@
     Locally
         `python3 /scripts/anvil_tools/get_workspaces_list_in_project.py -tp terra project/namespace [-v]`
     Docker
-        `docker run --rm -it -v "$HOME"/.config:/.config -v "$HOME"/local_data_directory/:/data broadinstitute/horsefish:anvil_tools bash -c "cd data; python3 /scripts/anvil_tools/get_workspaces_list_in_project.py -tp TERRA_PROJECT [-v]"`
+        `docker run --rm -it -v "$HOME"/.config:/.config -v "$HOME"/local_data_directory/:/data broadinstitute/horsefish bash -c "cd data; python3 /scripts/anvil_tools/get_workspaces_list_in_project.py -tp TERRA_PROJECT [-v]"`
 
         Note: `local_data_directory` should be the path to the folder where your desired output .tsv file should be placed.
 ##### Flags
@@ -75,7 +95,7 @@
     Locally
         `python3 /scripts/anvil_tools/set_up_anvil_workspace.py -t TSV_FILE [-p WORKSPACE_PROJECT]
     Docker
-        `docker run --rm -it -v "$HOME"/.config:/.config -v "$HOME"/local_data_directory/:/data broadinstitute/horsefish:anvil_tools bash -c "cd data; python3 /scripts/anvil_tools/set_up_anvil_workspace.py -t /data/INPUT.tsv [-p WORKSPACE_PROJECT]"`
+        `docker run --rm -it -v "$HOME"/.config:/.config -v "$HOME"/local_data_directory/:/data broadinstitute/horsefish bash -c "cd data; python3 /scripts/anvil_tools/set_up_anvil_workspace.py -t /data/INPUT.tsv [-p WORKSPACE_PROJECT]"`
 
         Note: local_data_directory should be the path to the folder where your input .tsv file is located and where your output .tsv file will be placed.
 ##### Flags
@@ -93,7 +113,7 @@
     Locally
         `python3 post_workspace_attributes.py -t TSV_FILE [-p BILLING-PROJECT]`
     Docker
-        `docker run --rm -it -v "$HOME"/.config:/.config -v "$HOME"/local_data_directory/:/data broadinstitute/horsefish:anvil_tools bash -c "cd data; python3 /scripts/anvil_tools/post_workspace_attributes.py -t /data/INPUT.tsv [-p WORKSPACE_PROJECT]"`
+        `docker run --rm -it -v "$HOME"/.config:/.config -v "$HOME"/local_data_directory/:/data broadinstitute/horsefish bash -c "cd data; python3 /scripts/anvil_tools/post_workspace_attributes.py -t /data/INPUT.tsv [-p WORKSPACE_PROJECT]"`
 
         Note: local_data_directory should be the path to the folder where your input .tsv file is located.
 ##### Flags
@@ -112,7 +132,7 @@
     Locally
         `python3 publish_workspaces_to_data_library.py -t TSV_FILE [-p BILLING-PROJECT]`
     Docker
-        `docker run --rm -it -v "$HOME"/.config:/.config -v "$HOME"/local_data_directory/:/data broadinstitute/horsefish:anvil_tools bash -c "cd data; python3 /scripts/anvil_tools/publish_workspaces_to_data_library.py -t /data/INPUT.tsv [-p WORKSPACE_PROJECT]"`
+        `docker run --rm -it -v "$HOME"/.config:/.config -v "$HOME"/local_data_directory/:/data broadinstitute/horsefish bash -c "cd data; python3 /scripts/anvil_tools/publish_workspaces_to_data_library.py -t /data/INPUT.tsv [-p WORKSPACE_PROJECT]"`
 
         Note: local_data_directory should be the path to the folder where your input .tsv file is located.
 ##### Flags
