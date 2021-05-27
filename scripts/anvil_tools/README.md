@@ -44,7 +44,7 @@
     Locally
         `./file_exists_checker EXCEL_FILE COLUMN_NUMBER_TO_CHECK`
     Docker
-        `docker run --rm -it -v "$HOME"/.config:/.config -v "$HOME"/local_data_directory/:/data broadinstitute/horsefish bash -c "export CLOUDSDK_PYTHON=python2.7; cd data; ./../scripts/anvil_tools/file_exists_checker.sh EXCEL_FILE COLUMN_NUMBER_TO_CHECK; unset CLOUDSDK_PYTHON"`
+        `docker run --rm -it -v "$HOME"/.config:/.config -v "$HOME"/local_data_directory/:/data broadinstitute/horsefish bash -c "export CLOUDSDK_PYTHON=python3.7; cd data; ./../scripts/anvil_tools/file_exists_checker.sh EXCEL_FILE COLUMN_NUMBER_TO_CHECK; unset CLOUDSDK_PYTHON"`
 
         Note: local_data_directory should be the path to the folder where your input .tsv file is located.
 ##### Flags
