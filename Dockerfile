@@ -26,6 +26,9 @@ RUN rm /usr/bin/lsb_release \
 # install python packages
 RUN python3 -m pip install gcsfs
 
+# install gnumeric (excel conversions)
+RUN apt-get install -y gnumeric
+
 COPY scripts /scripts
 
 COPY requirements.txt .
