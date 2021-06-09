@@ -27,7 +27,8 @@ RUN rm /usr/bin/lsb_release \
 RUN python3 -m pip install gcsfs
 
 # install gnumeric (excel conversions)
-RUN apt-get install -y gnumeric
+RUN apt-get update -y \
+    && apt-get install -y gnumeric
 
 COPY scripts /scripts
 
