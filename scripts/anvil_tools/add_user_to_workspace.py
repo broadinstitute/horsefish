@@ -1,7 +1,7 @@
 """Put/update user/group permissions to workspace - parsed from input tsv file.
 
 Usage:
-    > python3 add_user_to_workspace.py -t TSV_FILE [-p BILLING-PROJECT]"""
+    > python3 add_user_to_workspace.py -t TSV_FILE"""
 
 import argparse
 import pandas as pd

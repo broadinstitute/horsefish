@@ -16,20 +16,21 @@
 ##### Description
     Update/add user/group to workspace ACL (as READER, WRITER, OWNER). 
     
-    Input is a .tsv file with 3 columns:
+    Input is a .tsv file with 4 columns:
         1. "workspace_name"
-        2. "email"
-        3. "accessLevel" - (READER, WRITER, or OWNER)
+        2. "workspace_project"
+        3. "email"
+        4. "accessLevel" - (READER, WRITER, or OWNER)
 ##### Usage
     Locally
-        `python3 /scripts/anvil_tools/add_user_to_workspace.py -t TSV_FILE [-p WORKSPACE_PROJECT]`
+        `python3 /scripts/anvil_tools/add_user_to_workspace.py -t TSV_FILE`
     Docker
-        `docker run --rm -it -v "$HOME"/.config:/.config -v "$HOME"/local_data_directory/:/data broadinstitute/horsefish bash -c "cd data; python3 /scripts/anvil_tools/add_user_to_workspace.py -t /data/INPUT.tsv [-p WORKSPACE_PROJECT]"`
+        `docker run --rm -it -v "$HOME"/.config:/.config -v "$HOME"/local_data_directory/:/data broadinstitute/horsefish bash -c "cd data; python3 /scripts/anvil_tools/add_user_to_workspace.py -t /data/INPUT.tsv"`
 
         Note: `local_data_directory` should be the path to the folder where your desired input .tsv file is located.
 ##### Flags
     1. `--tsv`, `-t`: input .tsv file (required)
-    2. `--project`, `-p`: workspace project/namespace for listed workspaces in tsv (default = anvil_datastorage)
+
 
 #### **file_exists_checker.sh**
 ##### Description
