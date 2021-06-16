@@ -16,7 +16,7 @@
 ##### Description
     Update/add user/group to workspace ACL (as READER, WRITER, OWNER). 
     
-    Input is a .tsv file with 3 columns:
+    Input is a .tsv file with 4 columns:
         1. "workspace_name"
         2. "workspace_project"
         3. "email"
