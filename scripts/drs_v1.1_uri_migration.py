@@ -60,7 +60,7 @@ def update_entities_to_compact_identifier(workspace, project, single_etypes_list
         # list of the columns that are scoped to be updated if re-run without --dry_run flag
         modified_cols = list(modified_cols)
         if dry_run:
-            print(f"Columns in the {etype} table that *will be* be updated when notebook is re-run with `dry_run = False`:")
+            print(f"Columns in the {etype} table that *will be* be updated when script is re-run without the `--dry_run` flag:")
             if not modified_cols:
                 print("\t" * 4 + f"No columns to update in the {etype} table." + "\n\n")
             else:
