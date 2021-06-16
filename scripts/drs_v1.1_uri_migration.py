@@ -57,7 +57,7 @@ def update_entities_to_compact_identifier(workspace, project, single_etypes_list
             writer.writeheader()
             writer.writerows(drs_dict_table)
 
-        # list of the columns that are scoped to be updated if re-run with dry_run = False
+        # list of the columns that are scoped to be updated if re-run without --dry_run flag
         modified_cols = list(modified_cols)
         if dry_run:
             print(f"Columns in the {etype} table that *will be* be updated when notebook is re-run with `dry_run = False`:")
