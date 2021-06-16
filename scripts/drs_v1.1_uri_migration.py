@@ -102,16 +102,9 @@ if __name__ == "__main__":
 
     parser.add_argument('-w', '--workspace_name', required=True, type=str, help='Name of Terra workspace.')
     parser.add_argument('-p', '--terra_project', required=True, type=str, help='Name of Terra project.')
-    parser.add_argument('-b', '--workspace_bucket', required=True, type=str, help='Workspace bucket id (gs:// or just fc- accepted).')
     parser.add_argument('-d', '--dry_run', action='store_true', help='Returns updates that will be made if script is re-run without flag.')
 
     args = parser.parse_args()
-
-    # handle bucket input as gs://bucket or simply bucket
-    if args.workspace_bucket.startswith("gs://"):
-        bucket_id = args.workspace_bucket.split("/")[2]
-    else:
-        bucket_id = args.workspace_bucket
 
     # get a list of all single entity types
     single_etypes_list = get_single_entity_types(args.workspace_name, args.terra_project)
