@@ -60,21 +60,33 @@ def update_entities_to_compact_identifier(workspace, project, single_etypes_list
         # list of the columns that are scoped to be updated if re-run without --dry_run flag
         modified_cols = list(modified_cols)
         if dry_run:
-            print(f"Columns in the {etype} table that *will be* be updated when script is re-run without the `--dry_run` flag:")
+            print(f"Columns in the {etype} table in {project}/{workspace} that *will be* be updated when script is re-run without the `--dry_run` flag:")
             if not modified_cols:
-                print("\t" * 4 + f"No columns to update in the {etype} table." + "\n\n")
+                print("\t" * 4 + f"No columns to update in the {etype} table in {project}/{workspace}." + "\n\n")
             else:
                 print('\n'.join(['\t' * 4 + c for c in modified_cols]))
-                print(f"To view in detail what will be updated, inspect the {updated_tsv_name} file." + "\n\n")
+                print(f"To view in detail what will be updated in {project}/{workspace}, inspect the {updated_tsv_name} file." + "\n\n")
         else:
             # upload newly created tsv file containing drs urls
-            print(f"Starting update of the {etype} table with compact DRS identifiers (drs://df.4DFC:GUID).")
+            print(f"Starting update of the {etype} table in {project}/{workspace} with compact DRS identifiers (drs://df.4DFC:GUID).")
+            print(f"Unlocking the workspace to make updates to the data tables.")
 
-            res_update = fapi.upload_entities_tsv(project, workspace, updated_tsv_name, model="flexible")
-            if res_update.status_code != 200:
-                print(f"Could not update existing {etype} table. Error message: {res_update.text}")
+            # unlock the workspace
+            res_unlock = fapi.unlock_workspace(project, workspace)
+            # if unlock is successful
+            if res_unlock.status_code == 204:
+                res_update = fapi.upload_entities_tsv(project, workspace, updated_tsv_name, model="flexible")
+                if res_update.status_code != 200:
+                    print(f"Could not update existing {etype} table in {project}/{workspace}. Error message: {res_update.text}")
 
-            print(f"Finished uploading TCGA DRS updated .tsv for entity: {etype}" + "\n")
+                res_lock = fapi.lock_workspace(project, workspace)
+                if res_lock.status_code == 204:
+                    print(f"Finished uploading TCGA DRS updated .tsv in {project}/{workspace} for entity: {etype}" + "\n")
+                    print("Workspace is locked.")
+                else:
+                    print(f"Workspace could not be locked. Please manually check on the workspace: {project}/{workspace}")
+            else:
+                print(f"Could not unlock the workspace. No updates to the data tables can be made. Error message: {res_unlock.text}")
 
 
 def get_single_entity_types(workspace, project):
@@ -90,7 +102,7 @@ def get_single_entity_types(workspace, project):
     single_etypes_list = []
     single_etypes_list = [key for key in dict_all_etypes.keys() if not key.endswith("_set")]
 
-    print(f"List of entity types that will be updated, if applicable:")
+    print(f"List of entity types that will be updated in {project}/{workspace}, if applicable:")
     print('\n'.join(['\t' * 7 + c for c in single_etypes_list]))
 
     return single_etypes_list
