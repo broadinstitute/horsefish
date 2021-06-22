@@ -1,14 +1,14 @@
 """Split single data model load tsv file by workspace_name (and workspace_project) into individual load tsv files and push to respective Terra workspace.
 
 Usage:
-    > python3 split_and_push_data_model_tsvs.py -t TSV_FILE"""
+    > python3 split_and_push_data_model_tsvs.py -t TSV_FILE [-a ARRAY_COLUMNS_FILE]"""
 
 import argparse
 import pandas as pd
 import batch_usert_entities_standard
 
 
-def create_single_workspace_tsv(tsv, array_column_names=None):
+def split_and_push_workspace_entities(tsv, array_column_names=None):
     """Create individual request body per workspace and user/group listed in tsv file."""
 
     # read full tsv into dataframe
@@ -34,12 +34,10 @@ def create_single_workspace_tsv(tsv, array_column_names=None):
         workspace_tsv = tsv_all.loc[(tsv_all['workspace_name'] == workspace_name) & (tsv_all['workspace_project'] == workspace_project)] \
             .drop(['workspace_name', 'workspace_project'], axis=1)
 
-        print(f"Creating json request for {workspace_project}/{workspace_name}.")
+        print(f"Creating json request for {workspace_project}/{workspace_name}." + "\n")
         json_request = batch_usert_entities_standard.create_upsert_request(workspace_tsv, array_attr_cols)
-        print(f'FINAL FULL REQUEST FOR THE ENTIRE TABLE: {json_request}')
 
-        exit(1)
-        print(f"Uploading json request for {workspace_project}/{workspace_name}.")
+        print(f"Uploading json request for {workspace_project}/{workspace_name}." + "\n")
         batch_usert_entities_standard.call_rawls_batch_upsert(workspace_name, workspace_project, json_request)
 
 
@@ -53,8 +51,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.array_columns:
-        print("There was a file provided with a list of columns that contain attributes of type array.")
-        create_single_workspace_tsv(args.tsv, args.array_columns)
+        split_and_push_workspace_entities(args.tsv, args.array_columns)
     else:
-        print("No file with columns of array type attributes was provided. This means all columns are attributes that are non-array.")
-        create_single_workspace_tsv(args.tsv)
+        split_and_push_workspace_entities(args.tsv)
+
