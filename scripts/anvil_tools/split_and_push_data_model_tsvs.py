@@ -44,15 +44,16 @@ def split_and_push_workspace_entities(tsv, array_column_names=None):
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description='Set-up AnVIL external data delivery workspaces.')
+    parser = argparse.ArgumentParser(description='Split single data model tsv and push individual tables using workspace/project column information.')
 
-    parser.add_argument('-t', '--tsv', required=True, type=str, help='tsv file with workspace name and auth domains to create.')
-    parser.add_argument('-a', '--array_columns', required=False, type=str, help='new line delimited file with array type column names in provided tsv.')
+    parser.add_argument('-t', '--tsv', required=True, type=str, help='tsv data model load file with workspace name and workspace project columns.')
+    parser.add_argument('-a', '--array_columns', required=False, type=str, help='new line delimited file with array type column names/attributes in provided tsv.')
 
     args = parser.parse_args()
 
+    # with array type columns/attributes
     if args.array_columns:
         split_and_push_workspace_entities(args.tsv, args.array_columns)
+    # no array type columns/attributes
     else:
         split_and_push_workspace_entities(args.tsv)
-
