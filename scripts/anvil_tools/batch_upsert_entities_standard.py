@@ -1,5 +1,4 @@
 import argparse
-import pandas as pd
 import requests
 
 from oauth2client.client import GoogleCredentials
@@ -31,12 +30,12 @@ def call_rawls_batch_upsert(workspace_name, project, request):
     status_code = response.status_code
 
     if status_code != 204:  # entities upsert fail
-        print(f"WARNING: Failed to upsert entities to {workspace_name}.")
+        print(f"WARNING: Failed to upload entities.")
         print(response.text)
         return
 
     # entities upsert success
-    print(f"Successful upsert of entities to {workspace_name}.")
+    print(f"Successfully uploaded entities." + "\n")
 
 
 def write_request_json(request):
@@ -45,6 +44,15 @@ def write_request_json(request):
     save_name = "batch_upsert_request.json"
     with open(save_name, "w") as f:
         f.write(request)
+
+
+def convert_string_to_list(input_string):
+    """Convert a given string into an array compatible with data model tsvs for array attributes."""
+
+    # remove single & double quotes, remove spaces, remove [ ], separate remaining string on commas (resulting in a list)
+    output_list = str(input_string).replace("'", '').replace('"', '').replace(" ", "").strip('[]').split(",")
+
+    return output_list
 
 
 def create_upsert_request(tsv, array_attr_cols=None):
@@ -83,10 +91,12 @@ def create_upsert_request(tsv, array_attr_cols=None):
             # for each column that is an array
             for col in array_attr_cols:
                 single_attribute_request += template_make_list_attr.replace("VAR_ATTRIBUTE_LIST_NAME", col)
-                # convert "array" from tsv which translates to a string back into an array
-                attr_values = str(row[col]).replace('"', '').strip('[]').split(",")
+                # convert given value from tsv -> translate to a string -> back into an array
+                attr_values = convert_string_to_list(row[col])
+                # for each item in array, add row attribute value to the above created list attribute
                 for val in attr_values:
                     single_attribute_request += template_add_list_member.replace("VAR_LIST_MEMBER", val).replace("VAR_ATTRIBUTE_LIST_NAME", col)
+
             # set the column values for the single attribute list based on which of the full tsv columns are array attributes
             single_attr_cols = list(set(list(tsv.columns)) - set(array_attr_cols))
         else:
@@ -111,11 +121,12 @@ def create_upsert_request(tsv, array_attr_cols=None):
 
         all_attributes_request.append(final_single_attribute_request)
 
-    # write out a json of the request body
-    # write_request_json(final_request)
-
     # remove quotes around elements of the list but keep the brackets - using sep() or join() get rid of the brackets
     all_attributes_request_formatted = '[%s]' % ','.join(all_attributes_request)
+
+    # write out a json of the request body
+    write_request_json(all_attributes_request_formatted)
+
     return all_attributes_request_formatted
 
 
