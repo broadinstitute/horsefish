@@ -38,10 +38,10 @@ def call_rawls_batch_upsert(workspace_name, project, request):
     print(f"Successfully uploaded entities." + "\n")
 
 
-def write_request_json(request):
+def write_request_json(request, filename_prefix):
     """Create output file with json request."""
 
-    save_name = "batch_upsert_request.json"
+    save_name = f"{filename_prefix}_batch_upsert_request.json"
     with open(save_name, "w") as f:
         f.write(request)
 
@@ -58,7 +58,7 @@ def convert_string_to_list(input_string):
 def create_upsert_request(tsv, array_attr_cols=None):
     """Generate the request body for batchUpsert API."""
 
-    # check if the tsv is formatted correctly - exit script if not in right load format
+    # check tsv format: data model load tsv requirement "entity:table_name_id" or "membership:table_name_id" -> else exit
     entity_type_col_name = tsv.columns[0]                               # entity:entity_name_id
     entity_type = entity_type_col_name.rsplit("_", 1)[0].split(":")[1]  # entity_name
 
@@ -67,13 +67,16 @@ def create_upsert_request(tsv, array_attr_cols=None):
         return
 
     # replace the "entity:col_name_id" with just "col_name" in df
-    # if not replaced, each "attributeName" in the template_make_single_attr becomes "entity:entity_name_id"entity_type_col_name
+    # if not replaced, "attributeName" in the template_make_single_attr becomes "entity:entity_name_id" instead of just entity_name
     # when the API request is made, its read as multiple columns with the "entity" prefix which is illegal
+    # this is specific just to the first column where the format is required for terra load tsv files
     tsv.rename(columns={entity_type_col_name: entity_type}, inplace=True)
 
-    # templates for request body components
+    # templates
+    # for request body skeleton
     template_req_body = """{"name":"VAR_ENTITY_ID", "entityType":"VAR_ENTITY_TYPE", "operations":[OPERATIONS_LIST]}"""
 
+    # for operations - create/update: list attribute, add list member to attribute if list, single attribute and value
     template_make_list_attr = '{"op":"CreateAttributeValueList","attributeName":"VAR_ATTRIBUTE_LIST_NAME"},'
     template_add_list_member = '{"op":"AddListMember","attributeListName":"VAR_ATTRIBUTE_LIST_NAME", "newMember":"VAR_LIST_MEMBER"},'
     template_make_single_attr = '{"op":"AddUpdateAttribute","attributeName":"VAR_ATTRIBUTE_NAME", "addUpdateAttribute":"VAR_ATTRIBUTE_MEMBER"},'
@@ -86,23 +89,25 @@ def create_upsert_request(tsv, array_attr_cols=None):
         # get the entity_id (row id - must be unique)
         entity_id = str(row[0])
 
-        # if there are array attribute columns
+        # if array columns/attributes
         if array_attr_cols:
-            # for each column that is an array
+            # for each array column
             for col in array_attr_cols:
+                # add column name to template for a single attribute
                 single_attribute_request += template_make_list_attr.replace("VAR_ATTRIBUTE_LIST_NAME", col)
-                # convert given value from tsv -> translate to a string -> back into an array
+                # convert string value -> back into an array: [foo,bar] (str) --> ['foo', 'bar'] (list)
                 attr_values = convert_string_to_list(row[col])
                 # for each item in array, add row attribute value to the above created list attribute
                 for val in attr_values:
                     single_attribute_request += template_add_list_member.replace("VAR_LIST_MEMBER", val).replace("VAR_ATTRIBUTE_LIST_NAME", col)
 
-            # set the column values for the single attribute list based on which of the full tsv columns are array attributes
+            # get single attribute list based on which of the full tsv columns are array attributes
             single_attr_cols = list(set(list(tsv.columns)) - set(array_attr_cols))
+        # if no array columns/attributes
         else:
             single_attr_cols = list(tsv.columns)
 
-        # if there are single attribute columns
+        # if there are single attribute columns - cases where all columns are arrays, single_attr_cols would be empty
         if single_attr_cols:
             # for each column that is not an array
             for col in single_attr_cols:
@@ -119,13 +124,12 @@ def create_upsert_request(tsv, array_attr_cols=None):
         # put operations list into request body template
         final_single_attribute_request = final_single_attribute_request.replace("OPERATIONS_LIST", single_attribute_request)
 
+        # add the single workspace request to largest list of individual workspace requests
         all_attributes_request.append(final_single_attribute_request)
 
     # remove quotes around elements of the list but keep the brackets - using sep() or join() get rid of the brackets
+    # ['{}', '{}', '{}'] (api fails) --> [{}, {}, {}] (api succeeds)
     all_attributes_request_formatted = '[%s]' % ','.join(all_attributes_request)
-
-    # write out a json of the request body
-    write_request_json(all_attributes_request_formatted)
 
     return all_attributes_request_formatted
 
