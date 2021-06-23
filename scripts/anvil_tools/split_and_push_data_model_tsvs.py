@@ -5,7 +5,7 @@ Usage:
 
 import argparse
 import pandas as pd
-import batch_usert_entities_standard
+import batch_upsert_entities_standard
 
 
 def split_and_push_workspace_entities(tsv, array_column_names=None):
@@ -36,10 +36,10 @@ def split_and_push_workspace_entities(tsv, array_column_names=None):
 
         print(f"Starting entity updates to {workspace_project}/{workspace_name}:")
         print(f"Creating json request.")
-        json_request = batch_usert_entities_standard.create_upsert_request(workspace_tsv, array_attr_cols)
+        json_request = batch_upsert_entities_standard.create_upsert_request(workspace_tsv, array_attr_cols)
 
         print(f"Uploading json request.")
-        batch_usert_entities_standard.call_rawls_batch_upsert(workspace_name, workspace_project, json_request)
+        batch_upsert_entities_standard.call_rawls_batch_upsert(workspace_name, workspace_project, json_request)
 
 
 if __name__ == "__main__":
