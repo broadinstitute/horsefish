@@ -83,27 +83,6 @@
     2. `--terra_project`, `-tp`: workspace project/namespace (default = "anvil-datastorage")
 
 
-#### **set_up_anvil_workspaces.py**
-##### Description
-    Create workspace with authorization domain and add user/groups with appropriate workspace ACLs. 
-    
-    Input is a .tsv file with columns:
-        1. "workspace_name"
-        2. "auth_domain_name"
-    Output is a .tsv file with name:
-        1. `{timestamp}_workspaces_setup_status.tsv`
-##### Usage
-    Locally
-        `python3 /scripts/anvil_tools/set_up_anvil_workspace.py -t TSV_FILE [-p WORKSPACE_PROJECT]
-    Docker
-        `docker run --rm -it -v "$HOME"/.config:/.config -v "$HOME"/local_data_directory/:/data broadinstitute/horsefish bash -c "cd data; python3 /scripts/anvil_tools/set_up_anvil_workspace.py -t /data/INPUT.tsv [-p WORKSPACE_PROJECT]"`
-
-        Note: local_data_directory should be the path to the folder where your input .tsv file is located and where your output .tsv file will be placed.
-##### Flags
-    1. `--tsv`, `-t`: input .tsv file (required)
-    2. `--project`, `-p`: workspace project/namespace for listed workspaces in tsv (default = anvil_datastorage)
-
-
 #### **post_workspace_attributes.py**
 ##### Description
     Post dataset attributes to workspaces.
@@ -139,3 +118,51 @@
 ##### Flags
     1. `--tsv`, `-t`: input .tsv file (required)
     2. `--project`, `-p`: workspace project/namespace for listed workspaces in tsv (default = anvil_datastorage)
+
+
+#### **set_up_anvil_workspaces.py**
+##### Description
+    Create workspace with authorization domain and add user/groups with appropriate workspace ACLs. 
+    
+    Input is a .tsv file with columns:
+        1. "workspace_name"
+        2. "auth_domain_name"
+    Output is a .tsv file with name:
+        1. `{timestamp}_workspaces_setup_status.tsv`
+##### Usage
+    Locally
+        `python3 /scripts/anvil_tools/set_up_anvil_workspace.py -t TSV_FILE [-p WORKSPACE_PROJECT]`
+    Docker
+        `docker run --rm -it -v "$HOME"/.config:/.config -v "$HOME"/local_data_directory/:/data broadinstitute/horsefish bash -c "cd data; python3 /scripts/anvil_tools/set_up_anvil_workspace.py -t /data/INPUT.tsv [-p WORKSPACE_PROJECT]"`
+
+        Note: local_data_directory should be the path to the folder where your input .tsv file is located and where your output .tsv file will be placed.
+##### Flags
+    1. `--tsv`, `-t`: input .tsv file (required)
+    2. `--project`, `-p`: workspace project/namespace for listed workspaces in tsv (default = anvil_datastorage)
+
+
+#### **split_and_push_data_model_tsvs.py**
+##### Description
+    Specific collaborators or consortiums sometimes provide a single tsv file containing ONE entity type's (data table) data but for multiple workspaces - rather than the traditional single tsv per workspace. In the cases where a single tsv is provided, there are two additional columns that will be required of the user, workspace name and workspace project. These two extra columns denote which rows in the tsv need to be pushed to which workspace. This script will split the tsv into workspace specific tsv contents, create a json request, and push the table to the workspace.
+
+    Inputs are:
+        1. .tsv file - file of a single entity_type's (data table) data - must contain columns with names -
+            a) "workspace_name"
+            b) "workspace_project"
+        2. .txt file - new line delimited .txt file with attribute/column names ONLY IF there are array type columns/attributes -
+            a) ensure that the data in this column are at minimum comma separated to denote separate items in the array
+        3. `--json_output` flag if a local json file with the final json request is required (see below for use and default information)
+    Output is:
+        1. if `--json_output` set - `{workspace_project}_{workspace_name}_batch_upsert_request.json`
+        2. if `--json_output` not set - NA - console will show printouts with the success or failure of the request to push to each workspace
+##### Usage
+    Locally
+        `python3 /scripts/anvil_tools/split_and_push_data_model_tsvs.py -t TSV_FILE [-a ARRAY_COLUMNS_FILE] [--json_output]`
+    Docker
+        `docker run --rm -it -v "$HOME"/.config:/.config -v "$HOME"/local_data_directory/:/data broadinstitute/horsefish bash -c "cd data; python3 /scripts/anvil_tools/split_and_push_data_model_tsvs.py -t /data/INPUT.tsv [-a /data/ARRAY_COLUMNS_FILE] [--json_output]"`
+
+        Note: local_data_directory should be the path to the folder where your input .tsv file is located and where your output .tsv file will be placed.
+##### Flags
+    1. `--tsv`, `-t`: input .tsv file (required)
+    2. `--array_columns`, `-a`: .txt file, new line delimited, to capture columns/attributes that are or array type (default = NO array type columns/attributes)
+    3. `--json_output`: parameter to set if a local json file of the final json request is required (default = NO local json output file created)
