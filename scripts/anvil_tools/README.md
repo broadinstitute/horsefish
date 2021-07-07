@@ -152,8 +152,8 @@
             a) ensure that the data in this column are at minimum comma separated to denote separate items in the array
         3. `--json_output` flag if a local json file with the final json request is required (see below for use and default information)
     Output is:
-        1. if (`--json_output` set) - `{workspace_project}_{workspace_name}_batch_upsert_request.json`
-        2. if (`--json_output` not set) - NA - console will show printouts with the success or failure of the request to push to each workspace
+        1. if `--json_output` set - `{workspace_project}_{workspace_name}_batch_upsert_request.json`
+        2. if `--json_output` not set - NA - console will show printouts with the success or failure of the request to push to each workspace
 ##### Usage
     Locally
         `python3 /scripts/anvil_tools/split_and_push_data_model_tsvs.py -t TSV_FILE [-a ARRAY_COLUMNS_FILE] [--json_output]`
