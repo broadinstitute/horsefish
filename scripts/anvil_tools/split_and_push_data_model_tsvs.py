@@ -50,8 +50,6 @@ def split_and_push_workspace_entities(tsv, array_column_names=None, json_output=
         print(f"Uploading json request.")
         batch_upsert_entities_standard.call_rawls_batch_upsert(workspace_name, workspace_project, json_request)
 
-        
-
 
 if __name__ == "__main__":
 

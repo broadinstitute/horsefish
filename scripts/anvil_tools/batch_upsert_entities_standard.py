@@ -56,27 +56,27 @@ def convert_string_to_list(input_string):
 
 
 def create_list_attr_operation(var_attribute_list_name):
-    """Return json request for a single operation to create an attribute of type array/list."""
+    """Return request string for a single operation to create an attribute of type array/list."""
 
     return '{"op":"CreateAttributeValueList","attributeName":"' + var_attribute_list_name + '"},'
 
 
 def add_list_member_operation(var_attribute_list_name, var_attribute_list_member):
-    """Return json request for a single operation to add a list member to an attribute of type array/list."""
+    """Return request string for a single operation to add a list member to an attribute of type array/list."""
 
     return '{"op":"AddListMember","attributeListName":"' + var_attribute_list_name + '", "newMember":"' + var_attribute_list_member + '"},'
 
 
 def create_non_array_attr_operation(var_attribute_name, var_attribute_value):
-    """Return json request for a single operation to create a non-array attribute."""
+    """Return request string for a single operation to create a non-array attribute."""
 
     return '{"op":"AddUpdateAttribute","attributeName":"' + var_attribute_name + '", "addUpdateAttribute":"' + var_attribute_value + '"},'
 
 
-def create_single_entity_request(var_entity_id, var_entity_type, single_entity_operations_list):
-    """Return json request with array/list attributes, their associated values/members, and single attribute operations."""
+def create_single_entity_request(var_entity_id, var_entity_type, single_entity_operations):
+    """Return request string with array/list attributes, their associated values/members, and single entity operations."""
 
-    return '{"name":"' + var_entity_id + '", "entityType":"' + var_entity_type + '", "operations":[' + single_entity_operations_list + ']}'
+    return '{"name":"' + var_entity_id + '", "entityType":"' + var_entity_type + '", "operations":[' + single_entity_operations + ']}'
 
 
 def create_upsert_request(tsv, array_attr_cols=None):
