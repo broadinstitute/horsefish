@@ -5,7 +5,7 @@ if (( $# < 1 )); then
   echo "Unless you specify a source file or a string of buckets, the script will read buckets from a file 'buckets.txt'."
   echo "The source file must include newline-delimited Terra bucket paths"
   echo 'The string of Terra bucket paths can be formatted as "gs://fc-XXXXX gs://fc-XXXXX" or "fc-XXXXX fc-XXXXX"'
-  echo "i.e you can run `./set_requester_pays.sh project_id fc-12345`"
+  echo "i.e you can run $(./set_requester_pays.sh project_id fc-12345)"
   echo "NOTE: this script requires you to be authed as your firecloud.org admin account."
   exit 0
   elif (( $# == 1 )); then
@@ -24,7 +24,18 @@ if (( $# < 1 )); then
     exit 0
 fi
 
+TEMP=$(getopt -o a:: -- "$@")
+echo $TEMP
+exit
+
 PROJECT_ID=$1
+RP_FLAG=$3
+RP_MODE="${RP_FLAG:-off}"  # If variable not set or null, use default.
+
+echo "$RP_MODE"
+
+exit
+
 USER_EMAIL=$(gcloud config get-value account)
 MEMBER="user:${USER_EMAIL}"
 
