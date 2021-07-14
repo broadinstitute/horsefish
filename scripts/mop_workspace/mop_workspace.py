@@ -205,7 +205,7 @@ def delete_files(bucket_name, files_to_delete, verbose):
 
     else:
         if verbose:
-            print(f"Deleting {n_blobs_to_delete} files from bucket {bucket_name}")
+            print(f"Deleting {n_files_to_delete} files from bucket {bucket_name}")
         delete_files_call(bucket_name, blobs)
 
     if verbose:
