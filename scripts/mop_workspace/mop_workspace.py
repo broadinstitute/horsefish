@@ -19,12 +19,13 @@ from six import string_types #, iteritems, itervalues, u, text_type
 # from six.moves import input
 from toolz.itertoolz import partition_all
 from tqdm import tqdm
+from datetime import timedelta, datetime
 
 from firecloud import api as fapi
 
 
 def _entity_paginator(namespace, workspace, etype, page_size=500,
-                            filter_terms=None, sort_direction="asc"):
+                      filter_terms=None, sort_direction="asc"):
     """Pages through the get_entities_query endpoint to get all entities in
        the workspace without crashing.
     """
@@ -33,8 +34,8 @@ def _entity_paginator(namespace, workspace, etype, page_size=500,
     all_entities = []
     # Make initial request
     r = fapi.get_entities_query(namespace, workspace, etype, page=page,
-                           page_size=page_size, sort_direction=sort_direction,
-                           filter_terms=filter_terms)
+                                page_size=page_size, sort_direction=sort_direction,
+                                filter_terms=filter_terms)
     fapi._check_response_code(r, 200)
 
     response_body = r.json()
@@ -48,8 +49,8 @@ def _entity_paginator(namespace, workspace, etype, page_size=500,
     page = 2
     while page <= total_pages:
         r = fapi.get_entities_query(namespace, workspace, etype, page=page,
-                               page_size=page_size, sort_direction=sort_direction,
-                               filter_terms=filter_terms)
+                                    page_size=page_size, sort_direction=sort_direction,
+                                    filter_terms=filter_terms)
         fapi._check_response_code(r, 200)
         entities = r.json()['results']
         all_entities.extend(entities)
@@ -82,23 +83,25 @@ def human_readable_size(size_in_bytes):
 
 
 def list_bucket_files(project, bucket_name, referenced_files, verbose):
-    """Lists all the blobs (files) in the bucket, returns a dictionary of metadata 
-    including file size, of the format 
+    """Lists all the blobs (files) in the bucket, returns a dictionary of metadata
+    including file size, of the format
         {full_file_path_1: {"file_name": str,
                             "file_path": str,
                             "submission_id": str,
                             "size": int,
-                            "is_in_data_table": bool },
+                            "is_in_data_table": bool,
+                            "time_created": datetime},
          full_file_path_2: {"file_name": str,
                             "file_path": str,
                             "submission_id": str,
                             "size": int,
-                            "is_in_data_table": bool }
+                            "is_in_data_table": bool,
+                            "time_created": datetime}
         }
     """
     if verbose:
         print("listing contents of bucket gs://" + bucket_name)
-    
+
     # set up storage client
     storage_client = storage.Client(project=project)
 
@@ -125,7 +128,7 @@ def list_bucket_files(project, bucket_name, referenced_files, verbose):
 
         full_file_path = "gs://" + bucket_name + "/" + blob_name
         # Splits the bucket file: "gs://bucket_Id/submission_id/file_path", by the '/' symbol
-        # and stores values in a 5 length array: ['gs:', '' , 'bucket_Id', submission_id, file_path] 
+        # and stores values in a 5 length array: ['gs:', '' , 'bucket_Id', submission_id, file_path]
         # to extract the submission id from the 4th element (index 3) of the array
         submission_id = full_file_path.split('/', 4)[3]
 
@@ -134,7 +137,8 @@ def list_bucket_files(project, bucket_name, referenced_files, verbose):
             "file_path": full_file_path,
             "submission_id": submission_id,
             "size": blob.size,
-            "is_in_data_table": full_file_path in referenced_files
+            "is_in_data_table": full_file_path in referenced_files,
+            "time_created": blob.time_created
         }
 
         return file_metadata
@@ -175,7 +179,7 @@ def delete_files(bucket_name, files_to_delete, verbose):
     n_files_to_delete = len(files_to_delete)
     if verbose:
         print(f"Preparing to delete {n_files_to_delete} files from bucket {bucket_name}")
-    
+
     # extract blob_name (full path minus bucket name)
     blob_names = [full_path.replace("gs://" + bucket_name + "/", "") for full_path in files_to_delete]
 
@@ -213,7 +217,7 @@ def get_parent_directory(filepath):
     return '/'.join(filepath.split('/')[:-1])
 
 
-def mop(project, workspace, include, exclude, dry_run, save_dir, yes, verbose):
+def mop(project, workspace, include, exclude, dry_run, save_dir, yes, verbose, weeks_old):
     '''Clean up unreferenced data in a workspace'''
 
     # First retrieve the workspace to get bucket information
@@ -228,7 +232,7 @@ def mop(project, workspace, include, exclude, dry_run, save_dir, yes, verbose):
 
     if verbose:
         print("{} -- {}".format(workspace_name, bucket_prefix))
-    
+
     # Handle Basic Values, Compound data structures, and Nestings thereof
     def update_referenced_files(referenced_files, attrs, bucket_prefix):
         for attr in attrs:
@@ -260,8 +264,8 @@ def mop(project, workspace, include, exclude, dry_run, save_dir, yes, verbose):
             print("Getting annotations for " + etype + " entities...")
         # use the paginated version of the query
         entities = _entity_paginator(project, workspace, etype,
-                              page_size=1000, filter_terms=None,
-                              sort_direction="asc")
+                                     page_size=1000, filter_terms=None,
+                                     sort_direction="asc")
         for entity in entities:
             update_referenced_files(referenced_files,
                                     entity['attributes'].values(),
@@ -273,7 +277,7 @@ def mop(project, workspace, include, exclude, dry_run, save_dir, yes, verbose):
 
     # Retrieve user's submission information
     user_submission_request = fapi.list_submissions(project, workspace)
-    # Check if API call was successful, in the case of failure, the function will return an error 
+    # Check if API call was successful, in the case of failure, the function will return an error
     fapi._check_response_code(user_submission_request, 200)
     # Sort user submission ids for future bucket file verification
     submission_ids = set(item['submissionId'] for item in user_submission_request.json())
@@ -309,13 +313,17 @@ def mop(project, workspace, include, exclude, dry_run, save_dir, yes, verbose):
     for f in unreferenced_files:
         if get_parent_directory(f) in referenced_directories:
             sibling_referenced_files.append(f)
-        
+
     # remove them from the list of unreferenced files (treat them as referenced)
     unreferenced_files = unreferenced_files - set(sibling_referenced_files)
 
     # Filter out files like .logs and rc.txt
-    def can_delete(f):
+    def can_delete(f, weeks_old_before_delete):
         '''Return true if this file should not be deleted in a mop.'''
+        time_created = bucket_dict[f]['time_created']
+
+        if time_created > datetime.now(time_created.tzinfo) - timedelta(weeks = weeks_old_before_delete):
+            return False
         filename = f.rsplit('/', 1)[-1]
         # Don't delete logs
         if filename.endswith('.log'):
@@ -345,7 +353,7 @@ def mop(project, workspace, include, exclude, dry_run, save_dir, yes, verbose):
 
         return True
 
-    deletable_files = [f for f in unreferenced_files if can_delete(f)]
+    deletable_files = [f for f in unreferenced_files if can_delete(f, weeks_old)]
 
     if len(deletable_files) == 0:
         if verbose:
@@ -360,7 +368,7 @@ def mop(project, workspace, include, exclude, dry_run, save_dir, yes, verbose):
     if verbose or dry_run:
         # save list to disk
         print("Found {} files to delete.".format(len(deletable_files)) +
-            '\nTotal size of deletable files: {}\n'.format(deletable_size))
+              '\nTotal size of deletable files: {}\n'.format(deletable_size))
         if not os.path.exists(save_dir):
             os.mkdir(save_dir)
         files_to_delete_list_path = "{}/files_to_delete_{}_{}.txt".format(save_dir, project, workspace_no_spaces)
@@ -415,7 +423,6 @@ def mop_files_from_list(project, workspace, delete_from_list, dry_run, yes, verb
     return 0
 
 
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='clean up intermediate files in a Terra workspace')
 
@@ -442,6 +449,9 @@ if __name__ == "__main__":
                       help='path to tsv containing newline-delimited files to delete')
     parser.add_argument('--save-dir', type=str, default='mop_data',
                       help='Directory to save manifests')
+    parser.add_argument('--weeks-old', type=int, default=3,
+                        help='number of weeks old (from creation time) a file must be before it will be deleted. '
+                             'Default is 3 weeks, set to 0 to delete everything.')
     group = parser.add_mutually_exclusive_group()
     group.add_argument('-i', '--include', nargs='+', metavar="glob",
                        help="Only delete unreferenced files matching the " +
@@ -455,5 +465,5 @@ if __name__ == "__main__":
     if args.delete_from_list:
         mop_files_from_list(args.project, args.workspace, args.delete_from_list, args.dry_run, args.yes, args.verbose)
     else:
-        mop(args.project, args.workspace, args.include, args.exclude, args.dry_run, args.save_dir, args.yes, args.verbose)
+        mop(args.project, args.workspace, args.include, args.exclude, args.dry_run, args.save_dir, args.yes, args.verbose, args.weeks_old)
 
