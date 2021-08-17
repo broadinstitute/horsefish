@@ -66,7 +66,7 @@ if __name__ == "__main__":
     # Optional Verbose and args
     parser = argparse.ArgumentParser(description='Adding users to the billing project: the inputs are project_name, email, role, and an optional verbose')
     parser.add_argument('--verbose', "-v", action="store_true", help='Verbose')
-    parser.add_argument('--project', "-p", type=str, default="dsp-fieldeng-vanallen-lab4", help='Billing Project Name')
+    parser.add_argument('--project', "-p", type=str, help='Billing Project Name')
     parser.add_argument('--csv', "-c", type=str, help='User Information CSV')
     args = parser.parse_args()
 
