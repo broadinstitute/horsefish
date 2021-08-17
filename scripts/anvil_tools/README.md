@@ -12,6 +12,25 @@
 
 ### Scripts
 
+#### **add_user_to_project.py**
+##### Description
+    Add a list of users' emails to a billing project. 
+    
+    Input is a .csv file with 1 required column, other columns can be added but will be ignored by this script:
+        1. "email"
+##### Usage
+    Locally
+        `python3 /scripts/anvil_tools/add_user_to_project.py -c CSV_FILE`
+    Docker
+        `docker run --rm -it -v "$HOME"/.config:/.config -v "$HOME"/local_data_directory/:/data broadinstitute/horsefish bash -c "cd data; python3 /scripts/anvil_tools/add_user_to_project.py -c /data/INPUT.csv -p BILLING_PROJECT [-v]"`
+
+        Note: `local_data_directory` should be the path to the folder where your desired input .csv file is located.
+##### Flags
+    1. `--verbose`, `-v`: set for more detailed/information to stdout (default = False)
+    2. `--csv`, `-c`: input .csv file (required)
+    3. `--project`, `-p`: billing project name (default = "anvil-datastorage")
+
+
 #### **add_user_to_workspace.py**
 ##### Description
     Update/add user/group to workspace ACL (as READER, WRITER, OWNER). 
@@ -118,6 +137,24 @@
 ##### Flags
     1. `--tsv`, `-t`: input .tsv file (required)
     2. `--project`, `-p`: workspace project/namespace for listed workspaces in tsv (default = anvil_datastorage)
+
+#### **remove_users_from_project.py**
+##### Description
+    Remove a list of users' emails to a billing project. 
+    
+    Input is a .csv file with 1 required column, other columns can be added but will be ignored by this script:
+        1. "email"
+##### Usage
+    Locally
+        `python3 /scripts/anvil_tools/remove_users_from_project.py -c CSV_FILE`
+    Docker
+        `docker run --rm -it -v "$HOME"/.config:/.config -v "$HOME"/local_data_directory/:/data broadinstitute/horsefish bash -c "cd data; python3 /scripts/anvil_tools/remove_users_from_project.py -c /data/INPUT.csv -p BILLING_PROJECT [-v]"`
+
+        Note: `local_data_directory` should be the path to the folder where your desired input .csv file is located.
+##### Flags
+    1. `--verbose`, `-v`: set for more detailed/information to stdout (default = False)
+    2. `--csv`, `-c`: input .csv file (required)
+    3. `--project`, `-p`: billing project name (default = "anvil-datastorage")
 
 
 #### **set_up_anvil_workspaces.py**
