@@ -66,10 +66,10 @@ def remove_users_from_project(project, email_list, verbose):
 if __name__ == "__main__":
 
     # Optional Verbose and args
-    parser = argparse.ArgumentParser(description='Adding users to the project: the inputs are project_name, email, role, and an optional verbose')
+    parser = argparse.ArgumentParser(description='Adding users to the project: the inputs are billing_project_name, csv, and an optional verbose')
     parser.add_argument('--verbose', "-v", action="store_true", help='Verbose')
-    parser.add_argument('--project', "-p", type=str, help='Billing Project Name')
-    parser.add_argument('--csv', "-c", type=str, help='User Information CSV')
+    parser.add_argument('--project', "-p", type=str, help='Billing Project Name', required=True)
+    parser.add_argument('--csv', "-c", type=str, help='User Information CSV', required=True)
     args = parser.parse_args()
 
     # Assigning verbose variable

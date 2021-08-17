@@ -28,7 +28,7 @@
 ##### Flags
     1. `--verbose`, `-v`: set for more detailed/information to stdout (default = False)
     2. `--csv`, `-c`: input .csv file (required)
-    3. `--project`, `-p`: billing project name (default = "anvil-datastorage")
+    3. `--project`, `-p`: billing project name
 
 
 #### **add_user_to_workspace.py**
@@ -154,7 +154,7 @@
 ##### Flags
     1. `--verbose`, `-v`: set for more detailed/information to stdout (default = False)
     2. `--csv`, `-c`: input .csv file (required)
-    3. `--project`, `-p`: billing project name (default = "anvil-datastorage")
+    3. `--project`, `-p`: billing project name
 
 
 #### **set_up_anvil_workspaces.py**
