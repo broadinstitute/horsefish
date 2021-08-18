@@ -14,7 +14,7 @@ def get_access_token():
     return credentials.get_access_token().access_token
 
 
-def add_or_remove_user_from_project(project, email_list, add, remove, verbose):
+def add_or_remove_user_from_project(project, email_list, add_action, verbose):
     """Adding or Removing list of users' emails to the billing project"""
     if verbose:
         print(email_list)
@@ -37,12 +37,11 @@ def add_or_remove_user_from_project(project, email_list, add, remove, verbose):
         uri = f"https://rawls.dsde-prod.broadinstitute.org/api/billing/v2/{project}/members/user/{url_encode_email}"
         
         # capture response from API
-        if add:
+        if add_action:
             response = requests.put(uri, headers=headers)
             action="add"
             action_past="added"
-
-        if remove:
+        else:
             response = requests.delete(uri, headers=headers)
             action="delete"
             action_past="deleted"
@@ -98,15 +97,15 @@ if __name__ == "__main__":
     # Assigning csv variable
     csv = args.csv
 
-    # Assigning add action variable
-    add = args.add
-
-    # Assigning remove action variable
-    remove = args.remove
+    # Assigning add_action variable
+    if args.add:
+        add_action = True
+    elif args.remove:
+        add_action = False
 
     # Getting the list of user emails
     data = read_csv(csv)
     email_list = data['email'].tolist()
 
     # Adding or Removing list of users' emails to the project
-    add_or_remove_user_from_project(project, email_list, add, remove, verbose)
+    add_or_remove_user_from_project(project, email_list, add_action, verbose)
