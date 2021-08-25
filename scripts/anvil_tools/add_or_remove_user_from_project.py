@@ -109,7 +109,7 @@ if __name__ == "__main__":
         print("Error: Not allowed to have both arguments --add/-a and --remove/-r")
         exit
     elif not args.add and not args.remove:
-        print("Error: Must have either --add/-a and --remove/-r argument")
+        print("Error: Must have either --add/-a or --remove/-r argument")
         exit
     elif args.add:
         add_action = True
