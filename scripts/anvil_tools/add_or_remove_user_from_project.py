@@ -29,6 +29,9 @@ def add_or_remove_user_from_project(project, email_list, add_action, verbose):
     # Keeping track of emails added
     emails_added = 0
 
+    # Keeping track of emails failed
+    emails_failed = []
+
     for email in email_list:
         # URL Encoding the email
         url_encode_email = urllib.parse.quote(email)
@@ -39,29 +42,33 @@ def add_or_remove_user_from_project(project, email_list, add_action, verbose):
         # capture response from API
         if add_action:
             response = requests.put(uri, headers=headers)
-            action="add"
-            action_past="added"
+            action = "add"
+            action_past = "added"
         else:
             response = requests.delete(uri, headers=headers)
-            action="delete"
-            action_past="deleted"
+            action = "delete"
+            action_past = "deleted"
 
         # Getting status code
         status_code = response.status_code
+
+
         
         # adding fail message
         if status_code != 200:
-            error_count+=1
+            error_count += 1
             print(f"WARNING: Failed to {action} the email {email} to the billing project {project}.")
             print("Please see full response for error:")
             print(response.text)
+
+            emails_failed.append(email)
              
             if error_count > 6:
-                print("ERROR: Failed to run on 6 emails")
+                print(f"ERROR: Failed to run on 6 emails: {emails_failed}")
                 return "ERROR: Failed to run on 6 emails"
         else:
             # adding success message
-            emails_added+=1
+            emails_added += 1
 
             # Print verbose message
             if verbose:
@@ -73,7 +80,7 @@ def add_or_remove_user_from_project(project, email_list, add_action, verbose):
     elif error_count == len(email_list):
         print(f"Failed to {action} emails to the billing project: {project}.")
     else:
-        print(f"Successfully {action_past} only {emails_added} emails out of {len(email_list)} to the billing project: {project}.")
+        print(f"Successfully {action_past} only {emails_added} emails out of {len(email_list)} to the billing project: {project}. \n\n Failed to run on Emails: {emails_failed}")
 
 
 if __name__ == "__main__":
@@ -98,7 +105,13 @@ if __name__ == "__main__":
     csv = args.csv
 
     # Assigning add_action variable
-    if args.add:
+    if args.add and args.remove:
+        print("Error: Not allowed to have both arguments --add/-a and --remove/-r")
+        exit
+    elif not args.add and not args.remove:
+        print("Error: Must have either --add/-a and --remove/-r argument")
+        exit
+    elif args.add:
         add_action = True
     elif args.remove:
         add_action = False
