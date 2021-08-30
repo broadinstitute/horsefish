@@ -12,6 +12,26 @@
 
 ### Scripts
 
+#### **add_or_remove_user_from_project.py**
+##### Description
+    Add a list of users' emails to a billing project. 
+    
+    Input is a .csv file with 1 required column, other columns can be added but will be ignored by this script:
+        1. "email"
+##### Usage
+    Locally
+        `python3 /scripts/anvil_tools/add_or_remove_user_from_project.py (-a | -r) -c CSV_FILE -p BILLING_PROJECT [-v]`
+    Docker
+        `docker run --rm -it -v "$HOME"/.config:/.config -v "$HOME"/local_data_directory/:/data broadinstitute/horsefish bash -c "cd data; python3 /scripts/anvil_tools/add_or_remove_user_from_project.py (-a | -r) -c /data/INPUT.csv -p BILLING_PROJECT [-v]"`
+
+        Note: `local_data_directory` should be the path to the folder where your desired input .csv file is located.
+##### Flags
+    1. `--verbose`, `-v`: set for more detailed/information to stdout (default = False)
+    2.`--add/-a` or `--remove/-r`: add user action or remove user action (one of the arguments are required)
+    3. `--csv`, `-c`: input .csv file (required)
+    4. `--project`, `-p`: billing project name (required)
+
+
 #### **add_user_to_workspace.py**
 ##### Description
     Update/add user/group to workspace ACL (as READER, WRITER, OWNER). 
