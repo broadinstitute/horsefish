@@ -60,7 +60,6 @@ if __name__ == "__main__":
     parser.add_argument('-j', '--json_output', required=False, action='store_true', help='set parameter if a local copy/file of the final json request is needed.')
 
     args = parser.parse_args()
-    # if a local copy of the final json request for API is needed
 
     # if both array type columns/attributes
     if args.json_output and args.array_columns:
