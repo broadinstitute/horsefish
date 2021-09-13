@@ -66,7 +66,12 @@ def gather_and_concatenate_data_model_tsvs(input_file, entity_name):
     failed_data.to_excel(writer, sheet_name="failed_workspaces", index=None)
     writer.save()
 
-    print(f"Successfully completed gather and concatenate. All results can be found in {output_filename}.")
+    # if any failures, print warning message.
+    if len(failed_workspaces) > 0:
+        print(f"Warning: Completed gather and concatenate with the exception of some workspace/s. Please examine details in {output_filename}.")
+        return
+    # else print success message
+    print(f"Successfully completed gather and concatenate for all workspaces. Results can be found in {output_filename}.")
 
 
 if __name__ == "__main__":
