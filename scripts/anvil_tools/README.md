@@ -73,6 +73,32 @@
     2. `COLUMN_NUMBER_TO_CHECK`: number of column to parse from excel with gs;//XXXX paths (required)
 
 
+#### **gather_and_concatenate_data_model_tsvs.py**
+##### Description
+    This script will gather the given entity table metadata/data table from a list of given workspace names and projects. The final result is an excel file with the concatenated entity metadata in the format of a Terra load table with the addition of two columns - the workspace name and workspace project. This script is the inverse of split_and_push_data_model_tsvs.py.
+
+    Inputs are:
+        1. .xlsx file - two columns with names -
+            a) "workspace_name"
+            b) "workspace_project"
+        2. string - name of the entity table to gather from each workspace -
+            ex. "sample", "participant", "file"
+    Output is:
+        1. .xlsx file - `input_filename_final.xlsx` containing 2 sheets -
+            a) "concatenated_entity_table"
+            b) "failed_workspaces"
+##### Usage
+    Locally
+        `python3 /scripts/anvil_tools/gather_and_concatenate_data_model_tsvs.py -x EXCEL_FILE -e ENTITY_TABLE_NAME`
+    Docker
+        `docker run --rm -it -v "$HOME"/.config:/.config -v "$HOME"/local_data_directory/:/data broadinstitute/horsefish bash -c "cd data; python3 /scripts/anvil_tools/gather_and_concatenate_data_model_tsvs.py -x EXCEL_FILE -e ENTITY_TABLE_NAME"`
+
+        Note: local_data_directory should be the path to the folder where your input .xlsx file is located and where your output .xlsx file will be placed.
+##### Flags
+    1. `--excel`, `-x`: input .xlsx file (required)
+    2. `--entity`, `-e`: input entity table name to be pulled from each workspace in the input file
+
+
 #### **get_workspace_attributes.py**
 ##### Description 
     Gets the workspace's attributes from all the workspaces in a project and makes a master tsv containing Terra workspace attributes, where each row is a workspace and each column is a field in workspace attributes.
