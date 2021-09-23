@@ -59,19 +59,18 @@ def gather_and_concatenate_data_model_tsvs(input_file, entity_name):
     succeeded_data.insert(0, ent_id_col.name, ent_id_col)
 
     # # write final dataframes to excel file - separate sheets for success and failed data
-    output_filename = input_file.split("/")[-1].split(".")[0] + "_final.xlsx"
-    writer = pd.ExcelWriter(output_filename, engine="openpyxl")
+    succeeded_output_filename = input_file.split("/")[-1].split(".")[0] + "_succeeded.tsv"
+    failed_output_filename = input_file.split("/")[-1].split(".")[0] + "_failed.tsv"
 
-    succeeded_data.to_excel(writer, sheet_name="concatenated_entity_table", index=None)
-    failed_data.to_excel(writer, sheet_name="failed_workspaces", index=None)
-    writer.save()
+    succeeded_data.to_csv(succeeded_output_filename, sep="\t", index=None)
+    failed_data.to_csv(failed_output_filename, sep="\t", index=None)
 
     # if any failures, print warning message.
     if len(failed_workspaces) > 0:
-        print(f"Warning: Completed gather and concatenate with the exception of some workspace/s. Please examine details in {output_filename}.")
+        print(f"Warning: Completed gather and concatenate with the exception of some workspace/s. Please examine details in {failed_output_filename}.")
         return
     # else print success message
-    print(f"Successfully completed gather and concatenate for all workspaces. Results can be found in {output_filename}.")
+    print(f"Successfully completed gather and concatenate for all workspaces. Results can be found in {succeeded_output_filename}.")
 
 
 if __name__ == "__main__":
