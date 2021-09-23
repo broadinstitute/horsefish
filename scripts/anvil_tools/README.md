@@ -91,7 +91,7 @@
     Locally
         `python3 /scripts/anvil_tools/gather_and_concatenate_data_model_tsvs.py -x EXCEL_FILE -e ENTITY_TABLE_NAME`
     Docker
-        `docker run --rm -it -v "$HOME"/.config:/.config -v "$HOME"/local_data_directory/:/data broadinstitute/horsefish bash -c "cd data; python3 /scripts/anvil_tools/gather_and_concatenate_data_model_tsvs.py -x EXCEL_FILE -e ENTITY_TABLE_NAME"`
+        `docker run --rm -it -v "$HOME"/.config:/.config -v "$HOME"/local_data_directory/:/data broadinstitute/horsefish:anvil-tools bash -c "cd data; python3 /scripts/anvil_tools/gather_and_concatenate_data_model_tsvs.py -x EXCEL_FILE -e ENTITY_TABLE_NAME"`
 
         Note: local_data_directory should be the path to the folder where your input .xlsx file is located and where your output .xlsx file will be placed.
 ##### Flags
