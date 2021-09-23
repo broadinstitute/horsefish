@@ -83,10 +83,10 @@
             b) "workspace_project"
         2. string - name of the entity table to gather from each workspace -
             ex. "sample", "participant", "file"
-    Output is:
-        1. .xlsx file - `input_filename_final.xlsx` containing 2 sheets -
-            a) "concatenated_entity_table"
-            b) "failed_workspaces"
+    Outputs are:
+        1. `input_filename_succeeded.tsv` - successful data table information from list of workspaces
+        2. `input_filename_failed.tsv` - list of workspaces from which data table information could not be pulled
+
 ##### Usage
     Locally
         `python3 /scripts/anvil_tools/gather_and_concatenate_data_model_tsvs.py -x EXCEL_FILE -e ENTITY_TABLE_NAME`
