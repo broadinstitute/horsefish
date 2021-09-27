@@ -15,7 +15,7 @@ from utils import add_user_to_authorization_domain, \
     write_output_report
 
 
-ADMIN_ANVIL_EMAIL = "anvil_admins@firecloud.org"
+ADMIN_ANVIL_EMAIL = "anvil-admins@firecloud.org"
 
 
 def add_members_to_workspace(workspace_name, auth_domain_name, project="anvil_datastorage"):
