@@ -159,7 +159,7 @@ def list_bucket_files(project, bucket_name, referenced_files, verbose):
 
     return bucket_dict
 
-def on_error_function(blob):
+def on_error_function():
     return None
 
 # todo add retries
