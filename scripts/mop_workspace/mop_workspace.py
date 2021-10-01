@@ -162,14 +162,14 @@ def list_bucket_files(project, bucket_name, referenced_files, verbose):
 # todo add retries
 def delete_files_call(bucket_name, list_of_blobs_to_delete):
     # don't throw an error if blob not found
-    on_error = None
+    # on_error = None
 
     storage_client = storage.Client()
 
     # # establish a storage client that will close
     # with storage.Client as storage_client:
     bucket = storage_client.bucket(bucket_name)
-    bucket.delete_blobs(list_of_blobs_to_delete, on_error)
+    bucket.delete_blobs(list_of_blobs_to_delete, on_error=None)
 
     # storage_client.close()
 
