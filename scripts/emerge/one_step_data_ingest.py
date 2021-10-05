@@ -2,24 +2,35 @@ import argparse
 import json
 import pandas as pd
 
+REPEATED_FILES = set()
+UNIQUE_FILES = set()
 
 def create_recoded_json(row_json):
     """Update dictionary with TDR's dataset relative paths for keys with gs:// paths."""
 
-    all_row_jsons = []
+    recoded_row_json = dict(row_json)
+    # print(f"START LOOP row json ---- {row_json}")
+    # print(f"START LOOP recoded_row_json ---- {recoded_row_json}")
+
     for key in row_json.keys():
         value = str(row_json[key])  # convert to string to be able to check if gs:// path
 
-        # if value exists and has 'gs://'
-        if value is not None and "gs://" in value:
+        # if value exists and has 'gs://' and is not already in set of gs paths- recode path with expanded request
+        if value is not None and value.startswith("gs://") and value not in REPEATED_FILES:
             relative_tdr_path = value.replace("gs://","/")  # create TDR relative path
 
-            # # TODO: add in description = id_col + col_name
-            row_json[key] = {"sourcePath":value,
-                             "targetPath":relative_tdr_path,
-                             "mimeType":"text/plain"
+            # TODO: add in description = id_col + col_name
+            recoded_row_json[key] = {"sourcePath":value,
+                            "targetPath":relative_tdr_path,
+                            "mimeType":"text/plain"
                             }
-    return row_json
+            # add updated file to set so its not recoded in any other row/column
+            REPEATED_FILES.add(value)
+
+    print(f"row json ---- {row_json}")
+    print(f"recoded_row_json ---- {recoded_row_json}")
+    print(f"REPEATED_FILES ---- {REPEATED_FILES}")
+    return recoded_row_json
 
 
 def create_newline_delimited_json(input_tsv):
@@ -33,6 +44,7 @@ def create_newline_delimited_json(input_tsv):
     all_rows = []
     for row in tsv_df.iterrows():
         row_dict = json.loads(row[1].to_json())  # create dictionary for one sample/row
+
         # recode the row json with gs:// path ingest format if applicable
         recoded_row_dict = create_recoded_json(row_dict)
         # add recoded row's dictionary to list
@@ -44,8 +56,8 @@ def create_newline_delimited_json(input_tsv):
             json.dump(r, final_newline_json)
             final_newline_json.write('\n')
 
-    return output_filename
     print(f"Recoded newline delimited json created: {output_filename}")
+    return output_filename
 
 
 if __name__ == "__main__":
