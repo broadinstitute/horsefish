@@ -2,7 +2,12 @@
 from pandas_schema import*
 from pandas_schema.validation import*
 
-DATA_TABLE_VALIDATE_AND_FORMAT_SCHEMA = ps.Schema([Column("donor_id", [null_validation]),
+
+# column values cannot be null
+null_validation = [CustomElementValidation(lambda d: d is not np.nan, 'this field cannot be null')]
+
+# validation schema by specific column name across any and all possible datasets - not specific to just a single dataset
+DATA_TABLE_VALIDATE_AND_FORMAT_SCHEMA = Schema([Column("donor_id", [null_validation]),
                                                    Column("hasDonorAge", [IsDtypeValidation(int)]),
                                                    Column("has_phenotypic_sex", [InListValidation(["Male", "Female", "Intersex"])]),
                                                    Column("age_at_biopsy", [IsDtypeValidation(int)]),
@@ -38,6 +43,7 @@ DATA_TABLE_VALIDATE_AND_FORMAT_SCHEMA = ps.Schema([Column("donor_id", [null_vali
                                                                                              "Medical imaging _MRI", "Medical imaging _Xray", "Metabolomic", "Microbiome",
                                                                                              "Metagenomic", "Proteomic", "Transcriptomic", "SpatialTranscriptomics",
                                                                                              "Trascriptomic_Targeted", "Trascriptomic_NonTargeted"])]),
+                                                   # file path columns must start with "gs://"
                                                    Column("summary_file_path", [MatchesPatternValidation(r"^gs://*$")]),
                                                    Column("features_file_path", [MatchesPatternValidation(r"^gs://*$")]),
                                                    Column("matrix_file_path", [MatchesPatternValidation(r"^gs://*$")]),
@@ -49,12 +55,6 @@ DATA_TABLE_VALIDATE_AND_FORMAT_SCHEMA = ps.Schema([Column("donor_id", [null_vali
                                                    Column("has_disease", [InListValidation(["y", "n"])]),
                                                    Column("comment", [None])
                 ])
-
-# column values cannot be null
-null_validation = [CustomElementValidation(lambda d: d is not np.nan, 'this field cannot be null')]
-
-# file path columns must start with "gs://"
-
 
 
 

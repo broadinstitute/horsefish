@@ -7,25 +7,10 @@ import json
 import pandas as pd
 from pandas_schema import*
 from pandas_schema.validation import*
-
-DATA_TABLE_VALIDATE_AND_FORMAT_SCHEMA = ps.Schema([Column("hasDonorAge", [isDtypeValidation("int")]),
-                                                   Column("column_name", [validator()]),
-                                                   
-
-])
-
-# {
-#     "hasDonorAge": check_is_integer,
-#     "has_phenotypic_sex": "format_gender_string"
-# }
-
+from validate import DATA_TABLE_VALIDATE_AND_FORMAT_SCHEMA as validator
 
 def validate_and_format_dataset_tables(table_metadata, table_name):
     """Validate and/or format a dataset's data tables with defined validations/formats."""
-
-    function = check_is_integer
-
-    function()
 
     # validate the data frame for given table
     # validated_table = validate_and_format_table(table_df, table)
@@ -52,7 +37,7 @@ def create_dataset_tables_dictionary(dataset_metadata, dataset_name, dataset_tab
 def organize_dataset_metadata(dataset_name, tsv, schema_json):
     """Create dataframe determined by user supplied dataset name and schema."""
 
-    print("Loading schema json.")
+    print(f"Loading schema for selected dataset: {dataset_name}")
     # read schema into dictionary
     with open(schema_json) as schema:
         schema_dict = json.load(schema)
@@ -65,11 +50,20 @@ def organize_dataset_metadata(dataset_name, tsv, schema_json):
     # returns nested list of lists with column names
     nested_dataset_cols = [schema_dict[dataset_name][table] for table in dataset_tables]
     # unnest for flat list of columns to parse from tsv file
-    dataset_cols = [col for table_cols in nested_dataset_cols for col in table_cols]
+    expected_dataset_cols = [col for table_cols in nested_dataset_cols for col in table_cols]
 
-    # TODO: validation. if schema json columns do not match columns in given tsv file, report error
+    # user input manipulation
     # from template: sheet1, skip non-column header rows, ignore first empty column
-    dataset_metadata_df = pd.read_excel(tsv, sheet_name="Sheet1", skiprows=2, usecols=dataset_cols, index_col=None)
+    while True:
+        try:
+            dataset_metadata_df = pd.read_excel(tsv, sheet_name="Sheet1", skiprows=2, usecols=expected_dataset_cols, index_col=None)
+            break
+        except ValueError as e:
+            # TODO: how to handle different possible value errors
+            print(e)
+            # captures the list of missing columns in the user's tsv
+            # missing_cols = e.args[0].split(":")[1]
+            break
 
     print(f"Dataset metadata dataframe: {dataset_metadata_df}")
     return(dataset_metadata_df, dataset_tables, schema_dict)
