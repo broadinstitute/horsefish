@@ -25,19 +25,17 @@ from firecloud import api as fapi
 
 
 # Handle Basic Values, Compound data structures, and Nestings thereof
-def get_referenced_files(attrs, bucket_prefix):
-    referenced_files = set()
-
+def update_referenced_files(referenced_files, attrs, bucket_prefix):
     for attr in attrs:
         # 1-D array attributes are dicts with the values stored in 'items'
         if isinstance(attr, dict) and attr.get('itemsType') == 'AttributeValue':
-            update_referenced_files(referenced_files, attr['items'], bucket_prefix)
+            referenced_files = update_referenced_files(referenced_files, attr['items'], bucket_prefix)
         # Compound data structures resolve to dicts
         elif isinstance(attr, dict):
-            update_referenced_files(referenced_files, attr.values(), bucket_prefix)
+            referenced_files = update_referenced_files(referenced_files, attr.values(), bucket_prefix)
         # Nested arrays resolve to lists
         elif isinstance(attr, list):
-            update_referenced_files(referenced_files, attr, bucket_prefix)
+            referenced_files = update_referenced_files(referenced_files, attr, bucket_prefix)
         elif isinstance(attr, string_types) and attr.startswith(bucket_prefix):
             referenced_files.add(attr)
 
@@ -63,7 +61,7 @@ def get_referenced_files_entity_paginator(bucket_prefix, namespace, workspace, e
 
     # get referenced files and append the first set of results
     entities = response_body['results']
-    referenced_files = set().union([get_referenced_files(entity['attributes'].values(), bucket_prefix) for entity in entities])
+    referenced_files = set().union([update_referenced_files(entity['attributes'].values(), bucket_prefix) for entity in entities])
 
     # Now iterate over remaining pages to retrieve all the results
     page = 2
@@ -74,7 +72,7 @@ def get_referenced_files_entity_paginator(bucket_prefix, namespace, workspace, e
                                     filter_terms=filter_terms)
         fapi._check_response_code(r, 200)
         entities = r.json()['results']
-        referenced_files = set().union([referenced_files] + [get_referenced_files(entity['attributes'].values(), bucket_prefix) for entity in entities])
+        referenced_files = set().union([referenced_files] + [update_referenced_files(entity['attributes'].values(), bucket_prefix) for entity in entities])
         page += 1
 
     return referenced_files
