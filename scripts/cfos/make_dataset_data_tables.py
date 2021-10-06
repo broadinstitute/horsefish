@@ -17,14 +17,14 @@ def validate_and_format_dataset_tables(table_metadata, table_name):
     # write validated data table to tsv file in data table upload format
 
 
-def create_dataset_tables_dictionary(dataset_metadata, dataset_name, dataset_tables, schema_dict):
-    """For a given dataset's metadata, subset metadata into individual table dataframes."""
+def create_dataset_tables_dictionary(dataset_metadata, dataset_name, dataset_table_names, schema_dict):
+    """For a given dataset, subset/separate input columns into individual table dataframes."""
 
     # instantiate empty dictionary to capture {table_name: table_metadata_dataframe}
     dataset_tables_dict = {}
 
     # create a subset df for each table defined for given dataset and send for pertinent validation
-    for table in dataset_tables:
+    for table in dataset_table_names:
         # get subset dataframe for specific table for given dataset name
         table_df = dataset_metadata[schema_dict[dataset_name][table]]
         # add KVP {table name : table_df} entry to all tables dictionary
@@ -43,12 +43,12 @@ def organize_dataset_metadata(dataset_name, tsv, schema_json):
         schema_dict = json.load(schema)
 
     # get list of tables for a given dataset name
-    dataset_tables = list(schema_dict[dataset_name].keys())
-    print(f"{len(dataset_tables)} tables will be created for {dataset_name}: {dataset_tables}")
+    dataset_table_names = list(schema_dict[dataset_name].keys())
+    print(f"{len(dataset_table_names)} tables will be created for {dataset_name}: {dataset_table_names}")
 
     # get all cols (attributes) from all tables for dataset
     # returns nested list of lists with column names
-    nested_dataset_cols = [schema_dict[dataset_name][table] for table in dataset_tables]
+    nested_dataset_cols = [schema_dict[dataset_name][table] for table in dataset_table_names]
     # unnest for flat list of columns to parse from tsv file
     expected_dataset_cols = [col for table_cols in nested_dataset_cols for col in table_cols]
 
@@ -66,7 +66,7 @@ def organize_dataset_metadata(dataset_name, tsv, schema_json):
             break
 
     print(f"Dataset metadata dataframe: {dataset_metadata_df}")
-    return(dataset_metadata_df, dataset_tables, schema_dict)
+    return(dataset_metadata_df, dataset_table_names, schema_dict)
 
 
 if __name__ == "__main__":
@@ -82,5 +82,5 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    dataset_metadata, dataset_tables, schema_dict = organize_dataset_metadata(args.dataset, args.tsv, args.schema)
-    dataset_tables_dict = create_dataset_tables_dictionary(dataset_metadata, args.dataset, dataset_tables, schema_dict)
+    dataset_metadata, dataset_table_names, schema_dict = organize_dataset_metadata(args.dataset, args.tsv, args.schema)
+    dataset_tables_dict = create_dataset_tables_dictionary(dataset_metadata, args.dataset, dataset_table_names, schema_dict)
