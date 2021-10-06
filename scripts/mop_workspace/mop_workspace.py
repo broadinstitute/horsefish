@@ -24,14 +24,33 @@ from datetime import timedelta, datetime
 from firecloud import api as fapi
 
 
-def _entity_paginator(namespace, workspace, etype, page_size=500,
+# Handle Basic Values, Compound data structures, and Nestings thereof
+def get_referenced_files(attrs, bucket_prefix):
+    referenced_files = set()
+
+    for attr in attrs:
+        # 1-D array attributes are dicts with the values stored in 'items'
+        if isinstance(attr, dict) and attr.get('itemsType') == 'AttributeValue':
+            update_referenced_files(referenced_files, attr['items'], bucket_prefix)
+        # Compound data structures resolve to dicts
+        elif isinstance(attr, dict):
+            update_referenced_files(referenced_files, attr.values(), bucket_prefix)
+        # Nested arrays resolve to lists
+        elif isinstance(attr, list):
+            update_referenced_files(referenced_files, attr, bucket_prefix)
+        elif isinstance(attr, string_types) and attr.startswith(bucket_prefix):
+            referenced_files.add(attr)
+
+    return referenced_files
+
+def get_referenced_files_entity_paginator(bucket_prefix, namespace, workspace, etype, page_size=500,
                       filter_terms=None, sort_direction="asc"):
-    """Pages through the get_entities_query endpoint to get all entities in
+    """Pages through the get_entities_query endpoint to get all referenced files in
        the workspace without crashing.
     """
 
     page = 1
-    all_entities = []
+
     # Make initial request
     r = fapi.get_entities_query(namespace, workspace, etype, page=page,
                                 page_size=page_size, sort_direction=sort_direction,
@@ -42,9 +61,10 @@ def _entity_paginator(namespace, workspace, etype, page_size=500,
     # Get the total number of pages
     total_pages = response_body['resultMetadata']['filteredPageCount']
 
-    # append the first set of results
+    # get referenced files and append the first set of results
     entities = response_body['results']
-    all_entities.extend(entities)
+    referenced_files = set().union([get_referenced_files(entity['attributes'].values(), bucket_prefix) for entity in entities])
+
     # Now iterate over remaining pages to retrieve all the results
     page = 2
     while page <= total_pages:
@@ -53,10 +73,10 @@ def _entity_paginator(namespace, workspace, etype, page_size=500,
                                     filter_terms=filter_terms)
         fapi._check_response_code(r, 200)
         entities = r.json()['results']
-        all_entities.extend(entities)
+        referenced_files = set().union([referenced_files] + [get_referenced_files(entity['attributes'].values(), bucket_prefix) for entity in entities])
         page += 1
 
-    return all_entities
+    return referenced_files
 
 def _confirm_prompt(message, prompt="\nAre you sure? [y/yes (default: no)]: ",
                     affirmations=("Y", "Yes", "yes", "y")):
@@ -236,21 +256,6 @@ def mop(project, workspace, include, exclude, dry_run, save_dir, yes, verbose, w
     if verbose:
         print("{} -- {}".format(workspace_name, bucket_prefix))
 
-    # Handle Basic Values, Compound data structures, and Nestings thereof
-    def update_referenced_files(referenced_files, attrs, bucket_prefix):
-        for attr in attrs:
-            # 1-D array attributes are dicts with the values stored in 'items'
-            if isinstance(attr, dict) and attr.get('itemsType') == 'AttributeValue':
-                update_referenced_files(referenced_files, attr['items'], bucket_prefix)
-            # Compound data structures resolve to dicts
-            elif isinstance(attr, dict):
-                update_referenced_files(referenced_files, attr.values(), bucket_prefix)
-            # Nested arrays resolve to lists
-            elif isinstance(attr, list):
-                update_referenced_files(referenced_files, attr, bucket_prefix)
-            elif isinstance(attr, string_types) and attr.startswith(bucket_prefix):
-                referenced_files.add(attr)
-
     # Build a set of bucket files that are referenced in the workspace attributes and data table
     referenced_files = set()
     # 0. Add any files that are in workspace attributes
@@ -266,13 +271,8 @@ def mop(project, workspace, include, exclude, dry_run, save_dir, yes, verbose, w
         if verbose:
             print("Getting annotations for " + etype + " entities...")
         # use the paginated version of the query
-        entities = _entity_paginator(project, workspace, etype,
-                                     page_size=1000, filter_terms=None,
-                                     sort_direction="asc")
-        for entity in entities:
-            update_referenced_files(referenced_files,
-                                    entity['attributes'].values(),
-                                    bucket_prefix)
+        referenced_files_to_add = get_referenced_files_entity_paginator(bucket_prefix, project, workspace, etype)
+        referenced_files = referenced_files.union(referenced_files_to_add)
 
     if verbose:
         num = len(referenced_files)
@@ -379,7 +379,6 @@ def mop(project, workspace, include, exclude, dry_run, save_dir, yes, verbose, w
         with open(files_to_delete_list_path, "w") as outfile:
             outfile.write("\n".join(deletable_files))
         print("List of files to delete saved to: {}".format(files_to_delete_list_path))
-
 
     message = "WARNING: Delete {} files totaling {} in {} ({})".format(
         len(deletable_files), deletable_size, bucket_prefix,
