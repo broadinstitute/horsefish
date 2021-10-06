@@ -41,6 +41,14 @@ def update_referenced_files(referenced_files, attrs, bucket_prefix):
 
     return referenced_files
 
+def get_referenced_files_from_entities(entities, bucket_prefix):
+    referenced_files = set()
+    for entity in entities:
+        referenced_files = update_referenced_files(entity['attributes'].values(), bucket_prefix)
+
+    return referenced_files
+
+
 def get_referenced_files_entity_paginator(bucket_prefix, namespace, workspace, etype, page_size=500,
                       filter_terms=None, sort_direction="asc"):
     """Pages through the get_entities_query endpoint to get all referenced files in
@@ -61,7 +69,7 @@ def get_referenced_files_entity_paginator(bucket_prefix, namespace, workspace, e
 
     # get referenced files and append the first set of results
     entities = response_body['results']
-    referenced_files = set().union([update_referenced_files(entity['attributes'].values(), bucket_prefix) for entity in entities])
+    referenced_files = get_referenced_files_from_entities(entities, bucket_prefix)
 
     # Now iterate over remaining pages to retrieve all the results
     page = 2
@@ -72,7 +80,7 @@ def get_referenced_files_entity_paginator(bucket_prefix, namespace, workspace, e
                                     filter_terms=filter_terms)
         fapi._check_response_code(r, 200)
         entities = r.json()['results']
-        referenced_files = set().union([referenced_files] + [update_referenced_files(entity['attributes'].values(), bucket_prefix) for entity in entities])
+        referenced_files = referenced_files.union(get_referenced_files_from_entities(entities, bucket_prefix))
         page += 1
 
     return referenced_files
