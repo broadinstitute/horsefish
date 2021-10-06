@@ -68,6 +68,7 @@ def get_referenced_files_entity_paginator(bucket_prefix, namespace, workspace, e
     # Now iterate over remaining pages to retrieve all the results
     page = 2
     while page <= total_pages:
+        print(f'retrieving page {page} of {total_pages}')
         r = fapi.get_entities_query(namespace, workspace, etype, page=page,
                                     page_size=page_size, sort_direction=sort_direction,
                                     filter_terms=filter_terms)
