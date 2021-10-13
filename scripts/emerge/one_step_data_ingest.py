@@ -9,8 +9,6 @@ def create_recoded_json(row_json):
     """Update dictionary with TDR's dataset relative paths for keys with gs:// paths."""
 
     recoded_row_json = dict(row_json)
-    # print(f"START LOOP row json ---- {row_json}")
-    # print(f"START LOOP recoded_row_json ---- {recoded_row_json}")
 
     for key in row_json.keys():
         value = str(row_json[key])  # convert to string to be able to check if gs:// path
@@ -18,6 +16,12 @@ def create_recoded_json(row_json):
         # if value exists and has 'gs://' and is not already in set of gs paths- recode path with expanded request
         if value is not None and value.startswith("gs://") and value not in REPEATED_FILES:
             relative_tdr_path = value.replace("gs://","/")  # create TDR relative path
+
+        # if the column is of type array
+        if value is not None and isinstance(value, list):
+            for item in value
+
+
 
             # TODO: add in description = id_col + col_name
             recoded_row_json[key] = {"sourcePath":value,
@@ -27,9 +31,6 @@ def create_recoded_json(row_json):
             # add updated file to set so its not recoded in any other row/column
             REPEATED_FILES.add(value)
 
-    print(f"row json ---- {row_json}")
-    print(f"recoded_row_json ---- {recoded_row_json}")
-    print(f"REPEATED_FILES ---- {REPEATED_FILES}")
     return recoded_row_json
 
 
