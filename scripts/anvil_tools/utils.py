@@ -167,3 +167,6 @@ def create_authorization_domain(auth_domain_name):
 
     print(f"Successfully setup Authorization Domain with name: {auth_domain_name}.")
     return True, None                               # create AD success - 204
+
+def get_workpace_bucket():
+    """Get the workspace bucket for a given workspace and workspace project."""
