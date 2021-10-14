@@ -58,21 +58,18 @@ def organize_dataset_metadata(dataset_name, excel, schema_json):
     # while True:
     try:
         dataset_metadata_df = pd.read_excel(excel, sheet_name="Sheet1", skiprows=2, usecols=expected_dataset_cols, index_col=None)
-        # break
+
     except ValueError as e:
-        print(len(e.args))
-        print(e.args[0])
-        exit(1)
-        if len(e.args) > 0 and e.args[0].startswith("Usecols do not match columns, columns, expected but not found"):
+        # if the value error is about missing columns in input file
+        if len(e.args) > 0 and e.args[0].startswith("Usecols do not match columns, columns expected but not found"):
             missing_cols = e.args[0].split(":")[1]
             print(f"Input excel file has the following missing columns that are required: {missing_cols}")
-            exit(1)
         else:
             print(e)
 
-    print(f"{len(dataset_table_names)} tables will be created for {dataset_name}: {dataset_table_names}")
-    print(f"Dataset metadata dataframe: {dataset_metadata_df}")
-    return(dataset_metadata_df, dataset_table_names, schema_dict)
+        print(f"{len(dataset_table_names)} tables will be created for {dataset_name}: {dataset_table_names}")
+        print(f"Dataset metadata dataframe: {dataset_metadata_df}")
+        return(dataset_metadata_df, dataset_table_names, schema_dict)
 
 
 if __name__ == "__main__":
