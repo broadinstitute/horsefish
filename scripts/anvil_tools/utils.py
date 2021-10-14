@@ -18,6 +18,13 @@ def get_access_token():
     return credentials.get_access_token().access_token
 
 
+def write_dataframe_to_file(dataframe, output_filename):
+    """Write a given pandas dataframe to an output file."""
+
+    dataframe.to_csv(output_filename, sep="\t", index=False)
+    print(f"Success: Output file has been created: {output_filename}")
+
+
 # function to write output tsv file and success/fail statistics with dataframe as input
 def write_output_report(dataframe):
     """Report workspace set-up statuses and create output tsv file from provided dataframe."""
@@ -168,5 +175,24 @@ def create_authorization_domain(auth_domain_name):
     print(f"Successfully setup Authorization Domain with name: {auth_domain_name}.")
     return True, None                               # create AD success - 204
 
-def get_workpace_bucket():
+
+def get_workpace_bucket(workspace_name, project):
     """Get the workspace bucket for a given workspace and workspace project."""
+
+    # request URL for createGroup
+    uri = f"https://api.firecloud.org/api/workspaces/{project}/{workspace_name}?fields=workspace.bucketName"
+
+    # Get access token and and add to headers for requests.
+    # -H  "accept: application/json" -H  "Authorization: Bearer [token]"
+    headers = {"Authorization": "Bearer " + get_access_token(), "accept": "application/json"}
+
+    # capture response from API and parse out status code
+    response = requests.get(uri, headers=headers)
+    status_code = response.status_code
+
+    if status_code != 200:
+        return response.text
+
+    bucket_id = "gs://" + response.json()["workspace"]["bucketName"]
+    print(f"Bucket ID for {project}/{workspace_name}: {bucket_id}")
+    return bucket_id
