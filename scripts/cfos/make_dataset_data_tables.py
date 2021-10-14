@@ -1,7 +1,7 @@
 """Parse user supplied input to create data tables in Terra workspaces for the appropriate type/format of dataset.
 
 Usage:
-    > python3 make_dataset_data_tables.py -d DATASET_TYPE -t TSV_FILE -w TERRA_WORKSPACE_NAME -p TERRA_WORKSPACE_PROJECT """
+    > python3 make_dataset_data_tables.py -d DATASET_TYPE -x EXCEL_FILE -w TERRA_WORKSPACE_NAME -p TERRA_WORKSPACE_PROJECT """
 import argparse
 import json
 import pandas as pd
@@ -34,7 +34,7 @@ def create_dataset_tables_dictionary(dataset_metadata, dataset_name, dataset_tab
     return dataset_tables_dict
 
 
-def organize_dataset_metadata(dataset_name, tsv, schema_json):
+def organize_dataset_metadata(dataset_name, excel, schema_json):
     """Create dataframe determined by user supplied dataset name and schema."""
 
     print(f"Loading schema for selected dataset: {dataset_name}")
@@ -44,27 +44,33 @@ def organize_dataset_metadata(dataset_name, tsv, schema_json):
 
     # get list of tables for a given dataset name
     dataset_table_names = list(schema_dict[dataset_name].keys())
-    print(f"{len(dataset_table_names)} tables will be created for {dataset_name}: {dataset_table_names}")
 
     # get all cols (attributes) from all tables for dataset
     # returns nested list of lists with column names
     nested_dataset_cols = [schema_dict[dataset_name][table] for table in dataset_table_names]
-    # unnest for flat list of columns to parse from tsv file
+    # unnest for flat list of columns to parse from excel file
     expected_dataset_cols = [col for table_cols in nested_dataset_cols for col in table_cols]
 
+
+    # dataset_metadata_df = pd.read_excel(excel, sheet_name="Sheet1", skiprows=2, usecols=expected_dataset_cols, index_col=None)
     # user input manipulation
     # from template: sheet1, skip non-column header rows, ignore first empty column
-    while True:
-        try:
-            dataset_metadata_df = pd.read_excel(tsv, sheet_name="Sheet1", skiprows=2, usecols=expected_dataset_cols, index_col=None)
-            break
-        except ValueError as e:
-            # TODO: how to handle different possible value errors
+    # while True:
+    try:
+        dataset_metadata_df = pd.read_excel(excel, sheet_name="Sheet1", skiprows=2, usecols=expected_dataset_cols, index_col=None)
+        # break
+    except ValueError as e:
+        print(len(e.args))
+        print(e.args[0])
+        exit(1)
+        if len(e.args) > 0 and e.args[0].startswith("Usecols do not match columns, columns, expected but not found"):
+            missing_cols = e.args[0].split(":")[1]
+            print(f"Input excel file has the following missing columns that are required: {missing_cols}")
+            exit(1)
+        else:
             print(e)
-            # captures the list of missing columns in the user's tsv
-            # missing_cols = e.args[0].split(":")[1]
-            break
 
+    print(f"{len(dataset_table_names)} tables will be created for {dataset_name}: {dataset_table_names}")
     print(f"Dataset metadata dataframe: {dataset_metadata_df}")
     return(dataset_metadata_df, dataset_table_names, schema_dict)
 
@@ -74,7 +80,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Create and optionally upload Terra dataset specific data tables to a Terra workspace.')
 
     parser.add_argument('-d', '--dataset', required=True, type=str, help='Dataset type to apply validations and data table structure. ex. proteomics, atac-seq, transcriptomics, singe-cell')
-    parser.add_argument('-t', '--tsv', required=True, type=str, help='CFoS data file - based on CFoS data intake template file.')
+    parser.add_argument('-x', '--excel', required=True, type=str, help='CFoS data excel file (.xlsx) - based on CFoS data intake template file.')
     parser.add_argument('-j', '--schema', required=True, type=str, help='Dataset schema file - defines per dataset tables and associated attributes.')
     parser.add_argument('-p', '--project', required=True, type=str, help='Terra workspace project (namespace).')
     parser.add_argument('-w', '--workspace', required=True, type=str, help='Terra workspace name.')
@@ -82,5 +88,5 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    dataset_metadata, dataset_table_names, schema_dict = organize_dataset_metadata(args.dataset, args.tsv, args.schema)
+    dataset_metadata, dataset_table_names, schema_dict = organize_dataset_metadata(args.dataset, args.excel, args.schema)
     dataset_tables_dict = create_dataset_tables_dictionary(dataset_metadata, args.dataset, dataset_table_names, schema_dict)
