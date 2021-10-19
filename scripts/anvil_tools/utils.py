@@ -176,6 +176,35 @@ def create_authorization_domain(auth_domain_name):
     return True, None                               # create AD success - 204
 
 
+def get_workspace_authorization_domain(workspace_name, project):
+    """Get the workspace bucket for a given workspace and workspace project."""
+
+    # request URL for createGroup
+    uri = f"https://api.firecloud.org/api/workspaces/{project}/{workspace_name}?fields=workspace.authorizationDomain"
+
+    # Get access token and and add to headers for requests.
+    # -H  "accept: application/json" -H  "Authorization: Bearer [token]"
+    headers = {"Authorization": "Bearer " + get_access_token(), "accept": "application/json"}
+
+    # capture response from API and parse out status code
+    response = requests.get(uri, headers=headers)
+    status_code = response.status_code
+
+    if status_code != 200:
+        return response.text
+
+    # returns an empty list if no auth domains
+    auth_domain_list = response.json()["workspace"]["authorizationDomain"]
+    # if list empty, return message
+    if not auth_domain_list:
+        return "no authorization domain"
+
+    # if list not empty, return formatted list of auth domains
+    auth_domains = [ad["membersGroupName"] for ad in auth_domain_list]
+    print(f"Authorization Domain/s for {project}/{workspace_name}: {auth_domains}")
+    return auth_domains
+
+
 def get_workpace_bucket(workspace_name, project):
     """Get the workspace bucket for a given workspace and workspace project."""
 
