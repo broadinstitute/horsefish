@@ -7,7 +7,7 @@ import json
 import pandas as pd
 from pandas_schema import*
 from pandas_schema.validation import*
-from validate import DATA_TABLE_VALIDATE_AND_FORMAT_SCHEMA as validator
+from validate import DATA_TABLE_VALIDATE_AND_FORMAT_SCHEMA as schema_validator
 
 def validate_and_format_dataset_tables(table_metadata, table_name):
     """Validate and/or format a dataset's data tables with defined validations/formats."""
@@ -15,7 +15,17 @@ def validate_and_format_dataset_tables(table_metadata, table_name):
     # validate the data frame for given table
     # validated_table = validate_and_format_table(table_df, table)
     # write validated data table to tsv file in data table upload format
+    print(table_name)
+    errors = validator.validate(table_metadata)
+    print(errors)
+    errors_index_rows = [e.row for e in errors]
+    print(errors_index_rows)
+    data_clean = table_metadata.drop(index=errors_index_rows)
+    print(data_clean)
 
+    pd.DataFrame({'col':errors}).to_csv('errors.csv')
+    data_clean.to_csv('clean_data.csv')
+    exit(1)
 
 def create_dataset_tables_dictionary(dataset_metadata, dataset_name, dataset_table_names, schema_dict):
     """For a given dataset, subset/separate input columns into individual table dataframes."""
@@ -31,7 +41,13 @@ def create_dataset_tables_dictionary(dataset_metadata, dataset_name, dataset_tab
         dataset_tables_dict[table] = table_df
 
     # dictionary of table and table dataframes
-    return dataset_tables_dict
+    # print(dataset_tables_dict)
+    for key in dataset_tables_dict:
+        table_name = key
+        table_df = dataset_tables_dict[key]
+        validate_and_format_dataset_tables(table_df, table_name)
+    exit(1)
+        # validate_and_format_dataset_tables(dataset, table_name)
 
 
 def organize_dataset_metadata(dataset_name, excel, schema_json):
@@ -51,11 +67,6 @@ def organize_dataset_metadata(dataset_name, excel, schema_json):
     # unnest for flat list of columns to parse from excel file
     expected_dataset_cols = [col for table_cols in nested_dataset_cols for col in table_cols]
 
-
-    # dataset_metadata_df = pd.read_excel(excel, sheet_name="Sheet1", skiprows=2, usecols=expected_dataset_cols, index_col=None)
-    # user input manipulation
-    # from template: sheet1, skip non-column header rows, ignore first empty column
-    # while True:
     try:
         dataset_metadata_df = pd.read_excel(excel, sheet_name="Sheet1", skiprows=2, usecols=expected_dataset_cols, index_col=None)
         
@@ -69,7 +80,19 @@ def organize_dataset_metadata(dataset_name, excel, schema_json):
         return
 
     print(f"{len(dataset_table_names)} tables will be created for {dataset_name}: {dataset_table_names}")
-    print(f"Dataset metadata dataframe: {dataset_metadata_df}")
+    # print(f"Dataset metadata dataframe: {dataset_metadata_df}")
+
+    errors = schema_validator.validate(dataset_metadata_df, columns=schema_validator.get_column_names())
+    print(errors)
+    errors_index_rows = [e.row for e in errors]
+    print(errors_index_rows)
+    exit(1)
+    data_clean = table_metadata.drop(index=errors_index_rows)
+    print(data_clean)
+
+    pd.DataFrame({'col':errors}).to_csv('errors.csv')
+    data_clean.to_csv('clean_data.csv')
+    exit(1)
     return(dataset_metadata_df, dataset_table_names, schema_dict)
 
 
@@ -88,3 +111,6 @@ if __name__ == "__main__":
 
     dataset_metadata, dataset_table_names, schema_dict = organize_dataset_metadata(args.dataset, args.excel, args.schema)
     dataset_tables_dict = create_dataset_tables_dictionary(dataset_metadata, args.dataset, dataset_table_names, schema_dict)
+    validate_and_format_dataset_tables(table_metadata, table_name)
+
+# python3 make_dataset_data_tables.py -d dataset1 -x test_data/CFoS_Template.xlsx -j dataset_tables_schema.json -p project -w workspace
