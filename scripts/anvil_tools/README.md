@@ -114,20 +114,20 @@
     2. `--workspace_project`, `-wp`: workspace project/namespace (default = "anvil-datastorage")
 
 
-#### get_workspace_bucket.py
+#### get_workspace_bucket_and_auth_domain.py
 ##### Description
-    Gets the bucket ids for a given list of workspace names and workspace projects and saves output as a tsv file.
+    Gets the bucket id and authorization domain/s for a given list of workspace names and workspace projects and saves output as a tsv file.
 
     Input is a .tsv file with columns:
         1. "workspace_name"
         2. "workspace_project"
     Output is a .tsv file with name:
-        1. `input_filename_with_bucket_id.tsv`
+        1. `input_filename_with_bucketID_and_authDomain.tsv`
 ##### Usage (from the main directory):
     Locally
-        `python3 get_workspace_bucket.py -t`
+        `python3 get_workspace_bucket_and_auth_domain.py -t TSV_FILE`
     Docker
-        `docker run --rm -it -v "$HOME"/.config:/.config -v "$HOME"/local_data_directory/:/data broadinstitute/horsefish bash -c "cd data; python3 /scripts/anvil_tools/get_workspace_bucket.py -t TSV_FILE"`
+        `docker run --rm -it -v "$HOME"/.config:/.config -v "$HOME"/local_data_directory/:/data broadinstitute/horsefish bash -c "cd data; python3 /scripts/anvil_tools/get_workspace_bucket_and_auth_domain.py -t TSV_FILE"`
 
         Note: `local_data_directory` should be the path to the folder where your desired output .tsv file should be placed.
 ##### Flags
