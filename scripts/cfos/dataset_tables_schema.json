@@ -1,8 +1,8 @@
 {
-    "dataset1" : {"Donor": ["donor_id", "age_at_biopsy", "APOE_atDonorAge", "APOE_value", "follow_up_years",
+    "dataset1" : {"Donor": ["donor_id", "hasOrganismType", "age_at_biopsy", "APOE_atDonorAge", "APOE_value", "follow_up_years",
                             "has_disease", "has_phenotypic_sex", "MMSE_Biopsy_atDonorAge", "MMSE_Biopsy_value",
                             "MMSE_final_atDonorAge", "MMSE_final_value", "neuropathology"],
-                  "BioSample": ["donor_id", "hasAnatomicalSite", "hasDonorAge"],
+                  "BioSample": ["donor_id", "hasAnatomicalSite", "hasDonorAge", "hasBioSampleType", "biosample_id_of_file"],
                   "File": ["biosample_id", "DataModality", "donor_id", "summary_file_path", "features_file_path",
                            "matrix_file_path", "barcode_file_path", "library_id"],
                   "Library": ["comment", "donor_id", "UMI_threshold"]
