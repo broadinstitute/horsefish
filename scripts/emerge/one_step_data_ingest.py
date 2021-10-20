@@ -2,34 +2,41 @@ import argparse
 import json
 import pandas as pd
 
-REPEATED_FILES = set()
-UNIQUE_FILES = set()
 
 def create_recoded_json(row_json):
     """Update dictionary with TDR's dataset relative paths for keys with gs:// paths."""
 
-    recoded_row_json = dict(row_json)
+    recoded_row_json = dict(row_json)  # update copy instead of original
 
-    for key in row_json.keys():
-        value = str(row_json[key])  # convert to string to be able to check if gs:// path
+    for key in row_json.keys():  # for column name in row
+        value = row_json[key]    # get value
+        # if value exists - not an empty cell/entry
+        if value is not None:
+            # and starts with 'gs://' --> recode path with expanded request
+            if value.startswith("gs://"):
+                relative_tdr_path = value.replace("gs://","/")  # create TDR relative path
+                # TODO: add in description = id_col + col_name
+                recoded_row_json[key] = {"sourcePath":value,
+                                "targetPath":relative_tdr_path,
+                                "mimeType":"text/plain"
+                                }
 
-        # if value exists and has 'gs://' and is not already in set of gs paths- recode path with expanded request
-        if value is not None and value.startswith("gs://") and value not in REPEATED_FILES:
-            relative_tdr_path = value.replace("gs://","/")  # create TDR relative path
-
-        # if the column is of type array
-        if value is not None and isinstance(value, list):
-            for item in value
-
-
-
-            # TODO: add in description = id_col + col_name
-            recoded_row_json[key] = {"sourcePath":value,
+            recoded_row_json_list = []  # instantiate empty list to store recoded values
+            # if value is of type array
+            if value.startswith("[") and value.endswith("]"):
+                value_list = json.loads(value)  # convert <str> to <liist>
+                # and list values start with 'gs://'
+                paths = [item.startswith('gs://') for item in list(value_list)]
+                if any(paths):
+                    # for each item in the array, create the json request
+                    for item in value_list:
+                        relative_tdr_path = item.replace("gs://","/")  # create TDR relative path
+                        x = {"sourcePath":item,
                             "targetPath":relative_tdr_path,
                             "mimeType":"text/plain"
                             }
-            # add updated file to set so its not recoded in any other row/column
-            REPEATED_FILES.add(value)
+                        recoded_row_json_list.append(x)  # add json request to list
+                recoded_row_json[key] = recoded_row_json_list  # add list of json requests to larger json request
 
     return recoded_row_json
 
@@ -43,11 +50,9 @@ def create_newline_delimited_json(input_tsv):
     output_filename = f"{basename}_recoded_newline_delimited.json"
 
     all_rows = []
-    for row in tsv_df.iterrows():
-        row_dict = json.loads(row[1].to_json())  # create dictionary for one sample/row
-
+    for index, row in tsv_df.iterrows():
         # recode the row json with gs:// path ingest format if applicable
-        recoded_row_dict = create_recoded_json(row_dict)
+        recoded_row_dict = create_recoded_json(row)
         # add recoded row's dictionary to list
         all_rows.append(recoded_row_dict)
 
