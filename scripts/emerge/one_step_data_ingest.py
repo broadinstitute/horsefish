@@ -1,6 +1,7 @@
 import argparse
 import json
 import pandas as pd
+import numpy as np
 
 
 def create_recoded_json(row_json):
@@ -25,9 +26,18 @@ def create_recoded_json(row_json):
                 recoded_row_json_list = []  # instantiate empty list to store recoded values for arrayOf:True cols
                 if value.startswith("[") and value.endswith("]"):  # if value is an array
                     value_list = json.loads(value)  # convert <str> to <liist>
-                    paths = [item.startswith('gs://') for item in list(value_list)]  # and check if list values start with 'gs://'
+
+                    # check if any of the list values are non-string types
+                    non_string_list_values = [isinstance(item, str) for item in value_list]
+                    # if non-string types, add value without recoding
+                    if not any(non_string_list_values):
+                        recoded_row_json[key] = value_list
+                        continue
+
+                    # check if any of the list_values are strings that start with gs://
+                    gs_paths = [item.startswith('gs://') for item in value_list]
                     # TODO: any cases where an item in a list is not gs:// should be a user error?
-                    if any(paths):
+                    if any(gs_paths):
                         for item in value_list:  # for each item in the array
                             relative_tdr_path = item.replace("gs://","/")  # create TDR relative path
                             # create the json request for list member
@@ -36,10 +46,10 @@ def create_recoded_json(row_json):
                                                    "mimeType":"text/plain"
                                                    }
                             recoded_row_json_list.append(recoded_list_member)  # add json request to list
-                    recoded_row_json[key] = recoded_row_json_list  # add list of json requests to larger json request
-                    continue
+                        recoded_row_json[key] = recoded_row_json_list  # add list of json requests to larger json request
+                        continue
 
-                # value is string but not a gs:// path or list of gs:// paths
+                # if value is string but not a gs:// path or list of gs:// paths
                 recoded_row_json[key] = value
 
     return recoded_row_json
@@ -49,15 +59,16 @@ def create_newline_delimited_json(input_tsv):
     """Create newline delimited json file from input tsv."""
 
     tsv_df = pd.read_csv(input_tsv, sep="\t")
-    new_df = tsv_df.where(tsv_df.notnull(), None)  # has None where empty cells
+    # new_df = tsv_df.where(tsv_df.notnull(), None)  # has None where empty cells
 
     basename = input_tsv.split(".tsv")[0]
     output_filename = f"{basename}_recoded_newline_delimited.json"
 
     all_rows = []
-    for index, row in new_df.iterrows():
+    for index, row in tsv_df.iterrows():
         # recode the row json with gs:// path ingest format if applicable
-        recoded_row_dict = create_recoded_json(row)
+        remove_row_nan = row.dropna()
+        recoded_row_dict = create_recoded_json(remove_row_nan)
         # add recoded row's dictionary to list
         all_rows.append(recoded_row_dict)
 
