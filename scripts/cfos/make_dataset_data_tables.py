@@ -14,27 +14,51 @@ from validate import DATA_TABLE_VALIDATE_AND_FORMAT_SCHEMA as schema_validator
 def upload_dataset_table_to_workspace(tsv_filenames_list, workspace_name, workspace_project):
     """Upload each of the tables in the chosen dataset to Terra workspace."""
 
-    for filename in tsv_filenames_list:
-        response = fapi.upload_entities_tsv(workspace_project, workspace_name, output_filename, model='flexible')
+    for tsv in tsv_filenames_list:
+        response = fapi.upload_entities_tsv(workspace_project, workspace_name, tsv, model='flexible')
         status_code = response.status_code
 
+        table_name = tsv.split("_")[0]
         # TODO: do we want it to fail entirely as long as a single table fails to upload
         # if not success
         if status_code != 200:
-            print(f"Failed: Table with name {table} has failed to upload. Please see errors: {response.text}")
+            print(f"Failed: {table_name} table has failed to upload. Please see errors: {response.text}")
             return
 
         # if success
-        print(f"Success: {table} has been uploaded to {workspace_project}/{workspace_name}.")
+        print(f"Success: {table_name} has been uploaded to {workspace_project}/{workspace_name}.")
+
+    print("Success: All data tables have been loaded to workspace.")
 
 
-def modify_file_table_dict(file_table_df):
+def modify_file_table_dataframe(file_table_df):
     """File table needs additional modification."""
 
-    print(file_table_df)
-    file_table_df.stack()
-    print(file_table_df)
-    exit(1)
+    file_types = ["features", "matrix", "barcode", "summary"]  # four types of files
+    file_type_dataframes = []  # empty list to hold re-organized dataframe per file type
+
+    # for each file_path type, create a separate dataframe
+    for file_type in file_types:
+        # list of columns to subset + the additional file_type column
+        cols_to_subset = ["library_id", "donor_id", "DataModality", "biosample_id"]
+        cols_to_subset.append(f"{file_type}_file_path")
+
+        # make file type specific dataframe and rename column to generic name
+        file_type_df = file_table_df[cols_to_subset]
+        file_type_df = file_type_df.rename(columns={f"{file_type}_file_path": "file_path"})
+
+        # create the file_type column and the file_id column (as concatenation of other values)
+        # TODO: determine if concatenation of columns is unique or if other file identifier is required
+        # TODO: parsing file paths may not be a safe automation across datasets
+        file_type_df["file_type"] = file_type
+        file_type_df["file_id"] = file_type_df["file_type"] + "_" + file_type_df["donor_id"] + "_" + file_type_df["library_id"]
+
+        # add dataframe to list
+        file_type_dataframes.append(file_type_df)
+
+    # concatenate all the file_type dataframes into one and return
+    modified_file_table_df = pd.concat(file_type_dataframes)
+    return modified_file_table_df
 
 
 def generate_load_table_files(dataset_tables_dict):
@@ -44,16 +68,16 @@ def generate_load_table_files(dataset_tables_dict):
     tsv_filenames_list = []
 
     # for each table in dictionary
-    for table in dataset_tables_dict:
-        table_df = dataset_tables_dict[table]
-        if table == "file":
-            table_df = modify_file_table_dict(table_df)
+    for table_name in dataset_tables_dict:
+        table_df = dataset_tables_dict[table_name]
+        if table_name == "file":
+            table_df = modify_file_table_dataframe(table_df)
         # change table name column to new name --> entity:table_name_id and set as index
-        table_df = table_df.rename(columns={f"{table}_id": f"entity:{table}_id"})
-        table_df.set_index(f"entity:{table}_id", inplace=True)
+        table_df = table_df.rename(columns={f"{table_name}_id": f"entity:{table_name}_id"})
+        table_df.set_index(f"entity:{table_name}_id", inplace=True)
 
         # set output tsv filename
-        output_filename = f"{table}_table_load_file.tsv"
+        output_filename = f"{table_name}_table_load_file.tsv"
         tsv_filenames_list.append(output_filename)
 
         # write out tsv file per table
@@ -146,20 +170,20 @@ def get_expected_columns_list(schema_json, dataset_name):
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description='Create and optionally upload Terra dataset specific data tables to a Terra workspace.')
+    parser = argparse.ArgumentParser(description='Create, validate, and upload (optionally ) Terra dataset specific data tables to a Terra workspace.')
 
-    parser.add_argument('-d', '--dataset', required=True, type=str, help='Dataset type to apply validations and data table structure. ex. proteomics, atac-seq, transcriptomics, singe-cell')
+    parser.add_argument('-d', '--dataset_name', required=True, type=str, help='Dataset type to apply validations and data table structure. ex. proteomics, atac-seq, transcriptomics, singe-cell')
     parser.add_argument('-x', '--excel', required=True, type=str, help='CFoS data excel file (.xlsx) - based on CFoS data intake template file.')
     parser.add_argument('-j', '--schema', required=True, type=str, help='Dataset schema file (.json) - defines per dataset tables and associated attributes.')
-    parser.add_argument('-p', '--project', required=True, type=str, help='Terra workspace project (namespace).')
-    parser.add_argument('-w', '--workspace', required=True, type=str, help='Terra workspace name.')
+    parser.add_argument('-p', '--project', required=False, type=str, help='Terra workspace project (namespace).')
+    parser.add_argument('-w', '--workspace', required=False, type=str, help='Terra workspace name.')
     parser.add_argument('-v', '--validate', required=False, action='store_true', help='Set parameter to run only validation on input excel file.')
     parser.add_argument('-u', '--upload', required=False, action='store_true', help='Set parameter to upload data table files to workspace. default = no upload')
 
     args = parser.parse_args()
 
     # parse schema using dataset name to get list of expected columns
-    expected_dataset_cols, dataset_table_names, schema_dict = get_expected_columns_list(args.schema, args.dataset)
+    expected_dataset_cols, dataset_table_names, schema_dict = get_expected_columns_list(args.schema, args.dataset_name)
     # load excel to dataframe validating to check if all expected columns present
     dataset_metadata = load_excel_input(args.excel, expected_dataset_cols)
 
@@ -168,10 +192,11 @@ if __name__ == "__main__":
         validated_dataset = validate_dataset(dataset_metadata)
     else:
         validated_dataset = validate_dataset(dataset_metadata)
-        dataset_tables_dict = create_dataset_tables_dictionary(validated_dataset, args.dataset, dataset_table_names, schema_dict)
+        dataset_tables_dict = create_dataset_tables_dictionary(validated_dataset, args.dataset_name, dataset_table_names, schema_dict)
         tsv_filenames_list = generate_load_table_files(dataset_tables_dict)
     
     # if upload flag, upload generated tsv files to Terra workspace
-    if args.upload:
+    if args.upload and args.workspace and args.project:
         upload_dataset_table_to_workspace(tsv_filenames_list, args.workspace, args.project)
-# python3 make_dataset_data_tables.py -d inph -x test_data/CFoS_Template.xlsx -j dataset_tables_schema.json -p broad-cfos-data-platform1 -w cFOS_automation_testing
+
+    # python3 make_dataset_data_tables.py -d inph -x test_data/CFoS_Template.xlsx -j dataset_tables_schema.json -p broad-cfos-data-platform1 -w cFOS_automation_testing
