@@ -5,7 +5,7 @@ import json
 
 DEFAULT_TITLE = "Service Incident"
 DEFAULT_MESSAGE = "We are currently investigating an issue impacting the platform. Information about this incident will be made available here."
-DEFAULT_LINK = "https://support.terra.bio/hc/en-us/sections/360003692231-Service-Notifications"
+DEFAULT_LINK = "https://support.terra.bio/hc/en-us/sections/4408360560923"
 
 
 def convert_service_banner_json(json):
