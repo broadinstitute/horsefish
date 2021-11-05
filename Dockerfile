@@ -3,7 +3,7 @@ FROM google/cloud-sdk:295.0.0
 # Tell gcloud to save state in /.config so it's easy to override as a mounted volume.
 ENV HOME=/
 
-RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys FEEA9169307EA071 8B57C5C2836F4BEB
 
 # install python3 to make that also available - modified from https://tecadmin.net/install-python-3-7-on-ubuntu-linuxmint/
 RUN apt-get update \
