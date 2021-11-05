@@ -30,7 +30,7 @@ RUN python3 -m pip install gcsfs
 RUN apt-get update -y \
     && apt-get install -y gnumeric
 
-RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+RUN curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
 
 COPY scripts /scripts
 
