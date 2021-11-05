@@ -3,6 +3,8 @@ FROM google/cloud-sdk:295.0.0
 # Tell gcloud to save state in /.config so it's easy to override as a mounted volume.
 ENV HOME=/
 
+RUN curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+
 # install python3 to make that also available - modified from https://tecadmin.net/install-python-3-7-on-ubuntu-linuxmint/
 RUN apt-get update \
     && apt-get install -y build-essential checkinstall \
