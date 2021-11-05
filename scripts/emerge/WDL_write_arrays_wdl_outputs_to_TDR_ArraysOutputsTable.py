@@ -132,7 +132,6 @@ def load_data(dataset_id, ingest_data):
     return json.loads(response.text)
 
 
-# s.c recoding json function expanded to handle all data types as well as array type columns
 def create_recoded_json(row_json):
     """Update dictionary with TDR's dataset relative paths for keys with gs:// paths."""
 
@@ -336,13 +335,6 @@ def create_recoded_json_list(project, workspace, submission_id, snapshot_sample_
     # generate timestamp for last_modified_column --> current datetime in UTC
     last_modified_date = datetime.now(tz=pytz.UTC).strftime("%Y-%m-%dT%H:%M:%S")
 
-    # this is the desired format of data_to_upload (specific format for reblocking wdl):
-    # data_to_upload = {
-    #     "sample_id": None,
-    #     "reblocked_gvcf_path": None,
-    #     "reblocked_gvcf_index_path": None
-    # }
-
     for datarepo_row_id, workflow_id in workflows.items():
         # retrieve chip_well_barcode from snapshot data
         chip_well_barcode = get_single_attribute(snapshot_sample_table_fq, datarepo_row_id, 'chip_well_barcode', gcp_project)
@@ -414,7 +406,7 @@ def extract_submission_outputs(project, workspace, submission_id):
 if __name__ == "__main__" :
     parser = argparse.ArgumentParser(description='Push Arrays.wdl outputs to TDR dataset.')
 
-    parser.add_argument('-s', '--submission_id', required=True, type=str, help='id of submission from which to gather outputs')
+    parser.add_argument('-j', '--json', required=True, type=str, help='json file of outputs')
     parser.add_argument('-p', '--project', required=True, type=str, help='workspace namespace/project')
     parser.add_argument('-w', '--workspace', required=True, type=str, help='workspace name')
     parser.add_argument('-b', '--bucket', required=True, type=str, help='workspace bucket')
