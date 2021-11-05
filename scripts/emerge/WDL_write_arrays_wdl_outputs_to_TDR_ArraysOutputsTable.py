@@ -7,6 +7,7 @@ import pytz
 import requests
 import sys
 import time
+import pandas as pd
 
 from firecloud import api as fapi
 from google.cloud import bigquery
@@ -128,7 +129,7 @@ def load_data(dataset_id, ingest_data):
     if status_code != 202:
         return response.text
 
-    print(f"Successfully retrieved access information for snapshot with snapshotID {snapshot_id}.")
+    # print(f"Successfully retrieved access information for snapshot with snapshotID {snapshot_id}.")
     return json.loads(response.text)
 
 
@@ -272,10 +273,12 @@ def call_ingest_dataset(control_file_path, target_table_name, dataset_id):
 
     load_job_response = load_data(dataset_id, load_json)
 
+    print(f"Load Job Response: {load_job_response}")
+
     job_id = load_job_response["id"]
     job_status = load_job_response["job_status"]
 
-    print("Starting data ingest to complete.")
+    print("Starting data ingest to TDR dataset.")
     while job_status == "running":
         time.sleep(10)
         response = get_job_status_and_result(job_id)
@@ -285,6 +288,9 @@ def call_ingest_dataset(control_file_path, target_table_name, dataset_id):
             job_status = response["job_status"]
             print("Load job is still running.")
         # determine if done = failed or done = succeeded
+        # elif "errorDetail" in response.keys():
+        #     error_message = response["errorDetail"]
+        #     print(f"Load job did not succeed: {error_message}")
         else:
             failed_files = response["load_result"]["loadSummary"]["failedFiles"]
             succeeded_files = response["load_result"]["loadSummary"]["succeededFiles"]
@@ -302,23 +308,20 @@ def call_ingest_dataset(control_file_path, target_table_name, dataset_id):
     print("File ingest to TDR dataset completed.")
 
 
-def write_load_json_to_bucket(submission_id, bucket, recoded_rows_json):
+def write_load_json_to_bucket(bucket, recoded_rows_json, timestamp):
     """Write the list of recoded rows (list of dictionaries) to a file and copy to workspace bucket."""
 
-    loading_json_filename = f"TESTING_arrays_sub-{submission_id}_recoded_ingestDataset.json"
+    loading_json_filename = f"{timestamp}_recoded_ingestDataset.json"
     # write load json to the workspace bucket
-    control_file_destination = f"{bucket}/emerge_prod_test_dataset"
+    control_file_destination = f"{bucket}/control_files"
 
     with open(loading_json_filename, 'w') as final_newline_json:
-        for r in recoded_rows_json:
-            json.dump(r, final_newline_json)
-            final_newline_json.write('\n')
-
+        json.dump(recoded_rows_json, final_newline_json)
 
     storage_client = gcs.Client()
     dest_bucket = storage_client.get_bucket(bucket)
 
-    blob = dest_bucket.blob(f"emerge_prod_test_dataset/{loading_json_filename}")
+    blob = dest_bucket.blob(f"control_files/{loading_json_filename}")
     blob.upload_from_filename(loading_json_filename)
 
     print(f"Successfully copied {loading_json_filename} to {control_file_destination}.")
@@ -403,15 +406,36 @@ def extract_submission_outputs(project, workspace, submission_id):
     return snapshot_id, workflows
 
 
+def parse_json_outputs_file(input_tsv):
+    """Format the json file containing workflow outputs and headers."""
+
+    tsv_df = pd.read_csv(input_tsv, sep="\t")
+
+    basename = input_tsv.split(".tsv")[0]
+    output_filename = f"{basename}_recoded_newline_delimited.json"
+
+    last_modified_date = datetime.now(tz=pytz.UTC).strftime("%Y-%m-%dT%H:%M:%S")
+
+    all_rows = []
+    for index, row in tsv_df.iterrows():
+        # drop empty columns and add in timestamp
+        remove_row_nan = row.dropna()
+        remove_row_nan["last_modified_date"] = last_modified_date
+
+        recoded_row_dict = create_recoded_json(remove_row_nan)
+
+    return recoded_row_dict, last_modified_date
+
+
 if __name__ == "__main__" :
     parser = argparse.ArgumentParser(description='Push Arrays.wdl outputs to TDR dataset.')
 
-    parser.add_argument('-j', '--json', required=True, type=str, help='json file of outputs')
-    parser.add_argument('-p', '--project', required=True, type=str, help='workspace namespace/project')
+    parser.add_argument('-f', '--tsv', required=True, type=str, help='tsv file of outputs')
+    # parser.add_argument('-p', '--project', required=True, type=str, help='workspace namespace/project')
     parser.add_argument('-w', '--workspace', required=True, type=str, help='workspace name')
     parser.add_argument('-b', '--bucket', required=True, type=str, help='workspace bucket')
-    parser.add_argument('-g', '--gcp_project', required=True, type=str, help='gcp project for BQ')
-    parser.add_argument('-n', '--workflow_name', required=True, type=str, help='name of WDL')
+    # parser.add_argument('-g', '--gcp_project', required=True, type=str, help='gcp project for BQ')
+    # parser.add_argument('-n', '--workflow_name', required=True, type=str, help='name of WDL')
     parser.add_argument('-d', '--dataset_id', required=True, type=str, help='id of TDR dataset for destination of outputs')
     parser.add_argument('-t', '--target_table_name', required=True, type=str, help='name of target table in TDR dataset')
 
@@ -419,11 +443,17 @@ if __name__ == "__main__" :
 
     args = parser.parse_args()
 
-    snapshot_id, workflows = extract_submission_outputs(args.project, args.workspace, args.submission_id)
-    snapshot_sample_table_fq, dataset_sample_table_fq = gather_bq_table_info(snapshot_id, args.dataset_id)
-    recoded_upload_json = create_recoded_json_list(args.project, args.workspace, args.submission_id, snapshot_sample_table_fq, args.gcp_project, args.workflow_name)
-    control_file_path = write_load_json_to_bucket(args.submission_id, args.bucket, recoded_upload_json)
-    ingest_dataset_request = call_ingest_dataset(control_file_path, args.target_table_name, args.dataset_id)
+    recoded_row_dict, timestamp = parse_json_outputs_file(args.tsv)
+    control_file_path = write_load_json_to_bucket(args.bucket, recoded_row_dict, timestamp)
+    call_ingest_dataset(control_file_path, args.target_table_name, args.dataset_id)
+
+
+    # notebook order
+    # snapshot_id, workflows = extract_submission_outputs(args.project, args.workspace, args.submission_id)
+    # snapshot_sample_table_fq, dataset_sample_table_fq = gather_bq_table_info(snapshot_id, args.dataset_id)
+    # recoded_upload_json = create_recoded_json_list(args.project, args.workspace, args.submission_id, snapshot_sample_table_fq, args.gcp_project, args.workflow_name)
+    # control_file_path = write_load_json_to_bucket(args.submission_id, args.bucket, recoded_upload_json)
+    # ingest_dataset_request = call_ingest_dataset(control_file_path, args.target_table_name, args.dataset_id)
 
 # python3 arrays_wdl_outputs_to_TDR.py -s 9159f7fb-9bb4-49a7-a822-4e916b260677 -p emerge_prod -w Arrays_test 
 # -b fc-e036248e-067b-4365-8c1e-5eb25103681f -g terra-e97dc6ac -n Arrays -d 6f2bb559-34ae-4ba0-b2ce-1d8be76ada9f -t ArraysOutputsTable
