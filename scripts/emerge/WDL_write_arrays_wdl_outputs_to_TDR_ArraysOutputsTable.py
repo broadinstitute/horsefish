@@ -1,37 +1,20 @@
 # imports and environment variables
 import argparse
-from datetime import datetime, tzinfo
 import json
 import os
+import pandas as pd
 import pytz
 import requests
 import sys
 import time
-import pandas as pd
 
+from datetime import datetime, tzinfo
 from firecloud import api as fapi
 from google.cloud import bigquery
 from google.cloud import storage as gcs
 from oauth2client.client import GoogleCredentials
 from pprint import pprint
 
-WORKFLOW_OUTPUTS_DICT = {
-    "Arrays.chip_well_barcode_output": "chip_well_barcode_output",
-    "Arrays.analysis_version_number_output": "analysis_version_number_output",
-    "Arrays.gtc_file": "gtc_file",
-    "Arrays.arrays_variant_calling_control_metrics_file": "arrays_variant_calling_control_metrics_file",
-    "Arrays.arrays_variant_calling_detail_metrics_file": "arrays_variant_calling_detail_metrics_file",
-    "Arrays.arrays_variant_calling_summary_metrics_file": "arrays_variant_calling_summary_metrics_file",
-    "Arrays.baf_regress_metrics_file": "baf_regress_metrics_file",
-    "Arrays.fingerprint_detail_metrics_file": "fingerprint_detail_metrics_file",
-    "Arrays.fingerprint_summary_metrics_file": "fingerprint_summary_metrics_file",
-    "Arrays.genotype_concordance_contingency_metrics_file": "genotype_concordance_contingency_metrics_file",
-    "Arrays.genotype_concordance_detail_metrics_file": "genotype_concordance_detail_metrics_file",
-    "Arrays.genotype_concordance_summary_metrics_file": "genotype_concordance_summary_metrics_file",
-    "Arrays.last_modified_date": "last_modified_date",
-    "Arrays.output_vcf": "output_vcf",
-    "Arrays.output_vcf_index": "output_vcf_index"
-}
 
 def get_access_token():
     """Get access token."""
@@ -129,7 +112,6 @@ def load_data(dataset_id, ingest_data):
     if status_code != 202:
         return response.text
 
-    # print(f"Successfully retrieved access information for snapshot with snapshotID {snapshot_id}.")
     return json.loads(response.text)
 
 
@@ -201,7 +183,6 @@ def get_job_status_and_result(job_id):
     print(f'job_id {job_id} has status {job_status}')
     # if job status = done, check job result
     if job_status in ['succeeded', 'failed']:
-        print('retrieving job result')
         response = requests.get(uri + "/result", headers=headers)
         status_code = response.status_code
 
@@ -431,29 +412,16 @@ if __name__ == "__main__" :
     parser = argparse.ArgumentParser(description='Push Arrays.wdl outputs to TDR dataset.')
 
     parser.add_argument('-f', '--tsv', required=True, type=str, help='tsv file of outputs')
-    # parser.add_argument('-p', '--project', required=True, type=str, help='workspace namespace/project')
     parser.add_argument('-w', '--workspace', required=True, type=str, help='workspace name')
     parser.add_argument('-b', '--bucket', required=True, type=str, help='workspace bucket')
-    # parser.add_argument('-g', '--gcp_project', required=True, type=str, help='gcp project for BQ')
-    # parser.add_argument('-n', '--workflow_name', required=True, type=str, help='name of WDL')
     parser.add_argument('-d', '--dataset_id', required=True, type=str, help='id of TDR dataset for destination of outputs')
     parser.add_argument('-t', '--target_table_name', required=True, type=str, help='name of target table in TDR dataset')
-
-    # workflow outputs from Arrays.WDL
 
     args = parser.parse_args()
 
     recoded_row_dict, timestamp = parse_json_outputs_file(args.tsv)
     control_file_path = write_load_json_to_bucket(args.bucket, recoded_row_dict, timestamp)
     call_ingest_dataset(control_file_path, args.target_table_name, args.dataset_id)
-
-
-    # notebook order
-    # snapshot_id, workflows = extract_submission_outputs(args.project, args.workspace, args.submission_id)
-    # snapshot_sample_table_fq, dataset_sample_table_fq = gather_bq_table_info(snapshot_id, args.dataset_id)
-    # recoded_upload_json = create_recoded_json_list(args.project, args.workspace, args.submission_id, snapshot_sample_table_fq, args.gcp_project, args.workflow_name)
-    # control_file_path = write_load_json_to_bucket(args.submission_id, args.bucket, recoded_upload_json)
-    # ingest_dataset_request = call_ingest_dataset(control_file_path, args.target_table_name, args.dataset_id)
 
 # python3 arrays_wdl_outputs_to_TDR.py -s 9159f7fb-9bb4-49a7-a822-4e916b260677 -p emerge_prod -w Arrays_test 
 # -b fc-e036248e-067b-4365-8c1e-5eb25103681f -g terra-e97dc6ac -n Arrays -d 6f2bb559-34ae-4ba0-b2ce-1d8be76ada9f -t ArraysOutputsTable
