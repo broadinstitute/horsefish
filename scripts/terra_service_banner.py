@@ -45,7 +45,7 @@ def update_service_banner(env, json_string=None):
 
     print("Setting permissions and security on banner json object in GCS location.")
     # set metadata on json object (gsutil -m setmeta -r -h "Cache-Control:private, max-age=0, no-cache")
-    blob.cache_control = "private, max-age=0, no-cache"
+    blob.cache_control = "max-age=0, no-cache"
     blob.patch()
 
     # set and save READ access for AllUsers on json object (gsutil ach ch -u AllUsers:R)
