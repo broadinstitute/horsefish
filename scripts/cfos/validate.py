@@ -42,12 +42,12 @@ DATA_TABLE_VALIDATE_AND_FORMAT_SCHEMA = Schema([Column("donor_id", null_validati
                                                 # TODO: are there a list of sites, or is this a free form field
                                                 #    Column("hasAnatomicalSite", [None])
                                                 Column("neuropathology", [InListValidation(neuropathology_options)]),
-                                                Column("biosample_id", [IsDistinctValidation()]),
+                                                Column("BioSample_id", [IsDistinctValidation()]),
                                                 Column("hasBioSampleType", [InListValidation(has_biosample_type_options)]),
                                                 Column("MMSE_Biopsy_value", [IsDtypeValidation(int)]),
                                                 Column("MMSE_Biopsy_atDonorAge", [IsDtypeValidation(int)]),
-                                                Column("MMSE_final_value", [IsDtypeValidation(int)]),
-                                                Column("MMSE_final_atDonorAge", [IsDtypeValidation(int)]),
+                                                Column("MMSE_Final_value", [IsDtypeValidation(int)]),
+                                                Column("MMSE_Final_atDonorAge", [IsDtypeValidation(int)]),
                                                 Column("APOE_value", [IsDtypeValidation(int)]),
                                                 Column("APOE_atDonorAge", [IsDtypeValidation(int)]),
                                                 Column("DataModality", [InListValidation(data_modality_options)]),
