@@ -2,11 +2,11 @@
 
 The scripts in this directory can be used to delete Terra workspaces in bulk. Proceed with caution!
 
-`get_workspace_list.py` gathers a list of workspaces in a given project, along with information about storage cost and owners. That should be manually curated before passing it to the script to delete.
+`get_workspace_list.py` gathers a list of workspaces in a given project, along with information about storage cost and owners. The output of that script is a csv containing information about the workspaces that should help the user decide which they want to delete. The user should manually curate/whittle it down to only the workspaces they want to delete (and only the `project` and `workspace` columns) to pass to the delete_workspaces script.
 
 `delete_workspaces.py` deletes a list of workspaces.
 
-These script use the Terra APIs, so they can only delete workspaces that the running user has access to. If your goal is to view as many workspaces as possible in the project, it's best to make sure the person running the script is a project owner on the Terra project. Note that any workspace covered by an Authorization Domain (AD) will not be able to be deleted (or have cost information returned) by these scripts unless the person running the script is in the workspace's AD.
+These scripts use the Terra APIs, so they can only delete workspaces that the running user has access to. If your goal is to view as many workspaces as possible in the project, it's best to make sure the person running the script is a project owner on the Terra project. Note that any workspace covered by an Authorization Domain (AD) will not be able to be deleted (or have cost information returned) by these scripts unless the person running the script is in the workspace's AD.
 
 
 ## Running `get_workspace_list.py`
