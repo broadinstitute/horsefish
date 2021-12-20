@@ -49,6 +49,11 @@ def create_recoded_json(row_json):
                         recoded_row_json[key] = recoded_row_json_list  # add list of json requests to larger json request
                         continue
 
+                    else:  # when list values are strings that DO NOT start with gs:// (like filerefs)
+                        for item in value_list:  # for each string item in non gs:// path array
+                            recoded_row_json_list.append(item)
+                        recoded_row_json[key] = recoded_row_json_list
+                        continue
                 # if value is string but not a gs:// path or list of gs:// paths
                 recoded_row_json[key] = value
 
@@ -59,7 +64,6 @@ def create_newline_delimited_json(input_tsv):
     """Create newline delimited json file from input tsv."""
 
     tsv_df = pd.read_csv(input_tsv, sep="\t")
-    # new_df = tsv_df.where(tsv_df.notnull(), None)  # has None where empty cells
 
     basename = input_tsv.split(".tsv")[0]
     output_filename = f"{basename}_recoded_newline_delimited.json"
