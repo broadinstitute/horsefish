@@ -249,7 +249,8 @@ def call_ingest_dataset(control_file_path, target_table_name, dataset_id):
 
     load_json = json.dumps({"format": "json",
                             "path": control_file_path,
-                            "table": target_table_name
+                            "table": target_table_name,
+                            "resolve_existing_files": true
                             })
 
     load_job_response = load_data(dataset_id, load_json)
