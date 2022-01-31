@@ -33,7 +33,7 @@ def write_file_to_bucket(filename, bucket):
     blob = dest_bucket.blob(f"{dir}/{filename}")
     blob.upload_from_filename(filename)
     control_file_full_path = f"gs://{bucket}/{dir}/{filename}"
-    print(f"Successfully copied {loading_json_filename} to {control_file_full_path}.")
+    print(f"Successfully copied {filename} to {control_file_full_path}.")
     return control_file_full_path
 
 def wait_for_job_status_and_result(job_id, wait_sec=10):
@@ -97,7 +97,7 @@ def main(dataset_id, bucket, target_table, outputs_json, sample_id, gcp_project_
     # retrieve data for this sample
     print(f"retrieving data for sample_id {sample_id} from {dataset_table_fq}")
     bq = bigquery.Client(gcp_project_for_query)
-    query = f"SELECT * FROM \`{dataset_table_fq}\` WHERE sample_id = '{sample_id}'"
+    query = f"SELECT * FROM `{dataset_table_fq}` WHERE sample_id = '{sample_id}'"
     print("using query:" + query)
 
     executed_query = bq.query(query)
