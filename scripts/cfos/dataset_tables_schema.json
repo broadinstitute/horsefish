@@ -1,7 +1,7 @@
 {
     "inph" : {"donor": ["donor_id", "hasOrganismType", "age_at_biopsy", "APOE_atDonorAge", "APOE_value", "follow_up_years",
                             "has_disease", "has_phenotypic_sex", "MMSE_Biopsy_atDonorAge", "MMSE_Biopsy_value",
-                            "MMSE_final_atDonorAge", "MMSE_final_value", "neuropathology"],
+                            "MMSE_Final_atDonorAge", "MMSE_Final_value", "neuropathology"],
                   "biosample": ["biosample_id", "donor_id", "hasAnatomicalSite", "hasDonorAge", "hasBioSampleType", "biosample_id_of_file"],
                   "file": ["biosample_id", "DataModality", "donor_id", "summary_file_path", "features_file_path",
                            "matrix_file_path", "barcode_file_path", "library_id"],
