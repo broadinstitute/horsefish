@@ -27,7 +27,6 @@ def get_headers(request_type='get'):
 
 def write_file_to_bucket(filename, bucket):
     dir = "tdr"
-    control_file_destination = f"{bucket}/{dir}"
     storage_client = gcs.Client()
     dest_bucket = storage_client.get_bucket(bucket)
     blob = dest_bucket.blob(f"{dir}/{filename}")
@@ -35,6 +34,47 @@ def write_file_to_bucket(filename, bucket):
     control_file_full_path = f"gs://{bucket}/{dir}/{filename}"
     print(f"Successfully copied {filename} to {control_file_full_path}.")
     return control_file_full_path
+
+def configure_path_json(v):
+    tdr_path = v.replace("gs://","/")
+
+    return { 
+        "sourcePath": v,
+        "targetPath": tdr_path
+    }
+
+def configure_list(v_list):
+    v_list_recoded = []
+
+    # check if any of the list values are non-string types
+    for v in v_list:
+        if isinstance(v, str) and v.startswith("gs://"):
+            # update json for loading files
+            v_list_recoded.append(configure_path_json(v))
+        else:
+            # don't change it
+            v_list_recoded.append(v)
+    
+    return v_list_recoded
+
+def recode_json_with_filepaths(json_object):
+    """Takes a dict, transforms files for upload as needed for TDR ingest, returns updated dict."""
+    for k in json_object.keys():
+        v = json_object[k]
+        if v is None:
+            # nothing needed
+            continue
+        
+        if isinstance(v, str) and v.startswith("gs://"):
+            # update json for loading files
+            json_object[k] = configure_path_json(v)
+        elif isinstance(v, str) and v.startswith("[") and v.endswith("]"):  # if value is an array
+            v_list = json.loads(v)  # convert <str> to <list>
+            json_object[k] = configure_list(v_list)
+        elif isinstance(v, list):
+            json_object[k] = configure_list(v)
+
+    return json_object
 
 def wait_for_job_status_and_result(job_id, wait_sec=10):
     # first check job status
@@ -65,86 +105,27 @@ def wait_for_job_status_and_result(job_id, wait_sec=10):
     return job_status, response.json()
 
 
-def main(dataset_id, bucket, target_table, outputs_json, sample_id, gcp_project_for_query):
+def main(dataset_id, bucket, target_table, outputs_json, sample_id):
     # clean up bucket prefix
     bucket = bucket.replace("gs://","")
 
     # read workflow outputs from file
     print(f"reading data from outputs_json file {outputs_json}")
     with open(outputs_json, "r") as infile:
-        outputs_to_load = json.load(infile)
+        outputs_dict = json.load(infile)
 
     # recode any paths (files) for TDR ingest
     print("recoding paths for TDR ingest")
-    for k in outputs_to_load.keys():
-        v = outputs_to_load[k]
-        if v is not None and "gs://" in v:
-            outputs_to_load[k] = {
-                "sourcePath": v,
-                "targetPath": v.replace("gs://", "/")
-            }
+    outputs_to_load = recode_json_with_filepaths(outputs_dict)
 
-    # get BQ access info for TDR dataset
-    print("retrieving BQ access info for TDR dataset")
-    uri = f"https://data.terra.bio/api/repository/v1/datasets/{dataset_id}?include=ACCESS_INFORMATION"
-    response = requests.get(uri, headers=get_headers())
-    tables = response.json()['accessInformation']['bigQuery']['tables']
-    dataset_table_fq = None  # fq = fully qualified name, i.e. project.dataset.table
-    for table_info in tables:
-        if table_info['name'] == target_table:
-            dataset_table_fq = table_info['qualifiedName']
-
-    # retrieve data for this sample
-    print(f"retrieving data for sample_id {sample_id} from {dataset_table_fq}")
-    bq = bigquery.Client(gcp_project_for_query)
-    query = f"SELECT * FROM `{dataset_table_fq}` WHERE sample_id = '{sample_id}'"
-    print("using query:" + query)
-
-    executed_query = bq.query(query)
-    results = executed_query.result()
-
-    # this avoids the pyarrow error that arises if we use `df_result = result.to_dataframe()`
-    df = results.to_dataframe_iterable()
-    reader = next(df)
-    df_result = pd.DataFrame(reader)
-
-    # break if there's more than one row in TDR for this sample
-    print(f"retrieved {len(df_result)} samples matching sample_id {sample_id}")
-    assert(len(df_result) == 1)
-
-    # format to a dictionary
-    print("formatting results to dictionary")
-    input_data_list = []
-    for row_id in df_result.index:
-        row_dict = {}
-        for col in df_result.columns:
-            if isinstance(df_result[col][row_id], pd._libs.tslibs.nattype.NaTType):
-                value = None
-            elif isinstance(df_result[col][row_id], pd._libs.tslibs.timestamps.Timestamp):
-                print(f'processing timestamp. value pre-formatting: {df_result[col][row_id]}')
-                formatted_timestamp = df_result[col][row_id].strftime('%Y-%m-%dT%H:%M:%S')
-                print(f'value post-formatting: {formatted_timestamp}')
-                value = formatted_timestamp
-            else:
-                value = df_result[col][row_id]
-            if value is not None:  # don't include empty values
-                row_dict[col] = value
-        input_data_list.append(row_dict)
-
-    sample_data_dict = input_data_list[0]
-
-    # update original sample data with workflow outputs
-    sample_data_dict.update(outputs_to_load)
-    # remove and store datarepo_row_id
-    old_datarepo_row_id = sample_data_dict.pop('datarepo_row_id')
     # update version_timestamp field
     new_version_timestamp = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%S')
-    sample_data_dict['version_timestamp'] = new_version_timestamp
+    outputs_to_load['version_timestamp'] = new_version_timestamp
 
     # write update json to disk and upload to staging bucket
     loading_json_filename = f"{sample_id}_{new_version_timestamp}_recoded_ingestDataset.json"
     with open(loading_json_filename, 'w') as outfile:
-        outfile.write(json.dumps(sample_data_dict))
+        outfile.write(json.dumps(outputs_to_load))
         outfile.write("\n")
     load_file_full_path = write_file_to_bucket(loading_json_filename, bucket)
 
@@ -153,34 +134,12 @@ def main(dataset_id, bucket, target_table, outputs_json, sample_id, gcp_project_
                         "path": load_file_full_path,
                         "table": target_table,
                         "resolve_existing_files": True,
+                        "updateStrategy": "update"
                         })
     uri = f"https://data.terra.bio/api/repository/v1/datasets/{dataset_id}/ingest"
     response = requests.post(uri, headers=get_headers('post'), data=load_json)
     load_job_id = response.json()['id']
     job_status, job_info = wait_for_job_status_and_result(load_job_id)
-    if job_status != "succeeded":
-        print(f"job status {job_status}:")
-        print(job_info)
-
-    # soft delete old row
-    print("beginning soft delete")
-    soft_delete_data = json.dumps({
-            "deleteType": "soft", 
-            "specType": "jsonArray",
-            "tables": [
-            {"jsonArraySpec": {"rowIds": [old_datarepo_row_id]},
-                "tableName": target_table}
-            ]})
-    uri = f"https://data.terra.bio/api/repository/v1/datasets/{dataset_id}/deletes"
-    response = requests.post(uri, headers=get_headers('post'), data=soft_delete_data)
-
-    print("probing soft delete job status")
-    if "id" not in response.json():
-        pprint(response.text)
-    else:
-        sd_job_id = response.json()['id']
-
-    job_status, job_info = wait_for_job_status_and_result(sd_job_id)
     if job_status != "succeeded":
         print(f"job status {job_status}:")
         print(job_info)
@@ -198,9 +157,7 @@ if __name__ == "__main__":
         help='path to a json file defining the outputs to be loaded to TDR')
     parser.add_argument('-s', '--sample_id', required=True,
         help='the sample_id of the sample to be ingested')
-    parser.add_argument('-p', '--gcp_project_for_query', required=True,
-        help='GCP project to use for querying TDR/BQ dataset')
         
     args = parser.parse_args()
 
-    main(args.dataset_id, args.bucket, args.target_table, args.outputs_json, args.sample_id, args.gcp_project_for_query)
+    main(args.dataset_id, args.bucket, args.target_table, args.outputs_json, args.sample_id)
