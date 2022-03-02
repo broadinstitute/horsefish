@@ -142,7 +142,9 @@ def main(dataset_id, bucket, target_table, outputs_json, sample_id):
     job_status, job_info = wait_for_job_status_and_result(load_job_id)
     if job_status != "succeeded":
         print(f"job status {job_status}:")
-        error_msg = f"{job_info["message"]}; {job_info["errorDetail"]}"
+        message = job_info["message"]
+        detail = job_info["errorDetail"]
+        error_msg = f"{message}: {detail}"
         raise ValueError(error_msg)
 
 
