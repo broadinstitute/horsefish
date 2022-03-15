@@ -1,0 +1,16 @@
+{
+    "project_name": "myproject",
+    "dataset_name": "my_dataset_name",
+    "description": "Example dataset to illustrate TDR quickstart tools",
+    "tables_with_pks": {
+        "sample": "sample_id",
+        "participant": "participant_id"
+    },
+    "assets": [
+        "processing_inputs",
+        "deliverables_singlesample"
+    ],
+    "region": "us-central1",
+    "billing_profile": "c9439205-d81d-420f-a6d9-a500cc559b98",
+    "enableSecureMonitoring": false
+}
