@@ -81,7 +81,7 @@ def setup_anvil_workspace_clone(src_namespace, src_workspace, dest_namespace, de
     # workspace clone success
     src_workspace_link = f"https://app.terra.bio/#workspaces/{src_namespace}/{src_workspace}".replace(" ", "%20")
     dashboard_message = f"Source Workspace URL: {src_workspace_link}"
-    update_dashboard_request = create_update_entity_request("description", src_workspace_link)
+    update_dashboard_request = create_update_entity_request("description", dashboard_message)
     is_updated, updated_message = update_workspace_dashboard(dest_namespace, dest_workspace, update_dashboard_request)
     print(f"Terra workspace dashboard will be updated with message: {dashboard_message}")
 
