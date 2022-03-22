@@ -12,10 +12,29 @@ from utils import check_workspace_exists, clone_workspace, \
     update_workspace_dashboard, make_create_workspace_request, \
     get_workspace_authorization_domain
 
-def create_update_dashboard_message(attribute_name, attribute_value):
+def create_update_dashboard_request(attribute_name, attribute_value):
     """Return request string for a single operation to create a non-array attribute."""
 
     return '[{"op":"AddUpdateAttribute","attributeName":"' + attribute_name + '", "addUpdateAttribute":"Source Workspace URL: ' + attribute_value + '"}]'
+
+
+def format_authorization_domains(src_auth_domains, input_auth_domains):
+    """Create list of authorization domains to apply to destination/clone Terra workspace."""
+
+    # src workspace ADs, user input ADs
+    if src_auth_domains and input_auth_domains is not None:
+        all_auth_domains = src_auth_domains.append(input_auth_domains.split(" "))
+    # src workspace ADs, no user input ADs
+    if src_auth_domains and input_auth_domains is None:
+        all_auth_domains = src_auth_domains
+    # no src workspace ADs, user input ADs
+    if not src_auth_domains and input_auth_domains is not None:
+        all_auth_domains = input_auth_domains.split(" ")
+    # no src workspace ADs, no user input ADs
+    if not src_auth_domains and input_auth_domains is None:
+        all_auth_domains = []
+
+    return all_auth_domains
 
 
 def check_clone_workspace_exists(dest_namespace, dest_workspace):
@@ -43,26 +62,14 @@ def setup_anvil_workspace_clone(src_namespace, src_workspace, dest_namespace, de
     # check if workspace with name already exists
     clone_exists, clone_exists_message = check_clone_workspace_exists(dest_namespace, dest_workspace)
 
-    # workspace exists --> prompt user to pick mew name and exit script
+    # workspace exists --> prompt user to pick new name and exit script
     if clone_exists:
         return
 
     # workspace does not exist --> start set up for cloning workspace
     # get auth domains of src workspace
     src_auth_domains = get_workspace_authorization_domain(src_workspace, src_namespace)
-
-    # src workspace ADs, user input ADs
-    if src_auth_domains and auth_domains is not None:
-        dest_auth_domains = src_auth_domains.append(auth_domains.split(" "))
-    # src workspace ADs, no user input ADs
-    if src_auth_domains and auth_domains is None:
-        dest_auth_domains = src_auth_domains
-    # no src workspace ADs, user input ADs
-    if not src_auth_domains and auth_domains is not None:
-        dest_auth_domains = auth_domains.split(" ")
-    # no src workspace ADs, no user input ADs
-    if not src_auth_domains and auth_domains is None:
-        dest_auth_domains = []
+    dest_auth_domains = format_authorization_domains(src_auth_domains, auth_domains)
 
     print(f"Authorization Domain(s) for {dest_namespace}/{dest_workspace}: {dest_auth_domains}")
     is_cloned, cloned_message = clone_workspace(src_namespace, src_workspace, dest_namespace, dest_workspace, dest_auth_domains)
@@ -73,7 +80,7 @@ def setup_anvil_workspace_clone(src_namespace, src_workspace, dest_namespace, de
 
     # workspace clone success
     src_workspace_link = f"https://app.terra.bio/#workspaces/{src_namespace}/{src_workspace}".replace(" ", "%20")
-    dashboard_message = create_update_dashboard_message("description", src_workspace_link)
+    dashboard_message = create_update_dashboard_request("description", src_workspace_link)
     is_updated, updated_message = update_workspace_dashboard(dest_namespace, dest_workspace, dashboard_message)
     print(f"Terra workspace dashboard will be updated with message: {src_workspace_link}")
 
