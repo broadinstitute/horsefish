@@ -12,7 +12,7 @@ from utils import check_workspace_exists, clone_workspace, \
     update_workspace_dashboard, make_create_workspace_request, \
     get_workspace_authorization_domain
 
-def create_update_dashboard_request(attribute_name, attribute_value):
+def create_update_entity_request(attribute_name, attribute_value):
     """Return request string for a single operation to create a non-array attribute."""
 
     return '[{"op":"AddUpdateAttribute","attributeName":"' + attribute_name + '", "addUpdateAttribute":"Source Workspace URL: ' + attribute_value + '"}]'
@@ -80,7 +80,7 @@ def setup_anvil_workspace_clone(src_namespace, src_workspace, dest_namespace, de
 
     # workspace clone success
     src_workspace_link = f"https://app.terra.bio/#workspaces/{src_namespace}/{src_workspace}".replace(" ", "%20")
-    dashboard_message = create_update_dashboard_request("description", src_workspace_link)
+    dashboard_message = create_update_entity_request("description", src_workspace_link)
     is_updated, updated_message = update_workspace_dashboard(dest_namespace, dest_workspace, dashboard_message)
     print(f"Terra workspace dashboard will be updated with message: {src_workspace_link}")
 
