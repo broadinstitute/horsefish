@@ -1,59 +1,101 @@
-"""Clone AnVIL Terra workspace and paste link of original workspace in dashboard of cloned workspace.
+"""Clone AnVIL Terra workspace and paste link of source workspace in dashboard of cloned workspace.
 
 Usage:
-    > python3 clone_anvil_workspace.py -sw [src_workspace] -sn [src_namespace] -dw [dest_workspace] -dn [dest_namespace]"""
+    > python3 clone_anvil_workspace.py -sw [src_workspace] -sn [src_namespace] -dw [dest_workspace] -dn [dest_namespace] [-ads]"""
 
 import argparse
 import json
 import pandas as pd
 import requests
 
-from utils import clone_workspace, update_workspace_dashboard
+from utils import check_workspace_exists, clone_workspace, \
+    update_workspace_dashboard, make_create_workspace_request, \
+    get_workspace_authorization_domain
 
-def create_non_array_attr_operation(var_attribute_name, var_attribute_value):
+def create_update_dashboard_message(attribute_name, attribute_value):
     """Return request string for a single operation to create a non-array attribute."""
 
-    return '[{"op":"AddUpdateAttribute","attributeName":"' + var_attribute_name + '", "addUpdateAttribute":"' + var_attribute_value + '"}]'
+    return '[{"op":"AddUpdateAttribute","attributeName":"' + attribute_name + '", "addUpdateAttribute":"Source Workspace URL: ' + attribute_value + '"}]'
 
 
-def setup_anvil_workspace_clone(src_namespace, src_workspace, dest_namespace, dest_workspace, auth_domain=""):
-    """Clone AnVIL workspace and update dashboard with url to original workspace."""
+def check_clone_workspace_exists(dest_namespace, dest_workspace):
+    """Check if a Terra workspace with user input name for clone already eixsts."""
+
+    # check workspace exists
+    ws_exists, ws_exists_message = check_workspace_exists(dest_workspace, dest_namespace)
+
+    # if workspace exists
+    if ws_exists:
+        print(f"Workspace already exists with name: {dest_namepsace}/{dest_workspace}.")
+        print(f"Please choose unique name or delete existing workspace and try again.")
+        print(f"Existing workspace details: {json.dumps(json.loads(ws_exists_message), indent=2)}")
+        return True, ws_exists_message
+
+    ## workspace doesn't exist (404), create workspace
+    return False, ws_exists_message
+
+
+def setup_anvil_workspace_clone(src_namespace, src_workspace, dest_namespace, dest_workspace, auth_domains=None):
+    """Clone workspace and update dashboard with url to source workspace."""
 
     print(f"Starting clone of workspace.")
-    is_cloned, cloned_message = clone_workspace(src_namespace, src_workspace, dest_namespace, dest_workspace, auth_domain)
 
-    # if workspace clone fail
+    # check if workspace with name already exists
+    clone_exists, clone_exists_message = check_clone_workspace_exists(dest_namespace, dest_workspace)
+
+    # workspace exists --> prompt user to pick mew name and exit script
+    if clone_exists:
+        return
+
+    # workspace does not exist --> start set up for cloning workspace
+    # get auth domains of src workspace
+    src_auth_domains = get_workspace_authorization_domain(src_workspace, src_namespace)
+
+    # src workspace ADs, user input ADs
+    if src_auth_domains and auth_domains is not None:
+        dest_auth_domains = src_auth_domains.append(auth_domains.split(" "))
+    # src workspace ADs, no user input ADs
+    if src_auth_domains and auth_domains is None:
+        dest_auth_domains = src_auth_domains
+    # no src workspace ADs, user input ADs
+    if not src_auth_domains and auth_domains is not None:
+        dest_auth_domains = auth_domains.split(" ")
+    # no src workspace ADs, no user input ADs
+    if not src_auth_domains and auth_domains is None:
+        dest_auth_domains = []
+
+    print(f"Authorization Domain(s) for {dest_namespace}/{dest_workspace}: {dest_auth_domains}")
+    is_cloned, cloned_message = clone_workspace(src_namespace, src_workspace, dest_namespace, dest_workspace, dest_auth_domains)
+
+    # workspace clone fails
     if not is_cloned:
         return
 
+    # workspace clone success
     src_workspace_link = f"https://app.terra.bio/#workspaces/{src_namespace}/{src_workspace}".replace(" ", "%20")
-    dashboard_message = create_non_array_attr_operation("description", src_workspace_link)
-    print(dashboard_message)
+    dashboard_message = create_update_dashboard_message("description", src_workspace_link)
     is_updated, updated_message = update_workspace_dashboard(dest_namespace, dest_workspace, dashboard_message)
+    print(f"Terra workspace dashboard will be updated with message: {src_workspace_link}")
 
-    # if workspace dashboard update fail
+    # workspace dashboard update fails
     if not is_updated:
         return
 
-    # if clone and dashboard update success
+    # clone and workspace dashboard update success
     print(f"Workspace clone and dashboard update success.")
 
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description='Clone AnVIL workspace and update cloned workspace dashboard with original workspace link.')
+    parser = argparse.ArgumentParser(description='Clone AnVIL workspace and update cloned workspace dashboard with source workspace link.')
 
-    parser.add_argument('-sw', '--src_workspace', required=True, type=str, help='original Terra workspace name')
-    parser.add_argument('-sn', '--src_namespace', required=True, type=str, help='original Terra workspace namespace')
+    parser.add_argument('-sw', '--src_workspace', required=True, type=str, help='source Terra workspace name')
+    parser.add_argument('-sn', '--src_namespace', required=True, type=str, help='source Terra workspace namespace')
     parser.add_argument('-dw', '--dest_workspace', required=True, type=str, help='destination Terra workspace name')
     parser.add_argument('-dn', '--dest_namespace', required=True, type=str, help='destination Terra workspace namespace')
-    parser.add_argument('-ad', '--auth_domain', type=str, help='destination authorization domain')
+    parser.add_argument('-ad', '--auth_domains', type=str, help='desired destination authorization domain(s) separated by spaces')
 
     args = parser.parse_args()
 
     # call to create and set up external data delivery workspaces
-    setup_anvil_workspace_clone(args.src_namespace, args.src_workspace, args.dest_namespace, args.dest_workspace, args.auth_domain)
-
-# python3 clone_anvil_workspace.py -sw sushmac_sandbox_broad-firecloud-dsde -sn broad-firecloud-dsde -dw delete_test_dfe730 -dn broad-firecloud-dsde
-# TODO: if cloned workspace exists already
-# TODO: if src workspace has auth domain, carry it over
+    setup_anvil_workspace_clone(args.src_namespace, args.src_workspace, args.dest_namespace, args.dest_workspace, args.auth_domains)

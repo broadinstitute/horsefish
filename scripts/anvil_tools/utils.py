@@ -177,7 +177,7 @@ def create_authorization_domain(auth_domain_name):
 
 
 def get_workspace_authorization_domain(workspace_name, project):
-    """Get the workspace bucket for a given workspace and workspace project."""
+    """Get the workspace authorization domain for a given workspace and workspace project."""
 
     # request URL for createGroup
     uri = f"https://api.firecloud.org/api/workspaces/{project}/{workspace_name}?fields=workspace.authorizationDomain"
