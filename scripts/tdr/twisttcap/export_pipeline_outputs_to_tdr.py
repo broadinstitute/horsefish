@@ -127,7 +127,7 @@ def get_fq_bq_table(dataset_id, target_table):
     return dataset_table_fq
 
 
-def get_existing_data(gcp_project, dataset_table_fq, primary_key_field, primary_key_value):
+def get_existing_data(dataset_table_fq, primary_key_field, primary_key_value):
     gcp_project = dataset_table_fq.split('.')[0]
     bq = bigquery.Client(gcp_project)
     query = f"SELECT * FROM `{dataset_table_fq}` WHERE {primary_key_field} = '{primary_key_value}'"
