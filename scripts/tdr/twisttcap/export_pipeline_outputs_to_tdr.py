@@ -137,7 +137,7 @@ def get_existing_data(dataset_table_fq, primary_key_field, primary_key_value):
     result = executed_query.result()
 
     # this avoids the pyarrow error that arises if we use `df_result = result.to_dataframe()`
-    df = results.to_dataframe_iterable()
+    df = result.to_dataframe_iterable()
     reader = next(df)
     df_result = pd.DataFrame(reader)
 
