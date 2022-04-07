@@ -9,6 +9,8 @@ from oauth2client.client import GoogleCredentials
 from pprint import pprint
 from time import sleep
 
+# DEVELOPER: update this field anytime you make a new docker image
+docker_version = "1.1"
 
 # define some utils functions
 def get_access_token():
