@@ -65,6 +65,7 @@ def update_service_banner(env, json_string=None):
     final_blob = bucket.blob("alerts.json")
     final_blob.acl.all().grant_read()
     final_blob.acl.group(suitable_group).grant_owner()
+    final_blob.acl.save()
 
     # delete the temporary file
     tmp_blob.delete()
