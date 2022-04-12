@@ -25,10 +25,6 @@ def build_service_banner(title, message, link):
     return json.dumps(banner_dict)
 
 
-# def set_iam_on_blob(blob):
-
-
-
 def update_service_banner(env, json_string=None):
     """Push json to bucket in selected environment."""
 
