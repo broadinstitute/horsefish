@@ -39,22 +39,32 @@ def update_service_banner(env, json_string=None):
         bucket = storage_client.get_bucket(f"firecloud-alerts-{env}")
         suitable_group = (f"fc-comms@{env}.test.firecloud.org")
 
-    # define required filename (alerts.json) and upload json string to gcs
-    blob = bucket.blob("alerts.json")
-    blob.upload_from_string(json_string)
+    # define temporary filename (tmp/alerts.json) and upload json string to gcs
+    tmp_blob = bucket.blob("tmp/alerts.json")
+    tmp_blob.upload_from_string(json_string)
 
     print("Setting permissions and security on banner json object in GCS location.")
-    # set metadata on json object (gsutil -m setmeta -r -h "Cache-Control:private, max-age=0, no-cache")
-    blob.cache_control = "max-age=0, no-cache"
-    blob.patch()
+    # set metadata on tmp json object (gsutil -m setmeta -r -h "Cache-Control:no-store")
+    tmp_blob.cache_control = "no-store"
+    tmp_blob.patch()
 
-    # set and save READ access for AllUsers on json object (gsutil ach ch -u AllUsers:R)
-    blob.acl.all().grant_read()
-    blob.acl.save()
+    # set and save OWNER access for suitable_group on the tmp json object (gsutil ach ch -g suitable_group:O)
+    tmp_blob.acl.group(suitable_group).grant_owner()
+    tmp_blob.acl.save()
 
-    # set and save OWNER access for suitable_group on json object (gsutil ach ch -g suitable_group:O)
-    blob.acl.group(suitable_group).grant_owner()
-    blob.acl.save()
+    # copy the json out of the tmp location and to the real location. this is done to
+    # ensure that setting metadata on the object and creating the object happen at the same time
+    bucket.copy_blob(tmp_blob, bucket, "alerts.json")
+
+    # on the final object, we need to reset the permissions since those are not
+    # preserved when copying. add the suitable group as owner, and make it public
+    final_blob = bucket.blob("alerts.json")
+    final_blob.acl.all().grant_read()
+    final_blob.acl.group(suitable_group).grant_owner()
+    final_blob.acl.save()
+
+    # delete the temporary file
+    tmp_blob.delete()
 
     print("Banner action complete.")
 
