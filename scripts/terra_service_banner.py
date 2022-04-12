@@ -25,6 +25,10 @@ def build_service_banner(title, message, link):
     return json.dumps(banner_dict)
 
 
+# def set_iam_on_blob(blob):
+
+
+
 def update_service_banner(env, json_string=None):
     """Push json to bucket in selected environment."""
 
@@ -40,28 +44,30 @@ def update_service_banner(env, json_string=None):
         suitable_group = (f"fc-comms@{env}.test.firecloud.org")
 
     # define temporary filename (tmp/alerts.json) and upload json string to gcs
-    blob = bucket.blob("tmp/alerts.json")
-    blob.upload_from_string(json_string)
+    tmp_blob = bucket.blob("tmp/alerts.json")
+    tmp_blob.upload_from_string(json_string)
 
     print("Setting permissions and security on banner json object in GCS location.")
-    # set metadata on json object (gsutil -m setmeta -r -h "Cache-Control:no-store")
-    blob.cache_control = "no-store"
-    blob.patch()
+    # set metadata on tmp json object (gsutil -m setmeta -r -h "Cache-Control:no-store")
+    tmp_blob.cache_control = "no-store"
+    tmp_blob.patch()
 
-    # set and save READ access for AllUsers on json object (gsutil ach ch -u AllUsers:R)
-    blob.acl.all().grant_read()
-    blob.acl.save()
-
-    # set and save OWNER access for suitable_group on json object (gsutil ach ch -g suitable_group:O)
-    blob.acl.group(suitable_group).grant_owner()
-    blob.acl.save()
+    # set and save OWNER access for suitable_group on the tmp json object (gsutil ach ch -g suitable_group:O)
+    tmp_blob.acl.group(suitable_group).grant_owner()
+    tmp_blob.acl.save()
 
     # copy the json out of the tmp location and to the real location. this is done to
     # ensure that setting metadata on the object and creating the object happen at the same time
-    bucket.copy_blob(blob, bucket, "alerts.json")
+    bucket.copy_blob(tmp_blob, bucket, "alerts.json")
+
+    # on the final object, we need to reset the permissions since those are not
+    # preserved when copying. add the suitable group as owner, and make it public
+    final_blob = bucket.blob("alerts.json")
+    final_blob.acl.all().grant_read()
+    final_blob.acl.group(suitable_group).grant_owner()
 
     # delete the temporary file
-    blob.delete()
+    tmp_blob.delete()
 
     print("Banner action complete.")
 
