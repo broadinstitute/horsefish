@@ -31,6 +31,7 @@ RUN apt-get update -y \
     && apt-get install -y gnumeric
 
 COPY scripts /scripts
+COPY projects /projects
 
 COPY requirements.txt .
 RUN pip3 install -r requirements.txt
