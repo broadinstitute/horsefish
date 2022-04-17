@@ -26,77 +26,6 @@ def get_access_token():
     return credentials.get_access_token().access_token
 
 
-def check_user():
-    
-    uri = f"https://data.terra.bio/api/repository/v1/register/user"
-    
-    headers = {"Authorization": "Bearer " + get_access_token(),
-               "accept": "application/json"}
-    
-    response = requests.get(uri, headers=headers)
-    status_code = response.status_code
-    
-    if status_code != 200:
-        print(f"Check user request failed")
-        pprint(response.text)
-        return
-
-    print(f"Successfully retrieved user info.")
-    return json.loads(response.text)
-
-
-def get_dataset_info(dataset_id):
-    """"Get dataset details from retrieveDataset API given a datasetID."""
-
-    uri = f"https://data.terra.bio/api/repository/v1/datasets/{dataset_id}?include=SCHEMA%2CPROFILE%2CDATA_PROJECT%2CSTORAGE"
-    
-    headers = {"Authorization": "Bearer " + get_access_token(),
-               "accept": "application/json"}
-    
-    response = requests.get(uri, headers=headers)
-    status_code = response.status_code
-    
-    if status_code != 200:
-        return response.text
-    
-    print(f"Successfully retrieved details for dataset with datasetID {dataset_id}.")
-    return json.loads(response.text)
-
-
-def get_dataset_access_info(dataset_id):
-    """"Get dataset access details from retrieveDataset API given a datasetID."""
-
-    uri = f"https://data.terra.bio/api/repository/v1/datasets/{dataset_id}?include=ACCESS_INFORMATION"
-    
-    headers = {"Authorization": "Bearer " + get_access_token(),
-               "accept": "application/json"}
-
-    response = requests.get(uri, headers=headers)
-    status_code = response.status_code
-
-    if status_code != 200:
-        return response.text
-
-    print(f"Successfully retrieved access information for dataset with datasetID {dataset_id}.")
-    return json.loads(response.text)
-
-
-def get_snapshot_access_info(snapshot_id):
-    uri = f"https://data.terra.bio/api/repository/v1/snapshots/{snapshot_id}?include=ACCESS_INFORMATION"
-    
-    headers = {"Authorization": "Bearer " + get_access_token(),
-               "accept": "application/json"}
-
-    response = requests.get(uri, headers=headers)
-    status_code = response.status_code
-
-    if status_code != 200:
-        return response.text
-
-    print(f"Successfully retrieved snapshot access information for snapshotID {snapshot_id}.")
-    return json.loads(response.text)
-
-
 def load_data(dataset_id, ingest_data):
     """Load data into TDR"""
 
@@ -177,40 +106,25 @@ def get_job_status_and_result(job_id):
     
     headers = {"Authorization": "Bearer " + get_access_token(),
                "accept": "application/json"}
-    
-    response = requests.get(uri, headers=headers)
-    status_code = response.status_code
-    
-    if status_code != 200:
-        return response.json()
-    
-    job_status = response.json()['job_status']
-    print(f'job_id {job_id} has status {job_status}')
-    # if job status = done, check job result
-    if job_status in ['succeeded', 'failed']:
-        response = requests.get(uri + "/result", headers=headers)
-        status_code = response.status_code
+    time.sleep(10)
+    retrieveJob_response = requests.get(uri, headers=headers)
+    retrieveJob_response_json = json.loads(retrieveJob_response.text)
+    retrieveJob_status_code = retrieveJob_response.status_code
 
-    return json.loads(response.text)
+    # job_status = response_json['job_status']
+    if retrieveJob_status_code == 202:                                           # still running
+        print(f"load job {job_id} --> running")
+        return retrieveJob_status_code, retrieveJob_response_json
 
+    if retrieveJob_status_code == 200:                                          # finished successfully
+        print(f"load job {job_id} --> success")
+        retrieveJobResult_response = requests.get(uri + "/result", headers=headers)
+        retrieveJobResult_response_json = json.loads(retrieveJobResult_response.text)
+        retrieveJobResult_status_code = retrieveJobResult_response.status_code
+        return retrieveJobResult_status_code, retrieveJobResult_response_json
 
-def get_fq_table(entity_id, table_name, entity_type):
-    """Given a datset or snapshot id, table name, and entity type {dataset,snapshot}, retrieve its fully qualified BQ table name"""
-    if entity_type == 'dataset':
-        access_info = get_dataset_access_info(entity_id)
-    elif entity_type == 'snapshot':
-        access_info = get_snapshot_access_info(entity_id)
-
-    project_id = access_info['accessInformation']['bigQuery']['projectId']
-    tables = access_info['accessInformation']['bigQuery']['tables']
-
-    # pull out desired table
-    table_fq = None  # fq = fully qualified name, i.e. project.dataset.table
-    for table_info in tables:
-        if table_info['name'] == table_name:
-            table_fq = table_info['qualifiedName'] 
-
-    return table_fq
+    print(f"load job {job_id} --> not successful")  # finished but not successfully
+    return retrieveJob_status_code, retrieveJob_response_json
 
 
 def get_single_attribute(fq_bq_table, datarepo_row_id, desired_field, gcp_project):
@@ -231,68 +145,49 @@ def get_single_attribute(fq_bq_table, datarepo_row_id, desired_field, gcp_projec
     return df_result[desired_field][datarepo_row_id]
 
 
-def get_all_attributes(fq_bq_table, datarepo_row_id, gcp_project):
-    """Performs a BQ lookup of all attributes in the specified snapshot or dataset table"""
-    # create BQ connection
-    bq = bigquery.Client(gcp_project)
-    
-    # execute BQ query
-    query = f"""SELECT * FROM `{fq_bq_table}` WHERE datarepo_row_id = '{datarepo_row_id}'"""
-    executed_query = bq.query(query)
-    
-    result = executed_query.result()
-    
-    df_result = result.to_dataframe().set_index('datarepo_row_id')
-    
-    json_result = convert_df_to_json(df_result)
-    
-    return json_result
-
-
 def call_ingest_dataset(control_file_path, target_table_name, dataset_id):
     """Create the ingestDataset API json request body and call API."""
 
     load_json = json.dumps({"format": "json",
                             "path": control_file_path,
                             "table": target_table_name,
-                            "resolve_existing_files": "true"
+                            "resolve_existing_files": "true",
+                            "updateStrategy": "replace"
                             })
-
     load_job_response = load_data(dataset_id, load_json)
 
-    print(f"Load Job Response: {load_job_response}")
+    print(f"ingestDataset request body: \n {load_json} \n")
 
-    job_id = load_job_response["id"]
-    job_status = load_job_response["job_status"]
+    ingestDataset_job_id = load_job_response["id"]
+    ingestDataset_status_code = load_job_response["status_code"]
 
-    print("Starting data ingest to TDR dataset.")
-    while job_status == "running":
-        time.sleep(10)
-        response = get_job_status_and_result(job_id)
+    if ingestDataset_status_code != 202:
+        print("file ingest to TDR dataset failed.")
+        print(f"please refer to error message and retry ingest.")
+        print(f"ingestDataset response body: \n {load_job_response} \n")
+        return
 
-        # waiting for the status of the job to change from running (done could also mean failed)
-        if "job_status" in response.keys():
-            job_status = response["job_status"]
-            print("Load job is still running.")
-        # determine if done = failed or done = succeeded
-        # elif "errorDetail" in response.keys():
-        #     error_message = response["errorDetail"]
-        #     print(f"Load job did not succeed: {error_message}")
-        else:
-            failed_files = response["load_result"]["loadSummary"]["failedFiles"]
-            succeeded_files = response["load_result"]["loadSummary"]["succeededFiles"]
-            total_files = response["load_result"]["loadSummary"]["totalFiles"]
-            # if not success
-            if total_files != succeeded_files:
-                print(f"Total files to load count: {total_files}")
-                print(f"Successfully loaded file count: {succeeded_files}")
-                print(f"Failed to load file count: {failed_files}")
-                print(f"Full error for more details: {response}")
-                return
-            # if success, mark as done
-            job_status = "success"
+    # if ingestDataset_status_code == 202:  # if ingestDataset starts running successfully
+    job_status_code, job_response = get_job_status_and_result(ingestDataset_job_id)
+    while job_status_code == 202:           # while job is still running
+        time.sleep(10)  # wait 10 seconds
+        job_status_code, job_response = get_job_status_and_result(ingestDataset_job_id)
 
-    print("File ingest to TDR dataset completed.")
+    if job_status_code != 200:              # when job completes but not success
+        error_message = job_response["errorDetail"]
+        print(f"Load job finished but did not succeed: {error_message}")
+        return
+
+    # when job completes but successful
+    failed_files = job_response["load_result"]["loadSummary"]["failedFiles"]
+    succeeded_files = job_response["load_result"]["loadSummary"]["succeededFiles"]
+    total_files = job_response["load_result"]["loadSummary"]["totalFiles"]
+
+    print(f"Total files to load count: {total_files}")
+    print(f"Successfully loaded file count: {succeeded_files}")
+    print(f"Failed to load file count: {failed_files}")
+
+    print("File ingest to TDR dataset completed successfully.")
 
 
 def write_load_json_to_bucket(bucket, recoded_rows_json, timestamp):
@@ -313,61 +208,6 @@ def write_load_json_to_bucket(bucket, recoded_rows_json, timestamp):
 
     print(f"Successfully copied {loading_json_filename} to {control_file_destination}.")
     return f"gs://{control_file_destination}/{loading_json_filename}"
-
-
-def create_recoded_json_list(project, workspace, submission_id, snapshot_sample_table_fq, gcp_project, workflow_name):
-    """Create a list of recoded jsons where each item represents a workflow's outputs."""
-
-    # empty list to collect per-row recoded json requests to ingest dataset
-    all_rows_recoded_data_to_upload = []
-    # empty dictionary to hold single row outputs
-    single_row_data_to_upload = {}
-    # generate timestamp for last_modified_column --> current datetime in UTC
-    last_modified_date = datetime.now(tz=pytz.UTC).strftime("%Y-%m-%dT%H:%M:%S")
-
-    for datarepo_row_id, workflow_id in workflows.items():
-        # retrieve chip_well_barcode from snapshot data
-        chip_well_barcode = get_single_attribute(snapshot_sample_table_fq, datarepo_row_id, 'chip_well_barcode', gcp_project)
-        single_row_data_to_upload['chip_well_barcode'] = chip_well_barcode
-
-        # get reblocked gvcf & index paths
-        workflow_outputs_json = fapi.get_workflow_outputs(project, workspace, submission_id, workflow_id).json()
-        workflow_outputs = workflow_outputs_json['tasks'][workflow_name]['outputs']
-        
-        # pull out all the desired workflow outputs (defined in workflow_outputs_dict) and save them in data_to_upload
-        for output_name, output_value in workflow_outputs.items():
-            if output_name in WORKFLOW_OUTPUTS_DICT.keys():
-                single_row_data_to_upload[WORKFLOW_OUTPUTS_DICT[output_name]] = output_value
-        
-        # add timestamp to single_row_data_to_upload before recoding for ingestDataset API call
-        single_row_data_to_upload["last_modified_date"] = last_modified_date
-        # recode the single row for ingestDataset API call
-        single_row_recoded_ingest_json = create_recoded_json(single_row_data_to_upload)
-        # add recoded single row to list of all recoded rows
-        all_rows_recoded_data_to_upload.append(single_row_recoded_ingest_json)
-
-    # print(all_rows_recoded_data_to_upload)
-    return all_rows_recoded_data_to_upload
-
-
-def gather_bq_table_info(snapshot_id, dataset_id):
-    """Gather BQ table information"""
-
-    # TODO/question: should we just always query the underlying dataset?
-    # TODO: will these two tables ever be different
-    snapshot_input_table = "ArraysInputsTable"
-    dataset_input_table = "ArraysInputsTable"
-
-    # for the snapshot (for this sample's info)
-    snapshot_sample_table_fq = get_fq_table(snapshot_id, snapshot_input_table, 'snapshot')
-    print(f'SNAPSHOT {snapshot_input_table} table: {snapshot_sample_table_fq}')
-
-    # and for the underlying dataset (for updates)
-    # retrieve existing data for row to update
-    dataset_sample_table_fq = get_fq_table(dataset_id, dataset_input_table, 'dataset')
-    print(f'DATASET {dataset_input_table} table: {dataset_sample_table_fq}')
-
-    return snapshot_sample_table_fq, dataset_sample_table_fq
 
 
 def extract_submission_outputs(project, workspace, submission_id):
