@@ -78,8 +78,6 @@ def get_workspace_authorization_domain(workspace_name, project):
 
     # returns an empty list if no auth domains
     auth_domain_list = response.json()["workspace"]["authorizationDomain"]
-    print(auth_domain_list)
-    exit(1)
     # if list empty, return message
     if not auth_domain_list:
         auth_domains = []

@@ -64,12 +64,10 @@ def setup_anvil_workspace_clone(src_namespace, src_workspace, dest_namespace, de
 
     # workspace exists --> prompt user to pick new name and exit script
     if clone_exists:
-        print(f"Workspace clone exists.")
         return
 
     # workspace does not exist --> start set up for cloning workspace
     # get auth domains of src workspace
-    print("Starting auth domain gettings.")
     src_auth_domains = get_workspace_authorization_domain(src_workspace, src_namespace)
     dest_auth_domains = format_authorization_domains(src_auth_domains, auth_domains)
 
