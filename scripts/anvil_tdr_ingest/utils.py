@@ -17,6 +17,33 @@ def get_access_token():
 
     return credentials.get_access_token().access_token
 
+
+def add_user_to_workspace(workspace_name, workspace_project, email):
+    """PUT request to the putLibraryMetadata API."""
+
+    # request URL for updateWorkspaceACL
+    uri = f"https://api.firecloud.org/api/workspaces/{workspace_project}/{workspace_name}/acl?inviteUsersNotFound=false"
+
+    # Get access token and and add to headers for requests.
+    headers = {"Authorization": "Bearer " + get_access_token(), "accept": "*/*", "Content-Type": "application/json"}
+    # -H  "accept: */*" -H  "Authorization: Bearer [token] -H "Content-Type: application/json"
+
+    request = json.dumps({"email": email, "accessLevel": "READER", "canShare": false, "canCompute": false})
+    # capture response from API and parse out status code
+    response = requests.patch(uri, headers=headers, data=request)
+    status_code = response.status_code
+
+    # if adding user fails
+    if status_code != 200:
+        print(f"WARNING: Failed to add/update user/group to {workspace_project}/{workspace_name}")
+        print("Please see full response for error:")
+        print(response.text)
+        return False, response.text
+
+    print(f"Successfully added/updated {workspace_project}/{workspace_name} with user/group {email}.")
+    return True, response.text
+
+
 # clone Terra workspace
 def clone_workspace(src_namespace, src_workspace, dest_namespace, dest_workspace, auth_domains, copyFilesWithPrefix=None):
     """Clone a Terra workspace."""

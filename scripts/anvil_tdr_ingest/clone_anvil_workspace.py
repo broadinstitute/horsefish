@@ -8,7 +8,7 @@ import json
 import pandas as pd
 import requests
 
-from utils import check_workspace_exists, clone_workspace, \
+from utils import add_user_to_workspace, check_workspace_exists, clone_workspace, \
     update_workspace_dashboard, make_create_workspace_request, \
     get_workspace_authorization_domain
 
@@ -89,8 +89,18 @@ def setup_anvil_workspace_clone(src_namespace, src_workspace, dest_namespace, de
     if not is_updated:
         return
 
+    jade_sa = "datarepo-jade-api@terra-datarepo-production.iam.gserviceaccount.com"
+    add_user, add_user_message = add_user_to_workspace(dest_workspace, dest_namespace, jade_sa)
+    
+    # if adding jade SA fails
+    if not add_user:
+        return
+    
+    # copy notebooks and schema from resources workspaces into cloned workspace
+    
+
     # clone and workspace dashboard update success
-    print(f"Workspace clone and dashboard update success.")
+    print(f"Workspace clone success.")
 
 
 if __name__ == "__main__":
