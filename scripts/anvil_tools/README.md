@@ -51,6 +51,27 @@
 ##### Flags
     1. `--tsv`, `-t`: input .tsv file (required)
 
+#### **add_or_remove_user_from_group.py**
+##### Description
+    Add/remove user/group as member/admin from a Terra group (group_name@firecloud.org).
+
+    Input is:
+        1. a .tsv file with 3 columns (required):
+            1. "group_name" - only the group name, without "@firecloud.org"
+            2. "user_email" - email of user to add to group
+            3. "accessLevel" - (member or admin)
+        2. optional flag to remove user from group (--delete)
+##### Usage
+    Locally
+        `python3 /scripts/anvil_tools/add_or_remove_user_from_group.py -t TSV_FILE [--delete]`
+    Docker
+        `docker run --rm -it -v "$HOME"/.config:/.config -v "$HOME"/local_data_directory/:/data broadinstitute/horsefish bash -c "cd data; python3 /scripts/anvil_tools/add_or_remove_user_from_group.py -t /data/INPUT.tsv [--delete]"`
+
+    Note: `local_data_directory` should be the path to the folder where your desired input .tsv file is located.
+##### Flags
+    1. `--tsv`, `-t`: input .tsv file (required)
+    2. `--delete`, `-d`: add flag to REMOVE user from group
+
 
 #### **file_exists_checker.sh**
 ##### Description
