@@ -151,9 +151,7 @@ def create_recoded_json(row_json):
                     # recode original value/path with expanded request
                     # TODO: add in description = id_col + col_name
                     recoded_row_json[key] = {"sourcePath":value,
-                                    "targetPath":relative_tdr_path,
-                                    "mimeType":"text/plain"
-                                    }
+                                    "targetPath":relative_tdr_path}
                     continue
 
                 recoded_row_json_list = []  # instantiate empty list to store recoded values for arrayOf:True cols
@@ -175,9 +173,7 @@ def create_recoded_json(row_json):
                             relative_tdr_path = item.replace("gs://","/")  # create TDR relative path
                             # create the json request for list member
                             recoded_list_member = {"sourcePath":item,
-                                                   "targetPath":relative_tdr_path,
-                                                   "mimeType":"text/plain"
-                                                   }
+                                                   "targetPath":relative_tdr_path}
                             recoded_row_json_list.append(recoded_list_member)  # add json request to list
                         recoded_row_json[key] = recoded_row_json_list  # add list of json requests to larger json request
                         continue
