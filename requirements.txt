@@ -1,4 +1,5 @@
 firecloud==0.16.31
+google-cloud-bigquery==2.20.0
 google-cloud-storage==1.33.0
 oauth2client==4.1.3
 pandas==1.1.4
