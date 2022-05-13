@@ -189,7 +189,7 @@ def create_recoded_json(row_json):
     return recoded_row_json
 
 
-def parse_json_outputs_file(input_tsv):
+def parse_json_outputs_file(input_tsv, bucket, target_table_name, dataset_id):
     """Format the json file containing workflow outputs and headers."""
 
     tsv_df = pd.read_csv(input_tsv, sep="\t")
@@ -197,17 +197,20 @@ def parse_json_outputs_file(input_tsv):
     basename = input_tsv.split(".tsv")[0]
     output_filename = f"{basename}_recoded_newline_delimited.json"
 
-    last_modified_date = datetime.now(tz=pytz.UTC).strftime("%Y-%m-%dT%H:%M:%S")
-
     all_rows = []
     for index, row in tsv_df.iterrows():
+        # create timestamp
+        last_modified_date = datetime.now(tz=pytz.UTC).strftime("%Y-%m-%dT%H:%M:%S")
+        print(last_modified_date)
+
         # drop empty columns and add in timestamp
         remove_row_nan = row.dropna()
         remove_row_nan["last_modified_date"] = last_modified_date
-
         recoded_row_dict = create_recoded_json(remove_row_nan)
-
-    return recoded_row_dict, last_modified_date
+        # write recoded json to a GCS storage location - to the bucket given (workspace bucket)
+        control_file_path = write_load_json_to_bucket(bucket, recoded_row_dict, last_modified_date)
+        # create request to ingestDataset, call API, return response, and status update
+        call_ingest_dataset(control_file_path, target_table_name, dataset_id)
 
 
 if __name__ == "__main__" :
@@ -220,9 +223,4 @@ if __name__ == "__main__" :
 
     args = parser.parse_args()
 
-    # created the recoded json
-    recoded_row_dict, timestamp = parse_json_outputs_file(args.tsv)
-    # write recoded json to a GCS storage location - to the bucket given (workspace bucket)
-    control_file_path = write_load_json_to_bucket(args.bucket, recoded_row_dict, timestamp)
-    # create request to ingestDataset, call API, return response, and status update
-    call_ingest_dataset(control_file_path, args.target_table_name, args.dataset_id)
+    parse_json_outputs_file(args.tsv, args.bucket, args.target_table_name, args.dataset_id)
