@@ -201,8 +201,6 @@ def parse_json_outputs_file(input_tsv, bucket, target_table_name, dataset_id):
     for index, row in tsv_df.iterrows():
         # create timestamp
         last_modified_date = datetime.now(tz=pytz.UTC).strftime("%Y-%m-%dT%H:%M:%S")
-        print(last_modified_date)
-
         # drop empty columns and add in timestamp
         remove_row_nan = row.dropna()
         remove_row_nan["last_modified_date"] = last_modified_date
