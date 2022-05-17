@@ -8,14 +8,31 @@ import json
 import pandas as pd
 import requests
 
-from utils import check_workspace_exists, clone_workspace, \
+from utils import add_user_to_workspace, add_workspace_data, \
+    check_workspace_exists, clone_workspace, \
+    copy_objects_across_buckets, \
     update_workspace_dashboard, make_create_workspace_request, \
-    get_workspace_authorization_domain
+    get_workspace_authorization_domain, get_workspace_bucket
 
-def create_update_entity_request(attribute_name, attribute_value):
+
+def create_update_entity_request(attribute_name, attribute_value, attribute_description):
     """Return request string for a single operation to create a non-array attribute."""
 
-    return '[{"op":"AddUpdateAttribute","attributeName":"' + attribute_name + '", "addUpdateAttribute":"' + attribute_value + '"}]'
+    data = '{"op":"AddUpdateAttribute", "attributeName":"' + attribute_name + '", "addUpdateAttribute":"' + attribute_value + '"}, \
+            {"op":"AddUpdateAttribute", "attributeName":"__DESCRIPTION__' + attribute_name + '", "addUpdateAttribute":"' + attribute_description + '"}'
+
+    return data
+
+
+def create_workspace_attributes(workspace_link, workspace_bucket):
+    """Create request to add src workspace and bucket information to dest workspace variables."""
+
+    workspace_attributes = []
+    workspace_attributes.append(create_update_entity_request("src_workspace_bucket_path", workspace_bucket, "GCS bucket path for source workspace"))
+    workspace_attributes.append(create_update_entity_request("src_workspace_link", workspace_link, "Link to source workspace"))
+    workspace_attributes_request = "[" + ",".join(workspace_attributes) + "]"
+
+    return workspace_attributes_request
 
 
 def format_authorization_domains(src_auth_domains, input_auth_domains):
@@ -45,7 +62,7 @@ def check_clone_workspace_exists(dest_namespace, dest_workspace):
 
     # if workspace exists
     if ws_exists:
-        print(f"Workspace already exists with name: {dest_namepsace}/{dest_workspace}.")
+        print(f"Workspace already exists with name: {dest_namespace}/{dest_workspace}.")
         print(f"Please choose unique name or delete existing workspace and try again.")
         print(f"Existing workspace details: {json.dumps(json.loads(ws_exists_message), indent=2)}")
         return True, ws_exists_message
@@ -57,40 +74,58 @@ def check_clone_workspace_exists(dest_namespace, dest_workspace):
 def setup_anvil_workspace_clone(src_namespace, src_workspace, dest_namespace, dest_workspace, auth_domains=None):
     """Clone workspace and update dashboard with url to source workspace."""
 
-    print(f"Starting clone of workspace.")
+    print(f"Starting clone of workspace. \n")
 
     # check if workspace with name already exists
     clone_exists, clone_exists_message = check_clone_workspace_exists(dest_namespace, dest_workspace)
-
-    # workspace exists --> prompt user to pick new name and exit script
-    if clone_exists:
+    if clone_exists:                    # workspace exists --> prompt user to pick new name and exit script
         return
 
-    # workspace does not exist --> start set up for cloning workspace
+    # AUTH DOMAINS #
     # get auth domains of src workspace
     src_auth_domains = get_workspace_authorization_domain(src_workspace, src_namespace)
     dest_auth_domains = format_authorization_domains(src_auth_domains, auth_domains)
-
     print(f"Authorization Domain(s) for {dest_namespace}/{dest_workspace}: {dest_auth_domains}")
+
+    # WORKSPACE CLONING #
     is_cloned, cloned_message = clone_workspace(src_namespace, src_workspace, dest_namespace, dest_workspace, dest_auth_domains)
-
-    # workspace clone fails
-    if not is_cloned:
+    if not is_cloned:                   # workspace clone fails
         return
 
-    # workspace clone success
+    # workspace clone success --> get src and dest workspace links
     src_workspace_link = f"https://app.terra.bio/#workspaces/{src_namespace}/{src_workspace}".replace(" ", "%20")
-    dashboard_message = f"Source Workspace URL: {src_workspace_link}"
-    update_dashboard_request = create_update_entity_request("description", dashboard_message)
-    is_updated, updated_message = update_workspace_dashboard(dest_namespace, dest_workspace, update_dashboard_request)
-    print(f"Terra workspace dashboard will be updated with message: {dashboard_message}")
+    dest_workspace_link = f"https://app.terra.bio/#workspaces/{dest_namespace}/{dest_workspace}".replace(" ", "%20")
+    print(f"Destinationworkspace link: {dest_workspace_link}")
 
-    # workspace dashboard update fails
-    if not is_updated:
+    # SET UP CLONED WORKSPACE #
+    # get src workspace bucket id
+    is_bucket, bucket_id_message = get_workspace_bucket(src_workspace, src_namespace)
+    if not is_bucket:                   # if getting bucket id fails
         return
+    src_bucket_id = bucket_id_message["workspace"]["bucketName"]
+    src_bucket_path = f"gs://{src_bucket_id}"
+    dest_bucket_id = cloned_message["bucketName"]
+
+    # add src workspace link and src workspace bucket path as workspace variables in dest workspace
+    workspace_data_request = create_workspace_attributes(src_workspace_link, src_bucket_path)
+    is_workspace_data_added, workspace_data_added_message = add_workspace_data(dest_workspace, dest_namespace, workspace_data_request)
+    if not is_workspace_data_added:     # if workspace data variable update fails
+        return
+
+    # add jade SA as READER on destionation workspace
+    jade_sa = "datarepo-jade-api@terra-datarepo-production.iam.gserviceaccount.com"
+    add_user, add_user_message = add_user_to_workspace(dest_workspace, dest_namespace, jade_sa)
+    if not add_user:                    # if adding jade SA fails
+        return
+
+    # copy notebooks and dataset schema from template workspace to destination workspace
+    anvil_resources_workspace_bucket = "fc-9cd4583e-7855-4b5e-ae88-d8971cfd5b46"  # public, no auth domains
+    tim_schema_prefix = "ingest_pipeline/output/tim_core/schema"
+    copy_objects_across_buckets(anvil_resources_workspace_bucket, dest_bucket_id, "notebooks")
+    copy_objects_across_buckets(anvil_resources_workspace_bucket, dest_bucket_id, tim_schema_prefix)
 
     # clone and workspace dashboard update success
-    print(f"Workspace clone and dashboard update success.")
+    print(f"Destination workspace clone and set-up success.")
 
 
 if __name__ == "__main__":
