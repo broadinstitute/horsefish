@@ -204,13 +204,18 @@ def main(dataset_id, target_table, outputs_json, pk_field, pk_value, timestamp_f
 
     # ingest data to TDR
     load_json = json.dumps({"format": "array",
-                        "records": row_data,
+                        "records": [row_data],
                         "table": target_table,
                         "resolve_existing_files": True,
                         "updateStrategy": "replace"
                         })
     uri = f"https://data.terra.bio/api/repository/v1/datasets/{dataset_id}/ingest"
     response = requests.post(uri, headers=get_headers('post'), data=load_json)
+    status_code = response.status_code
+    if status_code != 202:
+        error_msg = f"Error with ingest: {response.text}"
+        raise ValueError(error_msg)
+
     load_job_id = response.json()['id']
     job_status, job_info = wait_for_job_status_and_result(load_job_id)
     if job_status != "succeeded":
