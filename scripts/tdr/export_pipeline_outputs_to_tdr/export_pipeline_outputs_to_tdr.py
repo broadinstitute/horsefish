@@ -233,7 +233,7 @@ if __name__ == "__main__":
         help='the name of the table\'s primary_key field')
     parser.add_argument('-v', '--primary_key_value', required=True,
         help='the primary key value for the row to update')
-    parser.add_argument('-t', '--timestamp_field_list', action='append',
+    parser.add_argument('-f', '--timestamp_field_list', action='append',
         help='field that should be populated with timestamp at ingest time (can have more than one)')
 
     args = parser.parse_args()
