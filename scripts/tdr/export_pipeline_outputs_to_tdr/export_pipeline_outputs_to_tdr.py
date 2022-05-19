@@ -10,7 +10,7 @@ from pprint import pprint
 from time import sleep
 
 # DEVELOPER: update this field anytime you make a new docker image
-docker_version = "1.1"
+docker_version = "1.2"
 
 # define some utils functions
 def get_access_token():
@@ -171,9 +171,7 @@ def get_existing_data(dataset_table_fq, primary_key_field, primary_key_value):
     return input_data_list[0]
 
 
-def main(dataset_id, bucket_input, target_table, outputs_json, pk_field, pk_value):
-    # clean up bucket string
-    bucket = clean_bucket_path(bucket_input)
+def main(dataset_id, target_table, outputs_json, pk_field, pk_value):
 
     # read workflow outputs from file
     print(f"reading data from outputs_json file {outputs_json}")
@@ -202,16 +200,9 @@ def main(dataset_id, bucket_input, target_table, outputs_json, pk_field, pk_valu
     new_version_timestamp = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%S')
     row_data['version_timestamp'] = new_version_timestamp
 
-    # write update json to disk and upload to staging bucket
-    loading_json_filename = f"{pk_value}_{new_version_timestamp}_recoded_ingestDataset.json"
-    with open(loading_json_filename, 'w') as outfile:
-        outfile.write(json.dumps(row_data))
-        outfile.write("\n")
-    load_file_full_path = write_file_to_bucket(loading_json_filename, bucket)
-
     # ingest data to TDR
-    load_json = json.dumps({"format": "json",
-                        "path": load_file_full_path,
+    load_json = json.dumps({"format": "array",
+                        "records": row_data,
                         "table": target_table,
                         "resolve_existing_files": True,
                         "updateStrategy": "replace"
@@ -232,8 +223,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Ingest workflow outputs to TDR')
     parser.add_argument('-d', '--dataset_id', required=True,
         help='UUID of destination TDR dataset')
-    parser.add_argument('-b', '--bucket', required=True,
-        help='GCS bucket to use for TDR API json payloads')
     parser.add_argument('-t', '--target_table', required=True,
         help='name of destination table in the TDR dataset')
     parser.add_argument('-o', '--outputs_json', required=True,
@@ -246,7 +235,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     main(args.dataset_id,
-         args.bucket,
          args.target_table,
          args.outputs_json,
          args.primary_key_field,
