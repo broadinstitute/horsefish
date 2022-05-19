@@ -171,7 +171,7 @@ def get_existing_data(dataset_table_fq, primary_key_field, primary_key_value):
     return input_data_list[0]
 
 
-def main(dataset_id, target_table, outputs_json, pk_field, pk_value):
+def main(dataset_id, target_table, outputs_json, pk_field, pk_value, timestamp_field_list):
 
     # read workflow outputs from file
     print(f"reading data from outputs_json file {outputs_json}")
@@ -197,8 +197,10 @@ def main(dataset_id, target_table, outputs_json, pk_field, pk_value):
     print(f"Replacing data from row with datarepo_row_id {old_datarepo_row_id}")
 
     # update version_timestamp field
-    new_version_timestamp = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%S')
-    row_data['version_timestamp'] = new_version_timestamp
+    if timestamp_field_list:
+        new_version_timestamp = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%S')
+        for field_name in timestamp_field_list:
+            row_data[field_name] = new_version_timestamp
 
     # ingest data to TDR
     load_json = json.dumps({"format": "array",
@@ -231,11 +233,14 @@ if __name__ == "__main__":
         help='the name of the table\'s primary_key field')
     parser.add_argument('-v', '--primary_key_value', required=True,
         help='the primary key value for the row to update')
-        
+    parser.add_argument('-t', '--timestamp_field_list', action='append',
+        help='field that should be populated with timestamp at ingest time (can have more than one)')
+
     args = parser.parse_args()
 
     main(args.dataset_id,
          args.target_table,
          args.outputs_json,
          args.primary_key_field,
-         args.primary_key_value)
+         args.primary_key_value,
+         args.timestamp_field_list)
