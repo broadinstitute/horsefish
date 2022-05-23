@@ -1,4 +1,4 @@
-FROM google/cloud-sdk:295.0.0
+FROM google/cloud-sdk:384.0.0
 	
 # Tell gcloud to save state in /.config so it's easy to override as a mounted volume.
 ENV HOME=/
