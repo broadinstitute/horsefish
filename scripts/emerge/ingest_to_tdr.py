@@ -105,15 +105,6 @@ def call_ingest_dataset(control_file_path, target_table_name, dataset_id):
         print(f"Load job finished but did not succeed: {error_message}")
         return
 
-    # when job completes but successful
-    failed_files = job_response["load_result"]["loadSummary"]["failedFiles"]
-    succeeded_files = job_response["load_result"]["loadSummary"]["succeededFiles"]
-    total_files = job_response["load_result"]["loadSummary"]["totalFiles"]
-
-    print(f"Total files to load count: {total_files}")
-    print(f"Successfully loaded file count: {succeeded_files}")
-    print(f"Failed to load file count: {failed_files}")
-
     print("File ingest to TDR dataset completed successfully.")
 
 
