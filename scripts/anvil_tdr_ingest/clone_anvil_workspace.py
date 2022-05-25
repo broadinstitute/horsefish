@@ -28,7 +28,7 @@ def create_workspace_attributes(workspace_link, workspace_bucket):
     """Create request to add src workspace and bucket information to dest workspace variables."""
 
     workspace_attributes = []
-    workspace_attributes.append(create_update_entity_request("src_workspace_bucket_path", workspace_bucket, "GCS bucket path for source workspace"))
+    workspace_attributes.append(create_update_entity_request("data_files_src_bucket", workspace_bucket, "GCS bucket path for source workspace"))
     workspace_attributes.append(create_update_entity_request("src_workspace_link", workspace_link, "Link to source workspace"))
     workspace_attributes_request = "[" + ",".join(workspace_attributes) + "]"
 
