@@ -10,7 +10,7 @@ from pprint import pprint
 from time import sleep
 
 # DEVELOPER: update this field anytime you make a new docker image
-docker_version = "1.1"
+docker_version = "1.2"
 
 # define some utils functions
 def get_access_token():
@@ -171,9 +171,7 @@ def get_existing_data(dataset_table_fq, primary_key_field, primary_key_value):
     return input_data_list[0]
 
 
-def main(dataset_id, bucket_input, target_table, outputs_json, pk_field, pk_value):
-    # clean up bucket string
-    bucket = clean_bucket_path(bucket_input)
+def main(dataset_id, target_table, outputs_json, pk_field, pk_value, timestamp_field_list):
 
     # read workflow outputs from file
     print(f"reading data from outputs_json file {outputs_json}")
@@ -199,25 +197,25 @@ def main(dataset_id, bucket_input, target_table, outputs_json, pk_field, pk_valu
     print(f"Replacing data from row with datarepo_row_id {old_datarepo_row_id}")
 
     # update version_timestamp field
-    new_version_timestamp = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%S')
-    row_data['version_timestamp'] = new_version_timestamp
-
-    # write update json to disk and upload to staging bucket
-    loading_json_filename = f"{pk_value}_{new_version_timestamp}_recoded_ingestDataset.json"
-    with open(loading_json_filename, 'w') as outfile:
-        outfile.write(json.dumps(row_data))
-        outfile.write("\n")
-    load_file_full_path = write_file_to_bucket(loading_json_filename, bucket)
+    if timestamp_field_list:
+        new_version_timestamp = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%S')
+        for field_name in timestamp_field_list:
+            row_data[field_name] = new_version_timestamp
 
     # ingest data to TDR
-    load_json = json.dumps({"format": "json",
-                        "path": load_file_full_path,
+    load_json = json.dumps({"format": "array",
+                        "records": [row_data],
                         "table": target_table,
                         "resolve_existing_files": True,
                         "updateStrategy": "replace"
                         })
     uri = f"https://data.terra.bio/api/repository/v1/datasets/{dataset_id}/ingest"
     response = requests.post(uri, headers=get_headers('post'), data=load_json)
+    status_code = response.status_code
+    if status_code != 202:
+        error_msg = f"Error with ingest: {response.text}"
+        raise ValueError(error_msg)
+
     load_job_id = response.json()['id']
     job_status, job_info = wait_for_job_status_and_result(load_job_id)
     if job_status != "succeeded":
@@ -232,8 +230,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Ingest workflow outputs to TDR')
     parser.add_argument('-d', '--dataset_id', required=True,
         help='UUID of destination TDR dataset')
-    parser.add_argument('-b', '--bucket', required=True,
-        help='GCS bucket to use for TDR API json payloads')
     parser.add_argument('-t', '--target_table', required=True,
         help='name of destination table in the TDR dataset')
     parser.add_argument('-o', '--outputs_json', required=True,
@@ -242,12 +238,14 @@ if __name__ == "__main__":
         help='the name of the table\'s primary_key field')
     parser.add_argument('-v', '--primary_key_value', required=True,
         help='the primary key value for the row to update')
-        
+    parser.add_argument('-f', '--timestamp_field_list', action='append',
+        help='field that should be populated with timestamp at ingest time (can have more than one)')
+
     args = parser.parse_args()
 
     main(args.dataset_id,
-         args.bucket,
          args.target_table,
          args.outputs_json,
          args.primary_key_field,
-         args.primary_key_value)
+         args.primary_key_value,
+         args.timestamp_field_list)
