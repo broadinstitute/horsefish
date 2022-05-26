@@ -30,7 +30,7 @@ def create_clone_workspace_attributes(workspace_link, workspace_bucket):
     workspace_attributes = []
 
     # get source workspace specific attributes
-    workspace_attributes.append(create_update_entity_request("data_files_src_bucket", workspace_bucket, "GCS bucket path for source workspace"))
+    workspace_attributes.append(create_update_entity_request("data_files_src_bucket", workspace_bucket, "GCS bucket ID for source workspace"))
     workspace_attributes.append(create_update_entity_request("src_workspace_link", workspace_link, "Link to source workspace"))
 
     # get template workspace attributes
@@ -117,7 +117,7 @@ def setup_anvil_workspace_clone(src_namespace, src_workspace, dest_namespace, de
     dest_bucket_id = cloned_message["bucketName"]
 
     # add src workspace link and src workspace bucket path as workspace variables in dest workspace
-    workspace_data_request = create_clone_workspace_attributes(src_workspace_link, src_bucket_path)
+    workspace_data_request = create_clone_workspace_attributes(src_workspace_link, src_bucket_id)
     is_workspace_data_added, workspace_data_added_message = add_workspace_data(dest_workspace, dest_namespace, workspace_data_request)
     if not is_workspace_data_added:     # if workspace data variable update fails
         return
