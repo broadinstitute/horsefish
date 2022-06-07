@@ -10,7 +10,7 @@ import requests
 
 from utils import add_user_to_workspace, add_workspace_data, \
     check_workspace_exists, clone_workspace, \
-    copy_objects_across_buckets, \
+    copy_objects_across_buckets, get_workspace_attributes, \
     update_workspace_dashboard, make_create_workspace_request, \
     get_workspace_authorization_domain, get_workspace_bucket
 
@@ -24,12 +24,22 @@ def create_update_entity_request(attribute_name, attribute_value, attribute_desc
     return data
 
 
-def create_workspace_attributes(workspace_link, workspace_bucket):
+def create_clone_workspace_attributes(workspace_link, workspace_bucket):
     """Create request to add src workspace and bucket information to dest workspace variables."""
 
     workspace_attributes = []
-    workspace_attributes.append(create_update_entity_request("src_workspace_bucket_path", workspace_bucket, "GCS bucket path for source workspace"))
+
+    # get source workspace specific attributes
+    workspace_attributes.append(create_update_entity_request("data_files_src_bucket", workspace_bucket, "GCS bucket ID for source workspace"))
     workspace_attributes.append(create_update_entity_request("src_workspace_link", workspace_link, "Link to source workspace"))
+
+    # get template workspace attributes
+    template_ws_attrs = get_workspace_attributes("anvil_cmg_ingest_resources", "dsp-data-ingest")["workspace"]["attributes"]
+    workspace_attributes.append(create_update_entity_request("tf_input_dir", template_ws_attrs["tf_input_dir"], "input metadata directory"))
+    workspace_attributes.append(create_update_entity_request("tf_output_dir", template_ws_attrs["tf_output_dir"], "output metadata directory"))
+    workspace_attributes.append(create_update_entity_request("val_output_dir", template_ws_attrs["val_output_dir"], "validation output directory"))
+    workspace_attributes.append(create_update_entity_request("tdr_schema_file", template_ws_attrs["tdr_schema_file"], "time TDR dataset schema file"))
+
     workspace_attributes_request = "[" + ",".join(workspace_attributes) + "]"
 
     return workspace_attributes_request
@@ -107,7 +117,7 @@ def setup_anvil_workspace_clone(src_namespace, src_workspace, dest_namespace, de
     dest_bucket_id = cloned_message["bucketName"]
 
     # add src workspace link and src workspace bucket path as workspace variables in dest workspace
-    workspace_data_request = create_workspace_attributes(src_workspace_link, src_bucket_path)
+    workspace_data_request = create_clone_workspace_attributes(src_workspace_link, src_bucket_id)
     is_workspace_data_added, workspace_data_added_message = add_workspace_data(dest_workspace, dest_namespace, workspace_data_request)
     if not is_workspace_data_added:     # if workspace data variable update fails
         return

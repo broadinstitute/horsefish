@@ -171,6 +171,14 @@ def get_workspace_bucket(workspace_name, workspace_project):
     return True, response.json()
 
 
+def get_workspace_attributes(workspace_name, workspace_project):
+    """Get workspace variables from a given workspace."""
+
+    ws_attributes = fapi.get_workspace(workspace_project, workspace_name, fields="workspace.attributes \n").json()
+
+    return ws_attributes
+
+
 def make_create_workspace_request(workspace_name, workspace_project, auth_domain_name):
     """Make the json request to pass into create_workspace()."""
 
