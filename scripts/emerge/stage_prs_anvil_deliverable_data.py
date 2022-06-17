@@ -70,6 +70,7 @@ def copy_object_to_bucket(src_bucket_name, src_object_name, dest_bucket_name, de
 def rename_and_rehome_data_files(prs_entities_dicts, dest_bucket, snapshot_id):
     """For columns in the df that represent files, update paths pointing to the final bucket and copy files."""
 
+    # file types and their file extensions to use for renaming files in delivery workspace
     file_cols = {"red_idat_cloud_path":"_Red.idat", "green_idat_cloud_path":"_Grn.idat",
                 "gtc_file":".gtc", "arrays_variant_calling_detail_metrics_file":".arrays_control_code_summary_metrics",
                 "single_sample_vcf":"_single_sample.vcf.gz", "single_sample_vcf_index":"_single_sample.vcf.gz.tbi",
@@ -89,7 +90,6 @@ def rename_and_rehome_data_files(prs_entities_dicts, dest_bucket, snapshot_id):
             copy_object_to_bucket(src_bucket, src_blob, dest_bucket, dest_blob)
 
             # update dictionary with new paths in destiantion workspace
-            # prs_entity[f"{file_type}_dest"] = dest_filepath
             prs_entity[file_type] = dest_filepath
 
     return prs_entities_dicts
@@ -111,17 +111,15 @@ def get_prs_entities(workspace, namespace, ids_file):
         ids_list = ids.readlines()
         ids_list = [entity_id.rstrip() for entity_id in ids_list]
 
-        print(str(len(ids_list)) + " samples to copy.")
+        print(str(len(ids_list)) + " samples to rename and cope to AnVIL delivery workspace.")
 
-    cols_to_pop = ["datarepo_row_id", "import:timestamp", "import:snapshot_id", "chip_well_barcode_output", "chip_well_barcode"]
-
-    all_prs_entities = []
+    all_prs_entities = [] # list of dictionaries - each item = 1 PRS row
     for prs_entity_id in ids_list:
         print(f"Gathering data for {prs_entity_id}.")
         # get required information from PRS Outputs Table
         prs_entity_dict = get_single_entity(workspace, namespace, "PrsOutputsTable", prs_entity_id)
-        prs_entity_dict.pop('chip_well_barcode', None)
-        prs_entity_dict["chip_well_barcode"] = prs_entity_id
+        prs_entity_dict.pop('chip_well_barcode', None) # pop dictionary with relationships returned
+        # prs_entity_dict["chip_well_barcode"] = prs_entity_id # replace with just single KVP
 
         snapshot_id = prs_entity_dict['import:snapshot_id']
         # get required information from Arrays Inputs Table
