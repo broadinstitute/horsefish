@@ -14,8 +14,7 @@ def upload_data_table(tsv, workspace, namespace):
     status_code = upload_response.status_code
 
     if status_code != 200:  # api call fails
-        print(f"Uploading entity failed: {upload_response.text}")
-        return
+        raise Exception(f"Uploading entity failed: {upload_response.text}")
 
     print(upload_response.text)
 
@@ -71,7 +70,7 @@ def make_terra_data_table_tsvs(prs_dictionaries, dest_workspace, dest_namespace)
         upload_data_table(tsv, dest_workspace, dest_namespace)
 
 
-def copy_object_to_bucket(src_bucket_name, src_object_name, dest_bucket_name, dest_object_name):
+def copy_object(src_bucket_name, src_object_name, dest_bucket_name, dest_object_name):
     """Copies object from one bucket to another with a new name."""
 
     storage_client = gcs.Client()
@@ -87,23 +86,24 @@ def rename_and_rehome_data_files(prs_entities_dicts, dest_bucket, snapshot_id):
     """For columns in the df that represent files, update paths pointing to the final bucket and copy files."""
 
     # file types and their file extensions to use for renaming files in delivery workspace
-    file_cols = {"red_idat_cloud_path":"_Red.idat", "green_idat_cloud_path":"_Grn.idat",
-                "gtc_file":".gtc", "arrays_variant_calling_detail_metrics_file":".arrays_control_code_summary_metrics",
-                "single_sample_vcf":"_single_sample.vcf.gz", "single_sample_vcf_index":"_single_sample.vcf.gz.tbi",
-                "imputed_single_sample_vcf":"_imputed_single_sample.vcf.gz", "imputed_single_sample_vcf_index":"_imputed_single_sample.vcf.gz.tbi"}
+    file_extensions = {"red_idat_cloud_path":"_Red.idat", "green_idat_cloud_path":"_Grn.idat",
+                      "gtc_file":".gtc", "arrays_variant_calling_detail_metrics_file":".arrays_control_code_summary_metrics",
+                      "single_sample_vcf":"_single_sample.vcf.gz", "single_sample_vcf_index":"_single_sample.vcf.gz.tbi",
+                      "imputed_single_sample_vcf":"_imputed_single_sample.vcf.gz", "imputed_single_sample_vcf_index":"_imputed_single_sample.vcf.gz.tbi"}
 
     print(f"Starting renaming and rehoming of PRS samples.")
     for prs_entity in prs_entities_dicts:
-        for file_type in file_cols.keys():
-            dest_filename = prs_entity["collaborator_participant_id"] + "_" + prs_entity["collaborator_sample_id"] + file_cols[file_type]
+        for file_type in file_extensions.keys():
+            dest_filename = prs_entity["collaborator_participant_id"] + "_" + prs_entity["collaborator_sample_id"] + file_extensions[file_type]
             dest_filepath = f"gs://{dest_bucket}/{snapshot_id}/{dest_filename}"
+            dest_blob = "/".join(dest_filepath.split("/")[3:])
 
             # copy file from source to destination bucket and rename
             src_bucket = prs_entity[file_type].split("/")[2]
             src_blob = "/".join(prs_entity[file_type].split("/")[3:]) # TDR source filepath
-            dest_blob = "/".join(dest_filepath.split("/")[3:])
-            print(f"Initiate copy of {src_blob} to {dest_filepath}")
-            copy_object_to_bucket(src_bucket, src_blob, dest_bucket, dest_blob)
+
+            print(f"Initiate copy of gs://{src_bucket}/{src_blob} to {dest_filepath}")
+            copy_object(src_bucket, src_blob, dest_bucket, dest_blob)
 
             # update dictionary with new paths in destiantion workspace
             prs_entity[file_type] = dest_filepath
@@ -118,8 +118,7 @@ def get_single_entity(workspace, namespace, entity_type, entity_id):
     status_code = entity_response.status_code
 
     if status_code != 200:  # api call fails
-        print(f"Getting entity information failed: {entity_response.text}")
-        return
+        raise Exception(f"Getting entity information failed: {entity_response.text}")
 
     return entity_response.json()["attributes"]
 
@@ -147,27 +146,30 @@ def get_prs_entities(workspace, namespace, ids_file):
         # get required files + metadata from Arrays Inputs Table
         arrays_inputs_dict = get_single_entity(workspace, namespace, "ArraysInputsTable", prs_entity_id)
         if arrays_inputs_dict['import:snapshot_id'] == snapshot_id:
-            for attribute in ["datarepo_row_id", "import:timestamp", "import:snapshot_id", "chip_well_barcode"]: 
-                arrays_inputs_dict.pop(attribute)
-            prs_entity_dict.update(arrays_inputs_dict)
+            raise Exception(f"Snapshot ID does not match for {prs_entity_id} between PrsOutputsTable and ArraysInputsTable.")
+        for attribute in ["datarepo_row_id", "import:timestamp", "import:snapshot_id", "chip_well_barcode"]: 
+            arrays_inputs_dict.pop(attribute)
+        prs_entity_dict.update(arrays_inputs_dict)
 
         # get required files + metadata from Arrays Outputs Table
         arrays_outputs_dict = get_single_entity(workspace, namespace, "ArraysOutputsTable", prs_entity_id)
-        if arrays_outputs_dict['import:snapshot_id'] == snapshot_id:
-            for attribute in ["datarepo_row_id", "import:timestamp", "import:snapshot_id", "chip_well_barcode_output"]:
-                arrays_outputs_dict.pop(attribute)
+        if arrays_outputs_dict['import:snapshot_id'] != snapshot_id:
+            raise Exception(f"Snapshot ID does not match for {prs_entity_id} between PrsOutputsTable and ArraysOutputsTable.")
+        for attribute in ["datarepo_row_id", "import:timestamp", "import:snapshot_id", "chip_well_barcode_output"]:
+            arrays_outputs_dict.pop(attribute)
 
-            # rename for clarity of single sample vcfs (arrays outputs) vs imputed vcfs (imputation output)
-            arrays_outputs_dict["single_sample_vcf"] = arrays_outputs_dict.pop("output_vcf")
-            arrays_outputs_dict["single_sample_vcf_index"] = arrays_outputs_dict.pop("output_vcf_index")
-            prs_entity_dict.update(arrays_outputs_dict)
+        # rename for clarity of single sample vcfs (arrays outputs) vs imputed vcfs (imputation output)
+        arrays_outputs_dict["single_sample_vcf"] = arrays_outputs_dict.pop("output_vcf")
+        arrays_outputs_dict["single_sample_vcf_index"] = arrays_outputs_dict.pop("output_vcf_index")
+        prs_entity_dict.update(arrays_outputs_dict)
 
         # get required files + metadata from Imputation Wide Outputs Table
         imputation_outputs_dict = get_single_entity(workspace, namespace, "ImputationWideOutputsTable", prs_entity_id)
-        if imputation_outputs_dict['import:snapshot_id'] == snapshot_id:
-            for attribute in ["datarepo_row_id", "import:timestamp", "import:snapshot_id", "chip_well_barcode"]:
-                imputation_outputs_dict.pop(attribute)
-            prs_entity_dict.update(imputation_outputs_dict)
+        if imputation_outputs_dict['import:snapshot_id'] != snapshot_id:
+            raise Exception(f"Snapshot ID does not match for {prs_entity_id} between PrsOutputsTable and ImputationWideOutputsTable.")
+        for attribute in ["datarepo_row_id", "import:timestamp", "import:snapshot_id", "chip_well_barcode"]:
+            imputation_outputs_dict.pop(attribute)
+        prs_entity_dict.update(imputation_outputs_dict)
 
         all_prs_entities.append(prs_entity_dict)
 
