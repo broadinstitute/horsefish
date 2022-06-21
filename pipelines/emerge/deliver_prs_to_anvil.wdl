@@ -28,6 +28,12 @@ workflow DeliverPrstoAnVIL {
         dest_workspace_namespace    = dest_workspace_namespace,
         dest_workspace_bucket_id    = dest_workspace_bucket_id
     }
+
+    output {
+        File prs_scores_tsv = DeliverPrsDatatoAnVILWorkspace.prs
+        File samples_tsv    = DeliverPrsDatatoAnVILWorkspace.samples
+        File arrays_tsv     = DeliverPrsDatatoAnVILWorkspace.arrays
+    }
 }
 
 task DeliverPrsDatatoAnVILWorkspace {
@@ -54,8 +60,8 @@ task DeliverPrsDatatoAnVILWorkspace {
     }
 
     output {
-        File arrays_tsv = "arrays.tsv"
-        File samples_tsv = "samples.tsv"
-        File prs_tsv = "prs_scores.tsv"
+        File arrays     = "arrays.tsv"
+        File samples    = "samples.tsv"
+        File prs        = "prs_scores.tsv"
     }
 }
