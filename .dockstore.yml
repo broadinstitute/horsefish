@@ -6,3 +6,8 @@ workflows:
    testParameterFiles:
     - empty.json
 
+ - name: deliver_prs_to_anvil
+   subclass: WDL
+   primaryDescriptorPath: /pipelines/emerge/deliver_prs_to_anvil.wdl
+   testParameterFiles:
+    - empty.json

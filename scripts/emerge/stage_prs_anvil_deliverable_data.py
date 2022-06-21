@@ -5,7 +5,6 @@ import pandas as pd
 
 from firecloud import api as fapi
 from google.cloud import storage as gcs
-from oauth2client.client import GoogleCredentials
 
 
 def upload_data_table(tsv, workspace, namespace):
@@ -111,9 +110,10 @@ def get_prs_entities(workspace, namespace, ids_file):
         ids_list = ids.readlines()
         ids_list = [entity_id.rstrip() for entity_id in ids_list]
 
-        print(str(len(ids_list)) + " samples to rename and cope to AnVIL delivery workspace.")
+        print(str(len(ids_list)) + " samples to rename and copy to AnVIL delivery workspace.")
 
     all_prs_entities = [] # list of dictionaries - each item = 1 PRS row
+    # for each sample/ID in file (row in Prs Outputs Table)
     for prs_entity_id in ids_list:
         print(f"Gathering data for {prs_entity_id}.")
         # get required information from PRS Outputs Table
@@ -157,10 +157,10 @@ def get_prs_entities(workspace, namespace, ids_file):
 if __name__ == "__main__" :
     parser = argparse.ArgumentParser(description='Push Arrays.wdl outputs to TDR dataset.')
 
-    parser.add_argument('-f', '--ids_file', required=True, type=str, help='file with entity ids to get from table')
+    parser.add_argument('-f', '--ids_file', required=True, type=str, help='new line delimited txt file with entity ids to get from table')
     parser.add_argument('-dw', '--dest_workspace', required=True, type=str, help='name of destiantion workspace')
     parser.add_argument('-dn', '--dest_namespace', required=True, type=str, help='namespace/project of destination workspace')
-    parser.add_argument('-db', '--dest_bucket', required=True, type=str, help='bucket-id of destination workspace')
+    parser.add_argument('-db', '--dest_bucket', required=True, type=str, help='bucket id (fc-) of destination workspace')
     parser.add_argument('-sw', '--src_workspace', required=True, type=str, help='name of source workspace')
     parser.add_argument('-sn', '--src_namespace', required=True, type=str, help='namespace/project of source workspace')
 
@@ -169,3 +169,5 @@ if __name__ == "__main__" :
     prs_entities_list, snapshot_id = get_prs_entities(args.src_workspace, args.src_namespace, args.ids_file)
     prs_entities_rehomed = rename_and_rehome_data_files(prs_entities_list, args.dest_bucket, snapshot_id)
     make_terra_data_table_tsvs(prs_entities_rehomed, args.dest_workspace, args.dest_namespace)
+
+# python3 stage_prs_anvil_deliverable_data.py -f ids_file.txt -sw AnVIL_eMerge_PRS_data_delivery_staging -sn emerge_prod -db fc-0ee5a557-571c-41eb-8679-a518582c48ac -dn broad-firecloud-dsde -dw sushmac_sandbox_broad-firecloud-dsde
