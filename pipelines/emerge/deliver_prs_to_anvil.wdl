@@ -42,11 +42,11 @@ task DeliverPrsDatatoAnVILWorkspace {
 
     command {
         python3 /scripts/emerge/stage_prs_anvil_deliverable_data.py -f ${write_lines(prs_entity_ids)} \
-                                                                    -sw src_workspace_name \
-                                                                    -sn src_workspace_namespace \
-                                                                    -dw dest_workspace_name \
-                                                                    -dn dest_workspace_namespace \
-                                                                    -db dest_workspace_bucket_id
+                                                                    -sw ~{src_workspace_name} \
+                                                                    -sn ~{src_workspace_namespace} \
+                                                                    -dw ~{dest_workspace_name} \
+                                                                    -dn ~{dest_workspace_namespace} \
+                                                                    -db ~{dest_workspace_bucket_id}
     }
 
     runtime {

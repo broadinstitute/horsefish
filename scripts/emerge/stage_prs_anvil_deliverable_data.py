@@ -97,10 +97,15 @@ def rename_and_rehome_data_files(prs_entities_dicts, dest_bucket, snapshot_id):
 def get_single_entity(workspace, namespace, entity_type, entity_id):
     """Get single entity of an entity type."""
 
-    entity_dict = fapi.get_entity(namespace, workspace, entity_type, entity_id).json()["attributes"]
+    entity_response = fapi.get_entity(namespace, workspace, entity_type, entity_id)
+    status_code = entity_response.status_code
+
+    if status_code != 200:
+        print(f"Getting entity information failed: {entity_response.text}")
+        return
     #TODO: error handling if response is not successful
 
-    return entity_dict
+    return entity_response.json()["attributes"]
 
 
 def get_prs_entities(workspace, namespace, ids_file):
