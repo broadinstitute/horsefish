@@ -8,10 +8,16 @@ from google.cloud import storage as gcs
 
 
 def upload_data_table(tsv, workspace, namespace):
-    """Upload tsv load file to workspace."""
+    """Upload tsv load file to workspace to create/add to existing data table."""
 
-    response = fapi.upload_entities_tsv(namespace, workspace, tsv, model='flexible')
-    print(response.text)
+    upload_response = fapi.upload_entities_tsv(namespace, workspace, tsv, model='flexible')
+    status_code = upload_response.status_code
+
+    if status_code != 200:  # api call fails
+        print(f"Uploading entity failed: {upload_response.text}")
+        return
+
+    print(upload_response.text)
 
 
 def make_terra_data_table_tsvs(prs_dictionaries, dest_workspace, dest_namespace):
@@ -20,20 +26,28 @@ def make_terra_data_table_tsvs(prs_dictionaries, dest_workspace, dest_namespace)
     # convert list of prs dictionaries (each dictionary = 1 prs entity with updated paths to renamed/rehomed files)
     prs_entities_df = pd.DataFrame(prs_dictionaries)
 
+    ## Samples
+    # create samples subset df
     anvil_samples_df = prs_entities_df[["crsp_sample_id", "collaborator_sample_id", "collaborator_participant_id"]]
+    # rename entity column and make entity:entity_id column first in tsv
     anvil_samples_df = anvil_samples_df.rename(columns={"crsp_sample_id": "entity:Samples_id"})
     first_column = anvil_samples_df.pop("entity:Samples_id")
     anvil_samples_df.insert(0, "entity:Samples_id", first_column)
 
+    # Arrays
+    # create arrays subset df
     anvil_arrays_df = prs_entities_df[["red_idat_cloud_path", "green_idat_cloud_path",
                                        "gtc_file", "arrays_variant_calling_detail_metrics_file",
                                        "single_sample_vcf", "single_sample_vcf_index",
                                        "imputed_single_sample_vcf", "imputed_single_sample_vcf_index",
                                        "crsp_sample_id"]]
+    # rename entity column and make entity:entity_id column first in tsv
     anvil_arrays_df = anvil_arrays_df.rename(columns={"crsp_sample_id": "entity:Arrays_id"})
     first_column = anvil_arrays_df.pop("entity:Arrays_id")
     anvil_arrays_df.insert(0, "entity:Arrays_id", first_column)
 
+    # Polygenic Risk Scores
+    # create prs_scores subset df
     anvil_prs_scores_df = prs_entities_df[["ast_raw", "ast_adjusted", "ast_percentile", "brca_raw", "brca_adjusted",
                                            "brca_percentile", "afib_raw", "afib_adjusted", "afib_percentile",
                                            "chd_raw", "chd_adjusted", "chd_percentile", "ckd_raw", "ckd_adjusted",
@@ -41,14 +55,17 @@ def make_terra_data_table_tsvs(prs_dictionaries, dest_workspace, dest_namespace)
                                            "bmi_adjusted", "bmi_percentile", "prca_raw", "prca_adjusted", "prca_percentile",
                                            "t1d_raw", "t1d_adjusted", "t1d_percentile", "t2d_raw", "t2d_adjusted", "t2d_percentile",
                                            "crsp_sample_id"]]
+    # rename entity column and make entity:entity_id column first in tsv
     anvil_prs_scores_df = anvil_prs_scores_df.rename(columns={"crsp_sample_id": "entity:Polygenic_Risk_Scores_id"})
     first_column = anvil_prs_scores_df.pop("entity:Polygenic_Risk_Scores_id")
     anvil_prs_scores_df.insert(0, "entity:Polygenic_Risk_Scores_id", first_column)
 
+    # write individual dataframes to tsv files
     anvil_arrays_df.to_csv("arrays.tsv", sep = "\t", index=False)
     anvil_samples_df.to_csv("samples.tsv", sep="\t", index=False)
     anvil_prs_scores_df.to_csv("prs_scores.tsv", sep="\t", index=False)
 
+    # load tsv files to destination workspace
     for tsv in ["arrays.tsv", "samples.tsv", "prs_scores.tsv"]:
         print(f"Loading {tsv} to {dest_workspace}.")
         upload_data_table(tsv, dest_workspace, dest_namespace)
@@ -100,10 +117,9 @@ def get_single_entity(workspace, namespace, entity_type, entity_id):
     entity_response = fapi.get_entity(namespace, workspace, entity_type, entity_id)
     status_code = entity_response.status_code
 
-    if status_code != 200:
+    if status_code != 200:  # api call fails
         print(f"Getting entity information failed: {entity_response.text}")
         return
-    #TODO: error handling if response is not successful
 
     return entity_response.json()["attributes"]
 
@@ -118,44 +134,45 @@ def get_prs_entities(workspace, namespace, ids_file):
         print(str(len(ids_list)) + " samples to rename and copy to AnVIL delivery workspace.")
 
     all_prs_entities = [] # list of dictionaries - each item = 1 PRS row
+
     # for each sample/ID in file (row in Prs Outputs Table)
     for prs_entity_id in ids_list:
         print(f"Gathering data for {prs_entity_id}.")
         # get required information from PRS Outputs Table
         prs_entity_dict = get_single_entity(workspace, namespace, "PrsOutputsTable", prs_entity_id)
-        prs_entity_dict.pop('chip_well_barcode', None) # pop dictionary with relationships returned
-        # prs_entity_dict["chip_well_barcode"] = prs_entity_id # replace with just single KVP
-
+        # get snapshot for prs entity/row
         snapshot_id = prs_entity_dict['import:snapshot_id']
-        # get required information from Arrays Inputs Table
+        prs_entity_dict.pop('chip_well_barcode', None) # pop chip_well_barcode information
+
+        # get required files + metadata from Arrays Inputs Table
         arrays_inputs_dict = get_single_entity(workspace, namespace, "ArraysInputsTable", prs_entity_id)
+        print(arrays_inputs_dict)
+        exit(1)
         if arrays_inputs_dict['import:snapshot_id'] == snapshot_id:
-            # TODO: replace with cols_to_pop var
             for attribute in ["datarepo_row_id", "import:timestamp", "import:snapshot_id", "chip_well_barcode"]: 
                 arrays_inputs_dict.pop(attribute)
             prs_entity_dict.update(arrays_inputs_dict)
 
-        # get required information from Arrays Outputs Table
+        # get required files + metadata from Arrays Outputs Table
         arrays_outputs_dict = get_single_entity(workspace, namespace, "ArraysOutputsTable", prs_entity_id)
         if arrays_outputs_dict['import:snapshot_id'] == snapshot_id:
-            # TODO: replace with cols_to_pop var
             for attribute in ["datarepo_row_id", "import:timestamp", "import:snapshot_id", "chip_well_barcode_output"]:
                 arrays_outputs_dict.pop(attribute)
 
-            # rename for clarity of single sample vs imputed vcfs
+            # rename for clarity of single sample vcfs (arrays outputs) vs imputed vcfs (imputation output)
             arrays_outputs_dict["single_sample_vcf"] = arrays_outputs_dict.pop("output_vcf")
             arrays_outputs_dict["single_sample_vcf_index"] = arrays_outputs_dict.pop("output_vcf_index")
             prs_entity_dict.update(arrays_outputs_dict)
 
-        # get required information from Imputation Wide Outputs Table
+        # get required files + metadata from Imputation Wide Outputs Table
         imputation_outputs_dict = get_single_entity(workspace, namespace, "ImputationWideOutputsTable", prs_entity_id)
         if imputation_outputs_dict['import:snapshot_id'] == snapshot_id:
-            # TODO: replace with cols_to_pop var
             for attribute in ["datarepo_row_id", "import:timestamp", "import:snapshot_id", "chip_well_barcode"]:
                 imputation_outputs_dict.pop(attribute)
             prs_entity_dict.update(imputation_outputs_dict)
 
         all_prs_entities.append(prs_entity_dict)
+
     return all_prs_entities, snapshot_id
 
 
