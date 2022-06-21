@@ -146,8 +146,6 @@ def get_prs_entities(workspace, namespace, ids_file):
 
         # get required files + metadata from Arrays Inputs Table
         arrays_inputs_dict = get_single_entity(workspace, namespace, "ArraysInputsTable", prs_entity_id)
-        print(arrays_inputs_dict)
-        exit(1)
         if arrays_inputs_dict['import:snapshot_id'] == snapshot_id:
             for attribute in ["datarepo_row_id", "import:timestamp", "import:snapshot_id", "chip_well_barcode"]: 
                 arrays_inputs_dict.pop(attribute)
