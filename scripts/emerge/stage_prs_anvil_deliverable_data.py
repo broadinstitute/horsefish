@@ -29,9 +29,9 @@ def make_terra_data_table_tsvs(prs_dictionaries, dest_workspace, dest_namespace)
     # create samples subset df
     anvil_samples_df = prs_entities_df[["crsp_sample_id", "collaborator_sample_id", "collaborator_participant_id"]]
     # rename entity column and make entity:entity_id column first in tsv
-    anvil_samples_df = anvil_samples_df.rename(columns={"crsp_sample_id": "entity:Samples_id"})
-    first_column = anvil_samples_df.pop("entity:Samples_id")
-    anvil_samples_df.insert(0, "entity:Samples_id", first_column)
+    anvil_samples_df = anvil_samples_df.rename(columns={"crsp_sample_id": "entity:Sample_id"})
+    first_column = anvil_samples_df.pop("entity:Sample_id")
+    anvil_samples_df.insert(0, "entity:Sample_id", first_column)
 
     # Arrays
     # create arrays subset df
@@ -41,9 +41,9 @@ def make_terra_data_table_tsvs(prs_dictionaries, dest_workspace, dest_namespace)
                                        "imputed_single_sample_vcf", "imputed_single_sample_vcf_index",
                                        "crsp_sample_id"]]
     # rename entity column and make entity:entity_id column first in tsv
-    anvil_arrays_df = anvil_arrays_df.rename(columns={"crsp_sample_id": "entity:Arrays_id"})
-    first_column = anvil_arrays_df.pop("entity:Arrays_id")
-    anvil_arrays_df.insert(0, "entity:Arrays_id", first_column)
+    anvil_arrays_df = anvil_arrays_df.rename(columns={"crsp_sample_id": "entity:Array_id"})
+    first_column = anvil_arrays_df.pop("entity:Array_id")
+    anvil_arrays_df.insert(0, "entity:Array_id", first_column)
 
     # Polygenic Risk Scores
     # create prs_scores subset df
@@ -55,9 +55,9 @@ def make_terra_data_table_tsvs(prs_dictionaries, dest_workspace, dest_namespace)
                                            "t1d_raw", "t1d_adjusted", "t1d_percentile", "t2d_raw", "t2d_adjusted", "t2d_percentile",
                                            "crsp_sample_id"]]
     # rename entity column and make entity:entity_id column first in tsv
-    anvil_prs_scores_df = anvil_prs_scores_df.rename(columns={"crsp_sample_id": "entity:Polygenic_Risk_Scores_id"})
-    first_column = anvil_prs_scores_df.pop("entity:Polygenic_Risk_Scores_id")
-    anvil_prs_scores_df.insert(0, "entity:Polygenic_Risk_Scores_id", first_column)
+    anvil_prs_scores_df = anvil_prs_scores_df.rename(columns={"crsp_sample_id": "entity:Polygenic_Risk_Score_id"})
+    first_column = anvil_prs_scores_df.pop("entity:Polygenic_Risk_Score_id")
+    anvil_prs_scores_df.insert(0, "entity:Polygenic_Risk_Score_id", first_column)
 
     # write individual dataframes to tsv files
     anvil_arrays_df.to_csv("arrays.tsv", sep = "\t", index=False)
