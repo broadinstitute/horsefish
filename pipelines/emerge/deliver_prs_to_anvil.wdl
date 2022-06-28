@@ -56,7 +56,7 @@ task DeliverPrsDatatoAnVILWorkspace {
     }
 
     runtime {
-        docker: "broadinstitute/horsefish:eMerge_prs_staging"
+        docker: "broadinstitute/horsefish"
     }
 
     output {

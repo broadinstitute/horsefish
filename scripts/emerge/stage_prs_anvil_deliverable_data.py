@@ -145,7 +145,7 @@ def get_prs_entities(workspace, namespace, ids_file):
 
         # get required files + metadata from Arrays Inputs Table
         arrays_inputs_dict = get_single_entity(workspace, namespace, "ArraysInputsTable", prs_entity_id)
-        if arrays_inputs_dict['import:snapshot_id'] == snapshot_id:
+        if arrays_inputs_dict['import:snapshot_id'] != snapshot_id:
             raise Exception(f"Snapshot ID does not match for {prs_entity_id} between PrsOutputsTable and ArraysInputsTable.")
         for attribute in ["datarepo_row_id", "import:timestamp", "import:snapshot_id", "chip_well_barcode"]: 
             arrays_inputs_dict.pop(attribute)
@@ -191,5 +191,3 @@ if __name__ == "__main__" :
     prs_entities_list, snapshot_id = get_prs_entities(args.src_workspace, args.src_namespace, args.ids_file)
     prs_entities_rehomed = rename_and_rehome_data_files(prs_entities_list, args.dest_bucket, snapshot_id)
     make_terra_data_table_tsvs(prs_entities_rehomed, args.dest_workspace, args.dest_namespace)
-
-# python3 stage_prs_anvil_deliverable_data.py -f ids_file.txt -sw AnVIL_eMerge_PRS_data_delivery_staging -sn emerge_prod -db fc-0ee5a557-571c-41eb-8679-a518582c48ac -dn broad-firecloud-dsde -dw sushmac_sandbox_broad-firecloud-dsde
