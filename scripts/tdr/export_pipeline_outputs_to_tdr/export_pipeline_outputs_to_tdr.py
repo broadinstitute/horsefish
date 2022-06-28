@@ -2,15 +2,11 @@ import argparse
 import datetime
 import json
 import requests
-import pandas as pd
-from google.cloud import bigquery
-from google.cloud import storage as gcs
 from oauth2client.client import GoogleCredentials
-from pprint import pprint
 from time import sleep
 
 # DEVELOPER: update this field anytime you make a new docker image
-docker_version = "1.2"
+docker_version = "1.3"
 
 # define some utils functions
 def get_access_token():
@@ -26,16 +22,6 @@ def get_headers(request_type='get'):
     if request_type == 'post':
         headers["Content-Type"] = "application/json"
     return headers
-
-def write_file_to_bucket(filename, bucket):
-    dir = "tdr"
-    storage_client = gcs.Client()
-    dest_bucket = storage_client.get_bucket(bucket)
-    blob = dest_bucket.blob(f"{dir}/{filename}")
-    blob.upload_from_filename(filename)
-    control_file_full_path = f"gs://{bucket}/{dir}/{filename}"
-    print(f"Successfully copied {filename} to {control_file_full_path}.")
-    return control_file_full_path
 
 def configure_path_json(v):
     tdr_path = v.replace("gs://","/")
@@ -107,71 +93,7 @@ def wait_for_job_status_and_result(job_id, wait_sec=10):
     return job_status, response.json()
 
 
-def clean_bucket_path(bucket_input):
-    """Removes gs:// prefix and trailing /"""
-    return bucket_input.replace("gs://", "").rstrip("/")
-
-
-def get_fq_bq_table(dataset_id, target_table):
-    uri = f"https://data.terra.bio/api/repository/v1/datasets/{dataset_id}?include=ACCESS_INFORMATION"
-    response = requests.get(uri, headers=get_headers())
-    tables = response.json()['accessInformation']['bigQuery']['tables']
-    dataset_table_fq = None  # fq = fully qualified name, i.e. project.dataset.table
-    for table_info in tables:
-        if table_info['name'] == target_table:
-            dataset_table_fq = table_info['qualifiedName']
-
-    if not dataset_table_fq:
-        # no table found
-        error_msg = f"No table named {target_table} was found in dataset {dataset_id}"
-        raise ValueError(error_msg)
-
-    return dataset_table_fq
-
-
-def get_existing_data(dataset_table_fq, primary_key_field, primary_key_value):
-    gcp_project = dataset_table_fq.split('.')[0]
-    bq = bigquery.Client(gcp_project)
-    query = f"SELECT * FROM `{dataset_table_fq}` WHERE {primary_key_field} = '{primary_key_value}'"
-    print("using query:" + query)
-
-    executed_query = bq.query(query)
-    result = executed_query.result()
-
-    # this avoids the pyarrow error that arises if we use `df_result = result.to_dataframe()`
-    df = result.to_dataframe_iterable()
-    reader = next(df)
-    df_result = pd.DataFrame(reader)
-
-    # break if there's more than one row in TDR for this sample
-    n_rows = len(df_result)
-    print(f"retrieved {n_rows} rows matching {primary_key_field} `{primary_key_value}`")
-    assert(n_rows == 1)
-
-    # format to a dictionary
-    print("formatting results to dictionary")
-    input_data_list = []
-    for row_id in df_result.index:
-        row_dict = {}
-        for col in df_result.columns:
-            if isinstance(df_result[col][row_id], pd._libs.tslibs.nattype.NaTType):
-                value = None
-            elif isinstance(df_result[col][row_id], pd._libs.tslibs.timestamps.Timestamp):
-                print(f'processing timestamp. value pre-formatting: {df_result[col][row_id]}')
-                formatted_timestamp = df_result[col][row_id].strftime('%Y-%m-%dT%H:%M:%S')
-                print(f'value post-formatting: {formatted_timestamp}')
-                value = formatted_timestamp
-            else:
-                value = df_result[col][row_id]
-            if value is not None:  # don't include empty values
-                row_dict[col] = value
-        input_data_list.append(row_dict)
-
-    # we have already asserted that there is only one row
-    return input_data_list[0]
-
-
-def main(dataset_id, target_table, outputs_json, pk_field, pk_value, timestamp_field_list):
+def main(dataset_id, target_table, outputs_json, timestamp_field_list = []):
 
     # read workflow outputs from file
     print(f"reading data from outputs_json file {outputs_json}")
@@ -182,32 +104,18 @@ def main(dataset_id, target_table, outputs_json, pk_field, pk_value, timestamp_f
     print("recoding paths for TDR ingest")
     outputs_to_add = recode_json_with_filepaths(outputs_dict)
 
-    # get BQ access info for TDR dataset
-    print("retrieving BQ access info for TDR dataset")
-    dataset_table_fq = get_fq_bq_table(dataset_id, target_table)
-
-    # retrieve data for this row
-    print(f"retrieving data for {pk_field} {pk_value} from {dataset_table_fq}")
-    row_data = get_existing_data(dataset_table_fq, pk_field, pk_value)
-
-    # update original row data with workflow outputs
-    row_data.update(outputs_to_add)
-    # remove and store datarepo_row_id
-    old_datarepo_row_id = row_data.pop('datarepo_row_id')
-    print(f"Replacing data from row with datarepo_row_id {old_datarepo_row_id}")
-
     # update version_timestamp field
     if timestamp_field_list:
         new_version_timestamp = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%S')
         for field_name in timestamp_field_list:
-            row_data[field_name] = new_version_timestamp
+            outputs_to_add[field_name] = new_version_timestamp
 
     # ingest data to TDR
     load_json = json.dumps({"format": "array",
-                        "records": [row_data],
+                        "records": [outputs_to_add],
                         "table": target_table,
                         "resolve_existing_files": True,
-                        "updateStrategy": "replace"
+                        "updateStrategy": "merge"
                         })
     uri = f"https://data.terra.bio/api/repository/v1/datasets/{dataset_id}/ingest"
     response = requests.post(uri, headers=get_headers('post'), data=load_json)
@@ -234,10 +142,6 @@ if __name__ == "__main__":
         help='name of destination table in the TDR dataset')
     parser.add_argument('-o', '--outputs_json', required=True,
         help='path to a json file defining the outputs to be loaded to TDR')
-    parser.add_argument('-k', '--primary_key_field', required=True,
-        help='the name of the table\'s primary_key field')
-    parser.add_argument('-v', '--primary_key_value', required=True,
-        help='the primary key value for the row to update')
     parser.add_argument('-f', '--timestamp_field_list', action='append',
         help='field that should be populated with timestamp at ingest time (can have more than one)')
 
@@ -246,6 +150,4 @@ if __name__ == "__main__":
     main(args.dataset_id,
          args.target_table,
          args.outputs_json,
-         args.primary_key_field,
-         args.primary_key_value,
          args.timestamp_field_list)
