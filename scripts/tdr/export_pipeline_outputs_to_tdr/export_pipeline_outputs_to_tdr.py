@@ -2,13 +2,20 @@ import argparse
 import datetime
 import json
 import requests
+import tenacity as tn
 from oauth2client.client import GoogleCredentials
 from time import sleep
 
 # DEVELOPER: update this field anytime you make a new docker image
-docker_version = "1.3"
+docker_version = "1.4"
+
 
 # define some utils functions
+def my_before_sleep(retry_state):
+    """Print a status update before a retry."""
+    print('Retrying %s with %s in %s seconds; attempt #%s ended with: %s',
+        retry_state.fn, retry_state.args, str(int(retry_state.next_action.sleep)), retry_state.attempt_number, retry_state.outcome)
+
 def get_access_token():
     """Get access token."""
     scopes = ["https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/userinfo.email"]
@@ -64,6 +71,27 @@ def recode_json_with_filepaths(json_object):
 
     return json_object
 
+# retry once if ingest_data fails
+@tn.retry(wait=tn.wait_fixed(10),
+          stop=tn.stop_after_attempt(1),
+          before_sleep=my_before_sleep)
+def ingest_data(dataset_id, load_json):
+    uri = f"https://data.terra.bio/api/repository/v1/datasets/{dataset_id}/ingest"
+    response = requests.post(uri, headers=get_headers('post'), data=load_json)
+    status_code = response.status_code
+    if status_code != 202:
+        error_msg = f"Error with ingest: {response.text}"
+        raise ValueError(error_msg)
+
+    load_job_id = response.json()['id']
+    job_status, job_info = wait_for_job_status_and_result(load_job_id)
+    if job_status != "succeeded":
+        print(f"job status {job_status}:")
+        message = job_info["message"]
+        detail = job_info["errorDetail"]
+        error_msg = f"{message}: {detail}"
+        raise ValueError(error_msg)
+
 def wait_for_job_status_and_result(job_id, wait_sec=10):
     # first check job status
     uri = f"https://data.terra.bio/api/repository/v1/jobs/{job_id}"
@@ -94,7 +122,6 @@ def wait_for_job_status_and_result(job_id, wait_sec=10):
 
 
 def main(dataset_id, target_table, outputs_json, timestamp_field_list = []):
-
     # read workflow outputs from file
     print(f"reading data from outputs_json file {outputs_json}")
     with open(outputs_json, "r") as infile:
@@ -117,21 +144,9 @@ def main(dataset_id, target_table, outputs_json, timestamp_field_list = []):
                         "resolve_existing_files": True,
                         "updateStrategy": "merge"
                         })
-    uri = f"https://data.terra.bio/api/repository/v1/datasets/{dataset_id}/ingest"
-    response = requests.post(uri, headers=get_headers('post'), data=load_json)
-    status_code = response.status_code
-    if status_code != 202:
-        error_msg = f"Error with ingest: {response.text}"
-        raise ValueError(error_msg)
+    ingest_data(dataset_id, load_json)
 
-    load_job_id = response.json()['id']
-    job_status, job_info = wait_for_job_status_and_result(load_job_id)
-    if job_status != "succeeded":
-        print(f"job status {job_status}:")
-        message = job_info["message"]
-        detail = job_info["errorDetail"]
-        error_msg = f"{message}: {detail}"
-        raise ValueError(error_msg)
+    print(f"Ingest to dataset {dataset_id} complete.")
 
 
 if __name__ == "__main__":
