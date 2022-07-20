@@ -27,8 +27,7 @@ def make_terra_data_table_tsvs(prs_dictionaries, dest_workspace, dest_namespace)
 
     ## Samples
     # create samples subset df
-    anvil_samples_df = prs_entities_df[["emerge_id", "anvil_poly_sample_id", 
-                                        "collaborator_sample_id", "collaborator_participant_id"]]
+    anvil_samples_df = prs_entities_df[["emerge_id", "anvil_poly_sample_id"]]
     # rename entity column and make entity:entity_id column first in tsv
     anvil_samples_df = anvil_samples_df.rename(columns={"anvil_poly_sample_id": "entity:Sample_id"})
     # create redundant anvil_poly_sample_id column - same value as entity:sample_id
