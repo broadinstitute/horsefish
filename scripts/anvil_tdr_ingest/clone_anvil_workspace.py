@@ -130,9 +130,9 @@ def setup_anvil_workspace_clone(src_namespace, src_workspace, dest_namespace, de
 
     # copy notebooks and dataset schema from template workspace to destination workspace
     anvil_resources_workspace_bucket = "fc-9cd4583e-7855-4b5e-ae88-d8971cfd5b46"  # public, no auth domains
-    tim_schema_prefix = "ingest_pipeline/output/tim_core/schema"
-    copy_objects_across_buckets(anvil_resources_workspace_bucket, dest_bucket_id, "notebooks")
-    copy_objects_across_buckets(anvil_resources_workspace_bucket, dest_bucket_id, tim_schema_prefix)
+    dirs_to_copy = ["notebooks", "resources", "ingest_pipeline/output/tim_core/schema"]
+    for dir in dirs_to_copy:
+        copy_objects_across_buckets(anvil_resources_workspace_bucket, dest_bucket_id, dir)
 
     # clone and workspace dashboard update success
     print(f"Destination workspace clone and set-up success.")
