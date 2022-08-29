@@ -92,7 +92,7 @@ def call_ingest_dataset(control_file_path, target_table_name, dataset_id):
         print("file ingest to TDR dataset failed.")
         print(f"please refer to error message and retry ingest.")
         print(f"ingestDataset response body: \n {load_job_response} \n")
-        return
+        raise ValueError(load_job_response)
 
     # if ingestDataset_status_code == 202:  # if ingestDataset starts running successfully
     job_status_code, job_response = get_job_status_and_result(ingestDataset_job_id)
@@ -103,7 +103,7 @@ def call_ingest_dataset(control_file_path, target_table_name, dataset_id):
     if job_status_code != 200:              # when job completes but not success
         error_message = job_response["errorDetail"]
         print(f"Load job finished but did not succeed: {error_message}")
-        return
+        raise ValueError(error_message)
 
     print("File ingest to TDR dataset completed successfully.")
 
@@ -180,24 +180,27 @@ def create_recoded_json(row_json):
     return recoded_row_json
 
 
-def parse_json_outputs_file(input_tsv, bucket, target_table_name, dataset_id):
+def parse_json_outputs_file(input_tsv, bucket, target_table_name, dataset_id, prefix):
     """Format the json file containing workflow outputs and headers."""
 
     tsv_df = pd.read_csv(input_tsv, sep="\t")
 
-    basename = input_tsv.split(".tsv")[0]
-    output_filename = f"{basename}_recoded_newline_delimited.json"
-
     all_rows = []
     for index, row in tsv_df.iterrows():
-        # create timestamp
+        # create output filename
         last_modified_date = datetime.now(tz=pytz.UTC).strftime("%Y-%m-%dT%H:%M:%S")
+        prefix_outfile = row[prefix]
+        output_filename = f"{prefix_outfile}_{last_modified_date}_recoded_newline_delimited.json"
+    
         # drop empty columns and add in timestamp
         remove_row_nan = row.dropna()
         remove_row_nan["last_modified_date"] = last_modified_date
         recoded_row_dict = create_recoded_json(remove_row_nan)
+
         # write recoded json to a GCS storage location - to the bucket given (workspace bucket)
-        control_file_path = write_load_json_to_bucket(bucket, recoded_row_dict, last_modified_date)
+        print(f"Recoded Row Json BEFORE writing to FILE IN BUCKET: {recoded_row_dict}")
+        control_file_path = write_load_json_to_bucket(bucket, recoded_row_dict, output_filename)
+
         # create request to ingestDataset, call API, return response, and status update
         call_ingest_dataset(control_file_path, target_table_name, dataset_id)
 
@@ -209,7 +212,8 @@ if __name__ == "__main__" :
     parser.add_argument('-b', '--bucket', required=True, type=str, help='workspace bucket to copy recoded json file')
     parser.add_argument('-d', '--dataset_id', required=True, type=str, help='id of TDR dataset for destination of outputs')
     parser.add_argument('-t', '--target_table_name', required=True, type=str, help='name of target table in TDR dataset')
+    parser.add_argument('-p', '--prefix_column', required=True, type=str, help='name of column to use as prefix for json files')
 
     args = parser.parse_args()
 
-    parse_json_outputs_file(args.tsv, args.bucket, args.target_table_name, args.dataset_id)
+    parse_json_outputs_file(args.tsv, args.bucket, args.target_table_name, args.dataset_id, args.prefix_column)
