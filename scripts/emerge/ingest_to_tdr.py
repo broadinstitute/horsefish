@@ -108,24 +108,24 @@ def call_ingest_dataset(control_file_path, target_table_name, dataset_id):
     print("File ingest to TDR dataset completed successfully.")
 
 
-def write_load_json_to_bucket(bucket, recoded_rows_json, timestamp):
+def write_load_json_to_bucket(bucket, recoded_rows_json, json_filename):
     """Write the list of recoded rows (list of dictionaries) to a file and copy to workspace bucket."""
 
-    loading_json_filename = f"{timestamp}_recoded_ingestDataset.json"
     # write load json to the workspace bucket
-    control_file_destination = f"{bucket}/control_files"
+    subdir = "_".join(json_filename.split("_")[0:2])
+    control_file_destination = f"{bucket}/control_files/{subdir}"
 
-    with open(loading_json_filename, 'w') as final_newline_json:
+    with open(json_filename, 'w') as final_newline_json:
         json.dump(recoded_rows_json, final_newline_json)
 
     storage_client = gcs.Client()
     dest_bucket = storage_client.get_bucket(bucket)
 
-    blob = dest_bucket.blob(f"control_files/{loading_json_filename}")
-    blob.upload_from_filename(loading_json_filename)
+    blob = dest_bucket.blob(f"control_files/{subdir}/{json_filename}")
+    blob.upload_from_filename(json_filename)
 
-    print(f"Successfully copied {loading_json_filename} to {control_file_destination}.")
-    return f"gs://{control_file_destination}/{loading_json_filename}"
+    print(f"Successfully copied {json_filename} to {control_file_destination}.")
+    return f"gs://{control_file_destination}/{json_filename}"
 
 
 def create_recoded_json(row_json):
@@ -198,7 +198,7 @@ def parse_json_outputs_file(input_tsv, bucket, target_table_name, dataset_id, pr
         recoded_row_dict = create_recoded_json(remove_row_nan)
 
         # write recoded json to a GCS storage location - to the bucket given (workspace bucket)
-        print(f"Recoded Row Json BEFORE writing to FILE IN BUCKET: {recoded_row_dict}")
+        print(f"Recoded Row Json BEFORE writing to FILE IN BUCKET: {recoded_row_dict} \n\n")
         control_file_path = write_load_json_to_bucket(bucket, recoded_row_dict, output_filename)
 
         # create request to ingestDataset, call API, return response, and status update
