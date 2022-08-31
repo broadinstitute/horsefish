@@ -486,10 +486,10 @@ def run_schema_comparison_checks(df, tdr_schema_dict, comparison_schema):
     tdr_relationship_set = set()
     comp_relationship_set = set()
     for rel_entry in tdr_schema_dict["relationships"]:
-        tdr_relationship_set.add(rel_entry["_from"]["table"] + " - " + rel_entry["_from"]["column"] + " - " + rel_entry["to"]["table"] + " - " + rel_entry["to"]["table"])
+        tdr_relationship_set.add(rel_entry["_from"]["table"] + " - " + rel_entry["_from"]["column"] + " - " + rel_entry["to"]["table"] + " - " + rel_entry["to"]["column"])
     try:
         for rel_entry in comparison_schema["relationships"]:
-            comp_relationship_set.add(rel_entry["from"]["table"] + " - " + rel_entry["from"]["column"] + " - " + rel_entry["to"]["table"] + " - " + rel_entry["to"]["table"])
+            comp_relationship_set.add(rel_entry["from"]["table"] + " - " + rel_entry["from"]["column"] + " - " + rel_entry["to"]["table"] + " - " + rel_entry["to"]["column"])
     except KeyError:
         logging.warning("Comparison schema file 'relationships' property is missing or malformed. Will continue schema comparison checks as if the schema has no relationships recorded.")
     in_tdr_not_comp = tdr_relationship_set.difference(comp_relationship_set)
