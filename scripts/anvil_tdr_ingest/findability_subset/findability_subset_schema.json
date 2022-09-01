@@ -1,0 +1,278 @@
+{
+  "tables": [
+    {
+      "name": "activity",
+      "columns": [
+        {"name": "activity_id", "datatype": "string", "array_of": false, "required": true},
+        {"name": "activity_type", "datatype": "string", "array_of": false},
+        {"name": "used_file_id", "datatype": "string", "array_of": true},
+        {"name": "generated_file_id", "datatype": "string", "array_of": true}
+      ],
+      "primaryKey": ["activity_id"],
+      "partitionMode": "none",
+      "datePartitionOptions": null,
+      "intPartitionOptions": null
+    },
+    {
+      "name": "alignmentactivity",
+      "columns": [
+        {"name": "alignmentactivity_id", "datatype": "string", "array_of": false, "required": true},
+        {"name": "activity_type", "datatype": "string", "array_of": false},
+        {"name": "data_modality", "datatype": "string", "array_of": true},
+        {"name": "generated_file_id", "datatype": "string", "array_of": true},
+        {"name": "used_file_id", "datatype": "string", "array_of": true},
+        {"name": "reference_assembly", "datatype": "string", "array_of": true}
+      ],
+      "primaryKey": ["alignmentactivity_id"],
+      "partitionMode": "none",
+      "datePartitionOptions": null,
+      "intPartitionOptions": null
+    },
+    {
+      "name": "antibody",
+      "columns": [
+        {"name": "antibody_id", "datatype": "string", "array_of": false, "required": true},
+        {"name": "target", "datatype": "string", "array_of": false}
+      ],
+      "primaryKey": ["antibody_id"],
+      "partitionMode": "none",
+      "datePartitionOptions": null,
+      "intPartitionOptions": null
+    },
+    {
+      "name": "assayactivity",
+      "columns": [
+        {"name": "assayactivity_id", "datatype": "string", "array_of": false, "required": true},
+        {"name": "activity_type", "datatype": "string", "array_of": false},
+        {"name": "antibody_id", "datatype": "string", "array_of": true},
+        {"name": "assay_type", "datatype": "string", "array_of": false},
+        {"name": "data_modality", "datatype": "string", "array_of": true},
+        {"name": "generated_file_id", "datatype": "string", "array_of": true},
+        {"name": "used_biosample_id", "datatype": "string", "array_of": true}
+      ],
+      "primaryKey": ["assayactivity_id"],
+      "partitionMode": "none",
+      "datePartitionOptions": null,
+      "intPartitionOptions": null
+    },
+    {
+      "name": "biosample",
+      "columns": [
+        {"name": "biosample_id", "datatype": "string", "array_of": false, "required": true},
+        {"name": "anatomical_site", "datatype": "string", "array_of": false},
+        {"name": "apriori_cell_type", "datatype": "string", "array_of": true},
+        {"name": "biosample_type", "datatype": "string", "array_of": false},
+        {"name": "diagnosis_id", "datatype": "string", "array_of": true},
+        {"name": "disease", "datatype": "string", "array_of": false},
+        {"name": "donor_age_at_collection_unit", "datatype": "string", "array_of": false},
+        {"name": "donor_age_at_collection_lower_bound", "datatype": "float", "array_of": false},
+        {"name": "donor_age_at_collection_upper_bound", "datatype": "float", "array_of": false},
+        {"name": "donor_id", "datatype": "string", "array_of": true},
+        {"name": "part_of_dataset_id", "datatype": "string", "array_of": true}
+      ],
+      "primaryKey": ["biosample_id"],
+      "partitionMode": "none",
+      "datePartitionOptions": null,
+      "intPartitionOptions": null
+    },
+    {
+      "name": "dataset",
+      "columns": [
+        {"name": "dataset_id", "datatype": "string", "array_of": false, "required": true},
+        {"name": "consent_group", "datatype": "string", "array_of": true},
+        {"name": "data_use_permission", "datatype": "string", "array_of": true},
+        {"name": "owner", "datatype": "string", "array_of": true},
+        {"name": "principal_investigator", "datatype": "string", "array_of": true},
+        {"name": "registered_identifier", "datatype": "string", "array_of": true},
+        {"name": "title", "datatype": "string", "array_of": false},
+        {"name": "data_modality", "datatype": "string", "array_of": true}
+      ],
+      "primaryKey": ["dataset_id"],
+      "partitionMode": "none",
+      "datePartitionOptions": null,
+      "intPartitionOptions": null
+    },
+    {
+      "name": "diagnosis",
+      "columns": [
+        {"name": "diagnosis_id", "datatype": "string", "array_of": false, "required": true},
+        {"name": "disease", "datatype": "string", "array_of": true},
+        {"name": "diagnosis_age_unit", "datatype": "string", "array_of": false},
+        {"name": "diagnosis_age_lower_bound", "datatype": "float", "array_of": false},
+        {"name": "diagnosis_age_upper_bound", "datatype": "float", "array_of": false},
+        {"name": "onset_age_unit", "datatype": "string", "array_of": false},
+        {"name": "onset_age_lower_bound", "datatype": "float", "array_of": false},
+        {"name": "onset_age_upper_bound", "datatype": "float", "array_of": false},
+        {"name": "phenotype", "datatype": "string", "array_of": true},
+        {"name": "phenopacket", "datatype": "string", "array_of": true}
+      ],
+      "primaryKey": ["diagnosis_id"],
+      "partitionMode": "none",
+      "datePartitionOptions": null,
+      "intPartitionOptions": null
+    },
+    {
+      "name": "donor",
+      "columns": [
+        {"name": "donor_id", "datatype": "string", "array_of": false, "required": true},
+        {"name": "organism_type", "datatype": "string", "array_of": false},
+        {"name": "part_of_dataset_id", "datatype": "string", "array_of": false},
+        {"name": "phenotypic_sex", "datatype": "string", "array_of": false},
+        {"name": "reported_ethnicity", "datatype": "string", "array_of": true},
+        {"name": "genetic_ancestry", "datatype": "string", "array_of": true},
+        {"name": "diagnosis_id", "datatype": "string", "array_of": true}
+      ],
+      "primaryKey": ["donor_id"],
+      "partitionMode": "none",
+      "datePartitionOptions": null,
+      "intPartitionOptions": null
+    },
+    {
+      "name": "file",
+      "columns": [
+        {"name": "file_id", "datatype": "string", "array_of": false, "required": true},
+        {"name": "data_modality", "datatype": "string", "array_of": true},
+        {"name": "file_format", "datatype": "string", "array_of": false},
+        {"name": "file_ref", "datatype": "fileref", "array_of": false},
+        {"name": "reference_assembly", "datatype": "string", "array_of": true},
+        {"name": "label", "datatype": "string", "array_of": false}
+      ],
+      "primaryKey": ["file_id"],
+      "partitionMode": "none",
+      "datePartitionOptions": null,
+      "intPartitionOptions": null
+    },
+    {
+      "name": "project",
+      "columns": [
+        {"name": "project_id", "datatype": "string", "array_of": false, "required": true},
+        {"name": "funded_by", "datatype": "string", "array_of": true},
+        {"name": "generated_dataset_id", "datatype": "string", "array_of": true},
+        {"name": "principal_investigator", "datatype": "string", "array_of": true},
+        {"name": "title", "datatype": "string", "array_of": false},
+        {"name": "registered_identifier", "datatype": "string", "array_of": true}
+      ],
+      "primaryKey": ["project_id"],
+      "partitionMode": "none",
+      "datePartitionOptions": null,
+      "intPartitionOptions": null
+    },
+    {
+      "name": "sequencingactivity",
+      "columns": [
+        {"name": "sequencingactivity_id", "datatype": "string", "array_of": false, "required": true},
+        {"name": "activity_type", "datatype": "string", "array_of": false},
+        {"name": "assay_type", "datatype": "string", "array_of": true},
+        {"name": "data_modality", "datatype": "string", "array_of": true},
+        {"name": "generated_file_id", "datatype": "string", "array_of": true},
+        {"name": "used_biosample_id", "datatype": "string", "array_of": true}
+      ],
+      "primaryKey": ["sequencingactivity_id"],
+      "partitionMode": "none",
+      "datePartitionOptions": null,
+      "intPartitionOptions": null
+    },
+    {
+      "name": "variantcallingactivity",
+      "columns": [
+        {"name": "variantcallingactivity_id", "datatype": "string", "array_of": false, "required": true},
+        {"name": "activity_type", "datatype": "string", "array_of": false},
+        {"name": "used_file_id", "datatype": "string", "array_of": true},
+        {"name": "generated_file_id", "datatype": "string", "array_of": true},
+        {"name": "reference_assembly", "datatype": "string", "array_of": true},
+        {"name": "data_modality", "datatype": "string", "array_of": true}
+      ],
+      "primaryKey": ["variantcallingactivity_id"],
+      "partitionMode": "none",
+      "datePartitionOptions": null,
+      "intPartitionOptions": null
+    }
+  ],
+  "relationships": [
+    {
+      "name": "from_activity.used_file_id_to_file.file_id",
+      "from": {"table": "activity", "column": "used_file_id"},
+      "to": {"table": "file", "column": "file_id"}
+    },
+    {
+      "name": "from_activity.generated_file_id_to_file.file_id",
+      "from": {"table": "activity", "column": "generated_file_id"},
+      "to": {"table": "file", "column": "file_id"}
+    },
+    {
+      "name": "from_alignmentactivity.used_file_id_to_file.file_id",
+      "from": {"table": "alignmentactivity", "column": "used_file_id"},
+      "to": {"table": "file", "column": "file_id"}
+    },
+    {
+      "name": "from_alignmentactivity.generated_file_id_to_file.file_id",
+      "from": {"table": "alignmentactivity", "column": "generated_file_id"},
+      "to": {"table": "file", "column": "file_id"}
+    },
+    {
+      "name": "from_assayactivity.antibody_id_to_antibody.antibody_id",
+      "from": {"table": "assayactivity", "column": "antibody_id"},
+      "to": {"table": "antibody", "column": "antibody_id"}
+    },
+    {
+      "name": "from_assayactivity.generated_file_id_to_file.file_id",
+      "from": {"table": "assayactivity", "column": "generated_file_id"},
+      "to": {"table": "file", "column": "file_id"}
+    },
+    {
+      "name": "from_assayactivity.used_biosample_id_to_biosample.biosample_id",
+      "from": {"table": "assayactivity", "column": "used_biosample_id"},
+      "to": {"table": "biosample", "column": "biosample_id"}
+    },
+    {
+      "name": "from_biosample.diagnosis_id_to_diagnosis.diagnosis_id",
+      "from": {"table": "biosample", "column": "diagnosis_id"},
+      "to": {"table": "diagnosis", "column": "diagnosis_id"}
+    },
+    {
+      "name": "from_biosample.donor_id_to_donor.donor_id",
+      "from": {"table": "biosample", "column": "donor_id"},
+      "to": {"table": "donor", "column": "donor_id"}
+    },
+    {
+      "name": "from_biosample.part_of_dataset_id_to_dataset.dataset_id",
+      "from": {"table": "biosample", "column": "part_of_dataset_id"},
+      "to": {"table": "dataset", "column": "dataset_id"}
+    },
+    {
+      "name": "from_donor.part_of_dataset_id_to_dataset.dataset_id",
+      "from": {"table": "donor", "column": "part_of_dataset_id"},
+      "to": {"table": "dataset", "column": "dataset_id"}
+    },
+    {
+      "name": "from_donor.diagnosis_id_to_diagnosis.diagnosis_id",
+      "from": {"table": "donor", "column": "diagnosis_id"},
+      "to": {"table": "diagnosis", "column": "diagnosis_id"}
+    },
+    {
+      "name": "from_project.generated_dataset_id_to_dataset.dataset_id",
+      "from": {"table": "project", "column": "generated_dataset_id"},
+      "to": {"table": "dataset", "column": "dataset_id"}
+    },
+    {
+      "name": "from_sequencingactivity.generated_file_id_to_file.file_id",
+      "from": {"table": "sequencingactivity", "column": "generated_file_id"},
+      "to": {"table": "file", "column": "file_id"}
+    },
+    {
+      "name": "from_sequencingactivity.used_biosample_id_to_biosample.biosample_id",
+      "from": {"table": "sequencingactivity", "column": "used_biosample_id"},
+      "to": {"table": "biosample", "column": "biosample_id"}
+    },
+    {
+      "name": "from_variantcallingactivity.used_file_id_to_file.file_id",
+      "from": {"table": "variantcallingactivity", "column": "used_file_id"},
+      "to": {"table": "file", "column": "file_id"}
+    },
+    {
+      "name": "from_variantcallingactivity.generated_file_id_to_file.file_id",
+      "from": {"table": "variantcallingactivity", "column": "generated_file_id"},
+      "to": {"table": "file", "column": "file_id"}
+    }
+  ]
+}
