@@ -193,8 +193,6 @@ def parse_json_outputs_file(input_tsv):
     for index, row in tsv_df.iterrows():
         # create output filename
         last_modified_date = datetime.now(tz=pytz.UTC).strftime("%Y-%m-%dT%H:%M:%S")
-        # prefix_outfile = row[prefix]
-        # output_filename = f"{prefix_outfile}_{last_modified_date}_recoded_newline_delimited.json"
     
         # drop empty columns and add in timestamp
         remove_row_nan = row.dropna()
