@@ -1,19 +1,14 @@
 # imports and environment variables
 import argparse
 import json
-import os
 import pandas as pd
 import pytz
 import requests
-import sys
 import time
 
-from datetime import datetime, tzinfo
-from firecloud import api as fapi
-from google.cloud import bigquery
+from datetime import datetime
 from google.cloud import storage as gcs
 from oauth2client.client import GoogleCredentials
-from pprint import pprint
 
 
 def get_access_token():
@@ -111,12 +106,7 @@ def call_ingest_dataset(control_file_path, target_table_name, dataset_id):
 def write_load_json_to_bucket(bucket, filename):
     """Cope newline delimited json file to workspace bucket."""
 
-    # write load json to the workspace bucket
-    # subdir = "_".join(filename.split("_")[0:2])
     control_file_destination = f"{bucket}/control_files"
-
-    # with open(json_filename, 'w') as final_newline_json:
-    #     json.dump(recoded_rows_json, final_newline_json)
 
     storage_client = gcs.Client()
     dest_bucket = storage_client.get_bucket(bucket)
@@ -194,7 +184,7 @@ def create_recoded_json(row_json):
 
 
 def parse_json_outputs_file(input_tsv):
-    """Format the json file containing workflow outputs and headers."""
+    """Create a recoded json dictionary per row in input."""
 
     tsv_df = pd.read_csv(input_tsv, sep="\t")
     all_recoded_row_dicts = []
@@ -223,7 +213,6 @@ if __name__ == "__main__" :
     parser.add_argument('-b', '--bucket', required=True, type=str, help='workspace bucket to copy recoded json file')
     parser.add_argument('-d', '--dataset_id', required=True, type=str, help='id of TDR dataset for destination of outputs')
     parser.add_argument('-t', '--target_table_name', required=True, type=str, help='name of target table in TDR dataset')
-    # parser.add_argument('-p', '--prefix_column', required=True, type=str, help='name of column to use as prefix for json files')
 
     args = parser.parse_args()
 
