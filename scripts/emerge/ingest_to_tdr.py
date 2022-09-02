@@ -189,7 +189,6 @@ def parse_json_outputs_file(input_tsv):
     tsv_df = pd.read_csv(input_tsv, sep="\t")
     all_recoded_row_dicts = []
 
-    all_rows = []
     for index, row in tsv_df.iterrows():
         # create output filename
         last_modified_date = datetime.now(tz=pytz.UTC).strftime("%Y-%m-%dT%H:%M:%S")
