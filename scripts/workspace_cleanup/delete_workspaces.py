@@ -28,7 +28,7 @@ def delete_workspace(workspace, project, retry=0):
     try:
         response = fapi.delete_workspace(project, workspace)
         status_code = response.status_code
-        if status_code == 202:
+        if status_code in [200, 202]:
             print(f"Workspace {project}/{workspace} was successfully deleted!")
             return 1
         elif status_code == 403:
