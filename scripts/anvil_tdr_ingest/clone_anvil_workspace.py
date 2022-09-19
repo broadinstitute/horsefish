@@ -34,7 +34,7 @@ def create_clone_workspace_attributes(workspace_link, workspace_bucket):
     workspace_attributes.append(create_update_entity_request("src_workspace_link", workspace_link, "Link to source workspace"))
 
     # get template workspace attributes
-    template_ws_attrs = get_workspace_attributes("anvil_cmg_ingest_resources", "dsp-data-ingest")["workspace"]["attributes"]
+    template_ws_attrs = get_workspace_attributes("anvil_workspace_ingest_resources", "dsp-data-ingest")["workspace"]["attributes"]
     workspace_attributes.append(create_update_entity_request("tf_input_dir", template_ws_attrs["tf_input_dir"], "input metadata directory"))
     workspace_attributes.append(create_update_entity_request("tf_output_dir", template_ws_attrs["tf_output_dir"], "output metadata directory"))
     workspace_attributes.append(create_update_entity_request("val_output_dir", template_ws_attrs["val_output_dir"], "validation output directory"))
@@ -122,15 +122,13 @@ def setup_anvil_workspace_clone(src_namespace, src_workspace, dest_namespace, de
     if not is_workspace_data_added:     # if workspace data variable update fails
         return
 
-    # add jade SA as READER on destionation workspace
-    jade_sa = "datarepo-jade-api@terra-datarepo-production.iam.gserviceaccount.com"
-    add_user, add_user_message = add_user_to_workspace(dest_workspace, dest_namespace, jade_sa)
-    if not add_user:                    # if adding jade SA fails
-        return
+    # add data ingest group to destination workspace
+    data_ingest_group = "anvil_tdr_ingest@firecloud.org"
+    add_user, add_user_message = add_user_to_workspace(dest_workspace, dest_namespace, data_ingest_group)
 
     # copy notebooks and dataset schema from template workspace to destination workspace
-    anvil_resources_workspace_bucket = "fc-9cd4583e-7855-4b5e-ae88-d8971cfd5b46"  # public, no auth domains
-    dirs_to_copy = ["notebooks", "ingest_pipeline/resources", "ingest_pipeline/output/tim_core/schema"]
+    anvil_resources_workspace_bucket = "fc-bc3dad8b-b3f9-43c7-b100-e8ed59b27f43"  # public, no auth domains
+    dirs_to_copy = ["notebooks", "ingest_pipeline/resources", "ingest_pipeline/mapping"]
     for dir in dirs_to_copy:
         copy_objects_across_buckets(anvil_resources_workspace_bucket, dest_bucket_id, dir)
 
