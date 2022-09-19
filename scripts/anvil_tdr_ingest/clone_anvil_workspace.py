@@ -122,7 +122,7 @@ def setup_anvil_workspace_clone(src_namespace, src_workspace, dest_namespace, de
     if not is_workspace_data_added:     # if workspace data variable update fails
         return
 
-    # add data ingest group as READER on destination workspace
+    # add data ingest group to destination workspace
     data_ingest_group = "anvil_tdr_ingest@firecloud.org"
     add_user, add_user_message = add_user_to_workspace(dest_workspace, dest_namespace, data_ingest_group)
 
