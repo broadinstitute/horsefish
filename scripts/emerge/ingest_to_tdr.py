@@ -104,7 +104,7 @@ def call_ingest_dataset(control_file_path, target_table_name, dataset_id):
 
 
 def write_load_json_to_bucket(bucket, filename):
-    """Cope newline delimited json file to workspace bucket."""
+    """Copy newline delimited json file to workspace bucket."""
 
     control_file_destination = f"{bucket}/control_files"
 
@@ -190,7 +190,6 @@ def parse_json_outputs_file(input_tsv):
     all_recoded_row_dicts = []
 
     for index, row in tsv_df.iterrows():
-        # create output filename
         last_modified_date = datetime.now(tz=pytz.UTC).strftime("%Y-%m-%dT%H:%M:%S")
     
         # drop empty columns and add in timestamp

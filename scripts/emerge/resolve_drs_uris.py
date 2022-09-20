@@ -30,9 +30,7 @@ def write_list_to_file(input_list, outfile_name):
 def resolve_drs_uri(drs_uuid):
     """Resolve a drs uri to return the corresponding gs path."""
 
-    print(f"resolving {drs_uuid}")
     uri = f"https://data.terra.bio/ga4gh/drs/v1/objects/{drs_uuid}"
-    print(uri)
 
     headers = {"Authorization": "Bearer " + get_access_token(), "accept": "*/*"}
 
@@ -42,9 +40,17 @@ def resolve_drs_uri(drs_uuid):
     if status_code != 200:
         return response.text
 
-    gs_path = response.json()["access_methods"][0]["access_url"]["url"]
+    # get a list of the available access methods for a drs uri
+    avail_access_methods = response.json()["access_methods"]
+    # if there is an access method with "type" == "gs", get the gs url (other type options = https)
+    gs_url = [access_type["access_url"]["url"] for access_type in avail_access_methods if access_type["type"] == "gs"] # ["gs://"] or []
+
+    # if a gs url is not available, return "NA"
+    if not gs_url:
+        return "NA"
     
-    return gs_path
+    # if gs url is available, return gs path
+    return gs_url[0]
 
 
 def resolve_drs_to_gs_paths(infile, outfile_name):
@@ -55,6 +61,7 @@ def resolve_drs_to_gs_paths(infile, outfile_name):
     
     gs_paths = []
     for drs in drs_paths_to_resolve:
+        # example drs = "drs://data.terra.bio/v1_########-####-####-####-############_########-####-####-####-############"      
         drs_uuid = drs.split("/")[3].strip("\n")  
         gs_url = resolve_drs_uri(drs_uuid)
 
