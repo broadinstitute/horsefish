@@ -51,7 +51,7 @@ def add_user_to_workspace(workspace_name, workspace_project, email):
     # Get access token and and add to headers for requests.
     headers = {"Authorization": "Bearer " + get_access_token(), "accept": "*/*", "Content-Type": "application/json"}
 
-    request = "[" + json.dumps({"email": email, "accessLevel": "READER", "canShare": True, "canCompute": True}) + "]"
+    request = "[" + json.dumps({"email": email, "accessLevel": "WRITER", "canShare": True, "canCompute": True}) + "]"
     # capture response from API and parse out status code
     response = requests.patch(uri, headers=headers, data=request)
     status_code = response.status_code
