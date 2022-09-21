@@ -47,9 +47,11 @@ def resolve_drs_uri(drs_uuid):
 
     # if a gs url is not available, return "NA"
     if not gs_url:
-        return "NA"
+        return None
     
     # if gs url is available, return gs path
+    # list type is due to list comprehension above
+    # we can assume there will only ever be one gs type and one gs url for a single drs object
     return gs_url[0]
 
 
