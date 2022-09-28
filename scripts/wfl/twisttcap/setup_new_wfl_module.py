@@ -26,7 +26,6 @@ def get_headers(request_type='get'):
     return headers
 
 
-
 # twist-tcap workspace & workflow info. could be made into a config in future.
 WORKSPACE_NAME = "TCap_Twist_WFL_Processing"
 WORKSPACE_NAMESPACE = "tcap-twist-wfl"
@@ -83,7 +82,6 @@ def rawls_copy_workflow(source_workspace_name,
         print(f"Successfully copied workflow")
     else:
         raise ValueError(f"Failed to copy workflow, response code {response.status_code}, text: {response.text}")
-
 
 
 def copy_workflow(workspace_name, workspace_namespace, source_workflow_name, suffix):
@@ -206,9 +204,6 @@ def main(dataset_id):
     # call the exec WFL module API (creates & starts the module)
     # return the WFL module info in some human readable form
     create_WFL_module(WORKSPACE_NAME, WORKSPACE_NAMESPACE, copied_workflow_name, dataset_id, method_config_version)
-
-
-
 
 
 if __name__ == "__main__":
