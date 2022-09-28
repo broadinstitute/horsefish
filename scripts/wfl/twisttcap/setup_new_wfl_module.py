@@ -34,6 +34,7 @@ WORKFLOW_NAME = "BroadInternalRNAWithUMIs"
 WORKFLOW_NAMESPACE = "tcap-twist-wfl"
 DATASET_INPUT_FIELD = "BroadInternalRNAWithUMIs.tdr_dataset_uuid"
 DATASET_TABLE = "sample"
+LOAD_TAG = "auto_process"
 SLACK_CHANNEL_ID = "C031GKEHCKF"
 SLACK_CHANNEL_NAME = "#dsp-gp-twisttcap-wfl"
 SNAPSHOT_READERS = [
@@ -44,7 +45,7 @@ SNAPSHOT_READERS = [
 OUTPUTS_FOR_DATA_TABLE = {
     "unified_metrics": "unified_metrics"
 }
-ENTITY_FOR_OUTPUTS = "sample"
+ENTITY_TABLE_FOR_OUTPUTS = "sample"
 IDENTIFIER_FOR_WORKFLOW = "tdr_sample_id"
 
 
@@ -156,7 +157,7 @@ def configure_WFL_json(workspace_name, workspace_namespace, workflow_name, datas
             "name": "Terra DataRepo",
             "dataset": dataset_id,
             "table": DATASET_TABLE,
-            "loadTag": "auto_process",
+            "loadTag": LOAD_TAG,
             "snapshotReaders": SNAPSHOT_READERS
         },
         "executor": {
@@ -169,7 +170,7 @@ def configure_WFL_json(workspace_name, workspace_namespace, workflow_name, datas
         "sink": {
             "name": "Terra Workspace",
             "workspace": f"{workspace_namespace}/{workspace_name}",
-            "entityType": ENTITY_FOR_OUTPUTS,
+            "entityType": ENTITY_TABLE_FOR_OUTPUTS,
             "fromOutputs": OUTPUTS_FOR_DATA_TABLE,
         "identifier": IDENTIFIER_FOR_WORKFLOW
         }
@@ -202,11 +203,11 @@ def main(dataset_id):
     input_to_set = {DATASET_INPUT_FIELD: f'"{dataset_id}"'}  # need to add double quotes around string inputs
     method_config_version = configure_dataset_input(WORKSPACE_NAME, WORKSPACE_NAMESPACE, copied_workflow_name, input_to_set)
 
-    # call the create WFL module API and then the activate WFL module API (or use the one that does both?)
+    # call the exec WFL module API (creates & starts the module)
+    # return the WFL module info in some human readable form
     create_WFL_module(WORKSPACE_NAME, WORKSPACE_NAMESPACE, copied_workflow_name, dataset_id, method_config_version)
 
-    # return the WFL module info in some human readable form
-    # recode any paths (files) for TDR ingest
+
 
 
 
