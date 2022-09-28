@@ -1,9 +1,7 @@
 import argparse
-# import datetime
 import json
 import requests
-# import tenacity as tn
-from oauth2client.client import GoogleCredentials
+import google.auth as googleauth
 from firecloud import api as fapi
 from time import sleep
 from pprint import pprint
@@ -12,18 +10,13 @@ from pprint import pprint
 docker_version = "1.0"
 
 
-# # define some utils functions
-# def my_before_sleep(retry_state):
-#     """Print a status update before a retry."""
-#     print('Retrying %s with %s in %s seconds; attempt #%s ended with: %s',
-#         retry_state.fn, retry_state.args, str(int(retry_state.next_action.sleep)), retry_state.attempt_number, retry_state.outcome)
-
 def get_access_token():
     """Get access token."""
-    scopes = ["https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/userinfo.email"]
-    credentials = GoogleCredentials.get_application_default()
-    credentials = credentials.create_scoped(scopes)
-    return credentials.get_access_token().access_token
+    creds, _ = googleauth.default()
+    auth_req = googleauth.transport.requests.Request()
+    creds.refresh(auth_req)
+
+    return creds.token
 
 def get_headers(request_type='get'):
     headers = {"Authorization": "Bearer " + get_access_token(),
@@ -32,54 +25,6 @@ def get_headers(request_type='get'):
         headers["Content-Type"] = "application/json"
     return headers
 
-# # retry once if ingest_data fails
-# @tn.retry(wait=tn.wait_fixed(10),
-#           stop=tn.stop_after_attempt(1),
-#           before_sleep=my_before_sleep)
-# def ingest_data(dataset_id, load_json):
-#     uri = f"https://data.terra.bio/api/repository/v1/datasets/{dataset_id}/ingest"
-#     response = requests.post(uri, headers=get_headers('post'), data=load_json)
-#     status_code = response.status_code
-#     if status_code != 202:
-#         error_msg = f"Error with ingest: {response.text}"
-#         raise ValueError(error_msg)
-
-#     load_job_id = response.json()['id']
-#     job_status, job_info = wait_for_job_status_and_result(load_job_id)
-#     if job_status != "succeeded":
-#         print(f"job status {job_status}:")
-#         message = job_info["message"]
-#         detail = job_info["errorDetail"]
-#         error_msg = f"{message}: {detail}"
-#         raise ValueError(error_msg)
-
-# def wait_for_job_status_and_result(job_id, wait_sec=10):
-#     # first check job status
-#     uri = f"https://data.terra.bio/api/repository/v1/jobs/{job_id}"
-
-#     headers = get_headers()
-#     response = requests.get(uri, headers=headers)
-#     status_code = response.status_code
-
-#     while status_code == 202:
-#         print(f"job running. checking again in {wait_sec} seconds")
-#         sleep(wait_sec)
-#         response = requests.get(uri, headers=headers)
-#         status_code = response.status_code
-
-#     if status_code != 200:
-#         print(f"error retrieving status for job_id {job_id}")
-#         return "internal error", response.text
-
-#     job_status = response.json()['job_status']
-#     print(f'job_id {job_id} has status {job_status}')
-#     # if job status = done, check job result
-#     if job_status in ['succeeded', 'failed']:
-#         result_uri = uri + "/result"
-#         print(f'retrieving job result from {result_uri}')
-#         response = requests.get(result_uri, headers=get_headers())
-
-#     return job_status, response.json()
 
 
 # twist-tcap workspace & workflow info. could be made into a config in future.
@@ -97,10 +42,9 @@ SNAPSHOT_READERS = [
     "twisttcap_processing_readers@firecloud.org"
 ]
 OUTPUTS_FOR_DATA_TABLE = {
-    "output_bam": "output_bam",
-    "output_bam_index": "output_bam_index",
     "unified_metrics": "unified_metrics"
 }
+ENTITY_FOR_OUTPUTS = "sample"
 IDENTIFIER_FOR_WORKFLOW = "tdr_sample_id"
 
 
@@ -225,7 +169,7 @@ def configure_WFL_json(workspace_name, workspace_namespace, workflow_name, datas
         "sink": {
             "name": "Terra Workspace",
             "workspace": f"{workspace_namespace}/{workspace_name}",
-            "entityType": "pipeline_outputs",
+            "entityType": ENTITY_FOR_OUTPUTS,
             "fromOutputs": OUTPUTS_FOR_DATA_TABLE,
         "identifier": IDENTIFIER_FOR_WORKFLOW
         }
@@ -237,7 +181,17 @@ def create_WFL_module(workspace_name, workspace_namespace, workflow_name, datase
 
     create_module_json = configure_WFL_json(workspace_name, workspace_namespace, workflow_name, dataset_id, method_config_version)
 
-    pprint(create_module_json)
+    uri = "https://gotc-prod-wfl.gotc-prod.broadinstitute.org/api/v1/exec"
+    response = requests.post(uri, data=json.dumps(create_module_json), headers=get_headers('post'))
+    
+    if response.status_code == 200:
+        wfl_config = response.json()
+
+        pprint(wfl_config)
+        print(f"\nWFL module {wfl_config['uuid']} successfully created and started.")
+
+    else:
+        print(f"Error creating WFL module, {response.status_code}, {response.text}")
 
 
 def main(dataset_id):
