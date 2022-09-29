@@ -48,6 +48,36 @@ ENTITY_TABLE_FOR_OUTPUTS = "sample"
 IDENTIFIER_FOR_WORKFLOW = "tdr_sample_id"
 
 
+def get_dataset_id(dataset_name):
+    """Given the name of a TDR dataset_id, return its uuid."""
+
+    uri = f"https://data.terra.bio/api/repository/v1/datasets?offset=0&limit=10&filter={dataset_name}"
+
+    response = requests.get(uri, get_headers())
+
+    response_data = response.json()
+
+    if response.status_code != 200:
+        raise ValueError(f"Failed to retrieve dataset id, response code {response.status_code}, text: {response.text}")
+
+    assert response_data["filteredTotal"] == 1
+
+    return response_data["items"][0]["id"]
+
+
+def get_dataset_name(dataset_id):
+    """Given the uuid of a TDR dataset, return its name."""
+
+    uri = f"https://data.terra.bio/api/repository/v1/datasets/{dataset_id}?include=NONE"
+
+    response = requests.get(uri, headers=get_headers())
+
+    if response.status_code != 200:
+        raise ValueError(f"Failed to retrieve dataset name, response code {response.status_code}, text: {response.text}")
+    
+    return response.json()["name"]
+
+
 def rawls_copy_workflow(source_workspace_name, 
                         source_workspace_namespace,
                         source_workflow_name,
@@ -134,13 +164,7 @@ def configure_dataset_input(workspace_name, workspace_namespace, workflow_name, 
     return config_version
 
 
-def configure_WFL_json(workspace_name, workspace_namespace, workflow_name, dataset_id, method_config_version):
-    # get dataset name
-    uri = f"https://data.terra.bio/api/repository/v1/datasets/{dataset_id}?include=NONE"
-    response = requests.get(uri, headers=get_headers())
-    if response.status_code != 200:
-        raise ValueError(f"Failed to retrieve dataset name, response code {response.status_code}, text: {response.text}")
-    dataset_name = response.json()["name"]
+def configure_WFL_json(workspace_name, workspace_namespace, workflow_name, dataset_id, dataset_name, method_config_version):
 
     return {
         "project": f"{workspace_namespace}/{workspace_name}",
@@ -175,42 +199,56 @@ def configure_WFL_json(workspace_name, workspace_namespace, workflow_name, datas
     }
 
 
-def create_WFL_module(workspace_name, workspace_namespace, workflow_name, dataset_id, method_config_version):
-    """Create and activate a new WFL module with the specified parameters."""
+def create_WFL_workload(workspace_name, workspace_namespace, workflow_name, dataset_id, dataset_name, method_config_version):
+    """Create and activate a new WFL workload with the specified parameters."""
 
-    create_module_json = configure_WFL_json(workspace_name, workspace_namespace, workflow_name, dataset_id, method_config_version)
+    create_workload_json = configure_WFL_json(workspace_name, workspace_namespace, workflow_name, dataset_id, dataset_name, method_config_version)
 
     uri = "https://gotc-prod-wfl.gotc-prod.broadinstitute.org/api/v1/exec"
-    response = requests.post(uri, data=json.dumps(create_module_json), headers=get_headers('post'))
+    response = requests.post(uri, data=json.dumps(create_workload_json), headers=get_headers('post'))
     
     if response.status_code == 200:
         wfl_config = response.json()
 
         pprint(wfl_config)
-        print(f"\nWFL module {wfl_config['uuid']} successfully created and started.")
+        print(f"\nWFL workload {wfl_config['uuid']} successfully created and started.")
 
     else:
-        print(f"Error creating WFL module, {response.status_code}, {response.text}")
+        print(f"Error creating WFL workload, {response.status_code}, {response.text}")
 
 
-def main(dataset_id):
-    # make a copy of the workflow with _<tdr_dataset_uuid> suffix
-    copied_workflow_name = copy_workflow(WORKSPACE_NAME, WORKSPACE_NAMESPACE, WORKFLOW_NAME, suffix=dataset_id)
+def main(dataset_id, dataset_name):
+    # make a copy of the workflow with _<dataset_name> suffix
+    copied_workflow_name = copy_workflow(WORKSPACE_NAME, WORKSPACE_NAMESPACE, WORKFLOW_NAME, suffix=dataset_name)
 
     # set up the config of the new workflow with the tdr_dataset_uuid input set correctly
     input_to_set = {DATASET_INPUT_FIELD: f'"{dataset_id}"'}  # need to add double quotes around string inputs
     method_config_version = configure_dataset_input(WORKSPACE_NAME, WORKSPACE_NAMESPACE, copied_workflow_name, input_to_set)
 
-    # call the exec WFL module API (creates & starts the module)
-    # return the WFL module info in some human readable form
-    create_WFL_module(WORKSPACE_NAME, WORKSPACE_NAMESPACE, copied_workflow_name, dataset_id, method_config_version)
+    # call the exec WFL workload API (creates & starts the workload)
+    # return the WFL workload info in some human readable form
+    create_WFL_workload(WORKSPACE_NAME, WORKSPACE_NAMESPACE, copied_workflow_name, dataset_id, dataset_name, method_config_version)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Ingest workflow outputs to TDR')
-    parser.add_argument('-d', '--dataset_id', required=True,
+    parser.add_argument('-d', '--dataset_id', required=False,
         help='UUID of source TDR dataset')
+    parser.add_argument('-n', '--dataset_name', required=False,
+        help='Name of source TDR dataset')
 
     args = parser.parse_args()
 
-    main(args.dataset_id)
+    if not args.dataset_id and not args.dataset_name:
+        print("You must provide either a TDR dataset uuid (using -d) or name (using -n).")
+        exit()
+
+    if not args.dataset_id:
+        # look up dataset_id from dataset_name
+        args.dataset_id = get_dataset_id(args.dataset_name)
+    
+    if not args.dataset_name:
+        # look up dataset_name from dataset_id
+        args.dataset_name = get_dataset_name(args.dataset_id)
+
+    main(args.dataset_id, args.dataset_name)
