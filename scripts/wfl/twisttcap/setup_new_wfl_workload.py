@@ -114,54 +114,65 @@ def rawls_copy_workflow(source_workspace_name,
         raise ValueError(f"Failed to copy workflow, response code {response.status_code}, text: {response.text}")
 
 
-def copy_workflow(workspace_name, workspace_namespace, source_workflow_name, suffix):
+def copy_workflow(workspace_name, workspace_namespace, source_workflow_name, suffix, dry_run):
     """Make a copy of the source workflow (in the same workspace) with the designated suffix."""
     # check to see whether the new workflow exists already
     copied_workflow_name = f"{source_workflow_name}_{suffix}"
 
-    print(f"Creating new workflow {copied_workflow_name} from base workflow {source_workflow_name} in {workspace_namespace}/{workspace_name}")
 
-    response = fapi.get_workspace_config(workspace_namespace, workspace_name, workspace_namespace, copied_workflow_name)
-    if response.status_code == 200:
-        print(f"WARNING: Dataset-specific workflow {copied_workflow_name} already exists. Continuing.")
-    elif response.status_code == 404:
-        # make a copy of the base workflow
-        rawls_copy_workflow(workspace_name, workspace_namespace, source_workflow_name, workspace_namespace,
-                            workspace_name, workspace_namespace, copied_workflow_name, workspace_namespace)
+    if dry_run:
+        print(f"Would create new workflow {copied_workflow_name} from base workflow {source_workflow_name} in {workspace_namespace}/{workspace_name}")
     else:
-        print(f"Unexpected response code {response.status_code}")
-        raise ValueError()
+        print(f"Creating new workflow {copied_workflow_name} from base workflow {source_workflow_name} in {workspace_namespace}/{workspace_name}")
+
+        response = fapi.get_workspace_config(workspace_namespace, workspace_name, workspace_namespace, copied_workflow_name)
+        if response.status_code == 200:
+            print(f"WARNING: Dataset-specific workflow {copied_workflow_name} already exists. Continuing.")
+        elif response.status_code == 404:
+            # make a copy of the base workflow
+            rawls_copy_workflow(workspace_name, workspace_namespace, source_workflow_name, workspace_namespace,
+                                workspace_name, workspace_namespace, copied_workflow_name, workspace_namespace)
+        else:
+            print(f"Unexpected response code {response.status_code}")
+            raise ValueError()
 
     return copied_workflow_name
 
 
-def configure_dataset_input(workspace_name, workspace_namespace, workflow_name, input_to_set):
+def configure_dataset_input(workspace_name, workspace_namespace, workflow_name, input_to_set, dry_run):
     """Set the specified workflow config input(s)."""
 
-    # first retrieve the workflow config
-    response = fapi.get_workspace_config(workspace_namespace, workspace_name, workspace_namespace, workflow_name)
+    if not dry_run:
+        # first retrieve the workflow config
+        response = fapi.get_workspace_config(workspace_namespace, workspace_name, workspace_namespace, workflow_name)
 
-    # TODO add error handling
+        # TODO add error handling
 
-    method_config = response.json()
+        method_config = response.json()
 
     # check that the fields in input_to_set exist, and then rewrite their values in the config
     for input_name, input_value in input_to_set.items():
-        if input_name not in method_config['inputs']:
-            raise ValueError(f"Did not find input field {input_name} in workflow config for {workflow_name}")
+        if dry_run:
+            print(f"Would update value of input {input_name} to {input_value}")
         else:
-            print(f"Updating value of input {input_name} from {method_config['inputs'][input_name]} to {input_value}")
-            method_config['inputs'][input_name] = input_value
+            if input_name not in method_config['inputs']:
+                raise ValueError(f"Did not find input field {input_name} in workflow config for {workflow_name}")
+            else:
+                print(f"Updating value of input {input_name} from {method_config['inputs'][input_name]} to {input_value}")
+                method_config['inputs'][input_name] = input_value
 
-    # commit the config back to Terra
-    response = fapi.update_workspace_config(workspace_namespace, workspace_name, workspace_namespace, workflow_name, method_config)
-    if response.status_code != 200:
-        raise ValueError(f"Failed to update method config, response code {response.status_code}, text: {response.text}")
-    
-    print("Workflow input configuration complete.")
+    if dry_run:
+        return None
+    else:
+        # commit the config back to Terra
+        response = fapi.update_workspace_config(workspace_namespace, workspace_name, workspace_namespace, workflow_name, method_config)
+        if response.status_code != 200:
+            raise ValueError(f"Failed to update method config, response code {response.status_code}, text: {response.text}")
+        
+        print("Workflow input configuration complete.")
 
-    config_version = response.json()["methodConfiguration"]["methodConfigVersion"]
-    return config_version
+        config_version = response.json()["methodConfiguration"]["methodConfigVersion"]
+        return config_version
 
 
 def configure_WFL_json(workspace_name, workspace_namespace, workflow_name, dataset_id, dataset_name, method_config_version):
@@ -199,35 +210,39 @@ def configure_WFL_json(workspace_name, workspace_namespace, workflow_name, datas
     }
 
 
-def create_WFL_workload(workspace_name, workspace_namespace, workflow_name, dataset_id, dataset_name, method_config_version):
+def create_WFL_workload(workspace_name, workspace_namespace, workflow_name, dataset_id, dataset_name, method_config_version, dry_run):
     """Create and activate a new WFL workload with the specified parameters."""
 
     create_workload_json = configure_WFL_json(workspace_name, workspace_namespace, workflow_name, dataset_id, dataset_name, method_config_version)
 
-    uri = "https://gotc-prod-wfl.gotc-prod.broadinstitute.org/api/v1/exec"
-    response = requests.post(uri, data=json.dumps(create_workload_json), headers=get_headers('post'))
-    
-    if response.status_code == 200:
-        wfl_config = response.json()
-
-        pprint(wfl_config)
-        print(f"\nWFL workload {wfl_config['uuid']} successfully created and started.")
-
+    if dry_run:
+        print(f"Would create WFL workload with the following config:")
+        pprint(create_workload_json)
     else:
-        print(f"Error creating WFL workload, {response.status_code}, {response.text}")
+        uri = "https://gotc-prod-wfl.gotc-prod.broadinstitute.org/api/v1/exec"
+        response = requests.post(uri, data=json.dumps(create_workload_json), headers=get_headers('post'))
+        
+        if response.status_code == 200:
+            wfl_config = response.json()
+
+            pprint(wfl_config)
+            print(f"\nWFL workload {wfl_config['uuid']} successfully created and started.")
+
+        else:
+            print(f"Error creating WFL workload, {response.status_code}, {response.text}")
 
 
-def main(dataset_id, dataset_name):
+def main(dataset_id, dataset_name, dry_run=False):
     # make a copy of the workflow with _<dataset_name> suffix
-    copied_workflow_name = copy_workflow(WORKSPACE_NAME, WORKSPACE_NAMESPACE, WORKFLOW_NAME, suffix=dataset_name)
+    copied_workflow_name = copy_workflow(WORKSPACE_NAME, WORKSPACE_NAMESPACE, WORKFLOW_NAME, suffix=dataset_name, dry_run=dry_run)
 
     # set up the config of the new workflow with the tdr_dataset_uuid input set correctly
     input_to_set = {DATASET_INPUT_FIELD: f'"{dataset_id}"'}  # need to add double quotes around string inputs
-    method_config_version = configure_dataset_input(WORKSPACE_NAME, WORKSPACE_NAMESPACE, copied_workflow_name, input_to_set)
+    method_config_version = configure_dataset_input(WORKSPACE_NAME, WORKSPACE_NAMESPACE, copied_workflow_name, input_to_set, dry_run)
 
     # call the exec WFL workload API (creates & starts the workload)
     # return the WFL workload info in some human readable form
-    create_WFL_workload(WORKSPACE_NAME, WORKSPACE_NAMESPACE, copied_workflow_name, dataset_id, dataset_name, method_config_version)
+    create_WFL_workload(WORKSPACE_NAME, WORKSPACE_NAMESPACE, copied_workflow_name, dataset_id, dataset_name, method_config_version, dry_run)
 
 
 if __name__ == "__main__":
@@ -236,6 +251,8 @@ if __name__ == "__main__":
         help='UUID of source TDR dataset')
     parser.add_argument('-n', '--dataset_name', required=False,
         help='Name of source TDR dataset')
+    parser.add_argument('--dry_run', action='store_true',
+        help='Show changes that would occur without executing them')
 
     args = parser.parse_args()
 
@@ -251,4 +268,4 @@ if __name__ == "__main__":
         # look up dataset_name from dataset_id
         args.dataset_name = get_dataset_name(args.dataset_id)
 
-    main(args.dataset_id, args.dataset_name)
+    main(args.dataset_id, args.dataset_name, args.dry_run)

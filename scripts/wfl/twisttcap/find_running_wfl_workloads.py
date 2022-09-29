@@ -84,7 +84,8 @@ def main(wfl_project):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Ingest workflow outputs to TDR')
-    parser.add_argument('-p', '--wfl_project', required=False,
+    parser.add_argument('-p', '--wfl_project',
+        default='tcap-twist-wfl/TCap_Twist_WFL_Processing',
         help='WFL project identifier to search for')
 
     args = parser.parse_args()
