@@ -7,7 +7,7 @@ COPY requirements.txt .
 RUN apt-get install python3-pip
 RUN pip3 install -r requirements.txt
 
-COPY setup_new_wfl_module.py /scripts/setup_new_wfl_module.py
+COPY setup_new_wfl_workload.py /scripts/setup_new_wfl_workload.py
 
 ENV PYTHONPATH "/scripts:${PYTHONPATH}"
 
