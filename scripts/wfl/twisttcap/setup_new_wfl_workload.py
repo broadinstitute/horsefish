@@ -1,29 +1,13 @@
 import argparse
 import json
 import requests
-import google.auth as googleauth
 from firecloud import api as fapi
 from time import sleep
 from pprint import pprint
+from utils import get_headers
 
 # DEVELOPER: update this field anytime you make a new docker image
 docker_version = "1.0"
-
-
-def get_access_token():
-    """Get access token."""
-    creds, _ = googleauth.default()
-    auth_req = googleauth.transport.requests.Request()
-    creds.refresh(auth_req)
-
-    return creds.token
-
-def get_headers(request_type='get'):
-    headers = {"Authorization": "Bearer " + get_access_token(),
-                "accept": "application/json"}
-    if request_type == 'post':
-        headers["Content-Type"] = "application/json"
-    return headers
 
 
 # twist-tcap workspace & workflow info. could be made into a config in future.
