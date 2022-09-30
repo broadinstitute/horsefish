@@ -11,11 +11,7 @@ def retrieve_WFL_workloads(wfl_project):
     """Retrieve all workloads, filtered for wfl_project.
     Return a list of jsons."""
 
-    # replace / with %2 for use in API URI
-    safe_project_name = wfl_project.replace("/", "%2")
-
-    # uri = f"https://gotc-prod-wfl.gotc-prod.broadinstitute.org/api/v1/workload?project={safe_project_name}"
-    # that filtering doesn't actually work
+    # ideally we'd filter by project name but it doesn't work, so get all workloads and filter afterwards
     uri = f"https://gotc-prod-wfl.gotc-prod.broadinstitute.org/api/v1/workload"
 
     response = requests.get(uri, headers=get_headers())
