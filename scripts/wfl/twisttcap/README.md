@@ -17,4 +17,13 @@ All the above steps are idempotent EXCEPT the creation of the WFL workload. If y
 # to run using Docker:
 Given a TDR dataset uuid `MY-TDR-UUID`, run:
 
-`docker run -it --rm -v "$HOME"/.config:/.config broadinstitute/horsefish:twisttcap_wfl_setup_v1.0  python3 /scripts/setup_new_wfl_workload.py -d MY-TDR-UUID`
+`docker run -it --rm -v "$HOME"/.config:/.config broadinstitute/horsefish:twisttcap_wfl_setup_v1.0  python /scripts/setup_new_wfl_workload.py -d MY-TDR-UUID`
+
+
+# List all active WFL workloads in your project:
+
+This script (`find_running_wfl_workloads.py`) queries WFL for all workloads in a given project (the WFL definition of project - our convention is to use `WORKSPACE_NAMESPACE/WORKSPACE_NAME`), and prints out a list of active (not stopped) workloads, organized by TDR dataset name, and including WFL uuid, timestamp the workload was started, and the name of the workflow that the workload runs.
+
+This defaults to checking for the Twist-TCAP project, but you could use this for a different project using the -p flag.
+
+`docker run -it --rm -v "$HOME"/.config:/.config broadinstitute/horsefish:twisttcap_wfl_setup_v1.0  python /scripts/find_running_wfl_workloads.py`
