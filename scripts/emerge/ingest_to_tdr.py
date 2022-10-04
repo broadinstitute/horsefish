@@ -113,7 +113,11 @@ def create_ingest_dataset_request(control_file_path, target_table_name, load_tag
                 }
     # if user provides a load_tag, add it to request body
     if load_tag:
-        load_dict["loadTag"] = load_tag
+        load_dict["load_tag"] = load_tag
+        # write load tag to output file
+        # used in WDL to ingest same files into different tables without errors
+        with open("load_tag.txt", "w") as loadfile:
+            loadfile.write(load_tag)
 
     load_json = json.dumps(load_dict) # dict -> json
 
@@ -159,12 +163,7 @@ def call_ingest_dataset(control_file_path, target_table_name, dataset_id, load_t
         raise ValueError(f"{job_result_response.text}")
 
     # ingest job completed and success
-    print("{ingest_job_id} --> succeeded")
-
-    # write load tag to output file
-    with open("load_tag.txt", "w") as loadfile:
-        loadfile.write(ingest_job_id)
-
+    print(f"{ingest_job_id} --> succeeded")
     print("File ingest to TDR dataset completed successfully.")
 
 
