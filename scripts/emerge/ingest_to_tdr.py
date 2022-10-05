@@ -53,36 +53,6 @@ def get_job_status(job_id):
     return status_code, response_json
 
 
-# def get_job_status_and_result(job_id):
-#     """retrieveJob"""
-
-#     # first check job status - retrieveJob
-#     uri = f"https://data.terra.bio/api/repository/v1/jobs/{job_id}"
-    
-#     headers = {"Authorization": "Bearer " + get_access_token(),
-#                "accept": "application/json"}
-    
-#     # wait 10 seconds
-#     time.sleep(10)
-
-#     retrieve_job_response = requests.get(uri, headers=headers)
-#     retrieve_job_response_json = json.loads(retrieve_job_response.text)
-#     retrieve_job_status_code = retrieve_job_response.status_code
-
-#     # job_status = response_json['job_status']
-#     if retrieve_job_status_code == 202:                              # still running
-#         print(f"load job {job_id} --> running")
-#         return retrieve_job_status_code, retrieve_job_response_json
-
-#     if retrieve_job_status_code == 200:                              # finished successfully
-#         print(f"load job {job_id} --> success")
-#         job_result_status_code, job_result_response_json = get_job_result(job_id)
-#         return job_result_status_code, job_result_response_json
-
-#     print(f"load job {job_id} --> not successful")  # finished but not successfully
-#     return retrieve_job_status_code, retrieve_job_response_json
-
-
 def ingest_dataset(dataset_id, data):
     """Load data into TDR with ingestDataset."""
 
@@ -132,39 +102,34 @@ def call_ingest_dataset(control_file_path, target_table_name, dataset_id, load_t
     ingest_job_id = ingest_response["id"] # check for id in ingest_dataset()
     ingest_status_code = ingest_response["status_code"]
 
-    if ingest_status_code != 202: # ingest failed
-        print("ingest to TDR dataset failed.")
+    if ingest_status_code != 202: # job fails to start
+        print(f"{ingest_job_id} --> failed")
         raise ValueError(ingest_response)
 
-    # 202 = ingest starts running
+    # 202 = job starts running
     job_status_code, job_status_response = get_job_status(ingest_job_id)
     # job_status_code, job_response = get_job_status_and_result(ingest_job_id)
 
-    while job_status_code == 202:           # while ingest job is running
+    while job_status_code == 202:           # while job is running
         print(f"{ingest_job_id} --> running")
-        time.sleep(10)
+        time.sleep(10) # wait 10 seconds before getting job status
         job_status_code, job_status_response = get_job_status(ingest_job_id) # get updated status info
-        # job_status_code, job_response = get_job_status_and_result(ingest_job_id)
 
-    if job_status_code != 200:              # ingest job completes and fails
-        print("{ingest_job_id} --> failed")
-        error_message = job_status_response["errorDetail"]
-        raise ValueError(f"Load job finished but did not succeed: {error_message}")
+    # job completes
+    # with failure --> success_code not 200 and "job_status" is "failed"
+    # any other combination is failure
+    if job_status_code != 200 or job_status_response["job_status"] != "succeeded":
+        print(f"{ingest_job_id} --> failed")
+        job_result_code, job_result_response = get_job_result(ingest_job_id)
+        raise ValueError(job_result_response)    
 
-    # ingest job completes and succeeds, double check with retrieveJobResult for 200 success
-    # some cases where message says "Load job finished but did not succeed"
-    job_result_code, job_result_response = get_job_result(ingest_job_id)
-    if job_result_code != 200:
-        print("{ingest_job_id} --> failed")
-        raise ValueError(f"{job_result_response.text}")
-
-    # ingest job completed and success
+    # job completes successfully
+    # success_code is 200 and "job_status" =is"succeeded"
     print(f"{ingest_job_id} --> succeeded")
     
-    # write load tag to output file
-    # used in WDL to ingest same files into different tables without errors
+    # write load tag to output file from final succeeded job result response
+    job_result_code, job_result_response = get_job_result(ingest_job_id)
     result_load_tag = job_result_response["load_tag"]
-    print(f"load tag: {result_load_tag}")
     with open("load_tag.txt", "w") as loadfile:
         loadfile.write(result_load_tag)
 
