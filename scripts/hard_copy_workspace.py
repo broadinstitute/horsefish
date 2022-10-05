@@ -4,7 +4,9 @@ import argparse
 import pandas as pd
 from firecloud import api as fapi
 from firecloud import errors as ferrors
-from update_workspace_dd import run_subprocess, update_attributes, update_entities, update_notebooks
+
+from utils import run_subprocess
+from fiss_fns import update_attributes, update_entities, update_notebooks
 
 
 def copy_multiple(df, set_auth_domain=None):

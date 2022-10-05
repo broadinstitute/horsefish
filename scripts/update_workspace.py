@@ -255,7 +255,7 @@ if __name__ == '__main__':
         update_attributes(args.workspace_name, args.workspace_project, args.replace_this, args.with_this)
         # update_notebooks(args.workspace_name, args.workspace_project, args.replace_this, args.with_this)
         update_entities(args.workspace_name, args.workspace_project, args.replace_this, args.with_this)
-    else:
-        list_entity_data_paths(args.workspace_name, args.workspace_project, ['gs://terra-featured-workspaces/'])
+    # else:
+    #     list_entity_data_paths(args.workspace_name, args.workspace_project, ['gs://terra-featured-workspaces/'])
 
 
