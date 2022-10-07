@@ -115,9 +115,8 @@ def call_ingest_dataset(control_file_path, target_table_name, dataset_id, load_t
         time.sleep(10) # wait 10 seconds before getting job status
         job_status_code, job_status_response = get_job_status(ingest_job_id) # get updated status info
 
-    # job completes
-    # with failure --> success_code not 200 and "job_status" is "failed"
-    # any other combination is failure
+    # job completes (‘failed’ or ‘succeeded’) with 200 status_code
+    # consider any combination other than 200 + succeeded as failure
     if job_status_code != 200 or job_status_response["job_status"] != "succeeded":
         print(f"{ingest_job_id} --> failed")
         job_result_code, job_result_response = get_job_result(ingest_job_id)
