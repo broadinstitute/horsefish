@@ -33,7 +33,7 @@ def write_file(dataframe):
     return output_filename
 
 
-def run_query(query, google_project="emerge-production"):
+def run_query(query, google_project):
     """Performs a BQ lookup of a desired attribute in a specified snapshot or dataset table."""
     
     # create BQ connection
@@ -69,7 +69,7 @@ def get_dataset_access_info(dataset_id):
 
 
 def get_fq_table(entity_id, table_name):
-    """Given a datset or snapshot id, table name, and entity type {dataset,snapshot}, retrieve its fully qualified BQ table name"""
+    """Given a datset id and table name, retrieve its fully qualified BQ table name."""
     
     access_info = get_dataset_access_info(entity_id)
     tables = access_info['accessInformation']['bigQuery']['tables']
@@ -84,7 +84,7 @@ def get_fq_table(entity_id, table_name):
 
 
 def create_query(dataset_id, table_name, attribute_name, attribute_value):
-    """Create query to get back the ingested row."""
+    """Generate query."""
 
     fq_table_name = get_fq_table(dataset_id, table_name)
     query = f"""SELECT * FROM `{fq_table_name}`
@@ -96,14 +96,15 @@ def create_query(dataset_id, table_name, attribute_name, attribute_value):
 if __name__ == "__main__" :
     parser = argparse.ArgumentParser(description='Check TDR dataset table for presence of a row.')
 
-    parser.add_argument('-d', '--dataset_id', required=True, type=str, help='id of TDR dataset for destination of outputs')
-    parser.add_argument('-t', '--table_name', required=True, type=str, help='name of target table in TDR dataset')
-    parser.add_argument('-a', '--attribute_name', required=True, type=str, help='name of target table in TDR dataset')
-    parser.add_argument('-v', '--attribute_value', required=True, type=str, help='name of target table in TDR dataset')
+    parser.add_argument('-d', '--dataset_id', required=True, type=str, help='id of TDR dataset')
+    parser.add_argument('-t', '--table_name', required=True, type=str, help='name of table in TDR dataset')
+    parser.add_argument('-a', '--attribute_name', required=True, type=str, help='name of column in table')
+    parser.add_argument('-v', '--attribute_value', required=True, type=str, help='value to search for in given table column')
+    parser.add_argument('-p', '--google_project', required=True, type=str, help='google project')
 
     args = parser.parse_args()
 
     query = create_query(args.dataset_id, args.table_name, args.attribute_name, args.attribute_value)
-    result_df = run_query(query)
+    result_df = run_query(query, args.google_project)
     write_file(result_df)
     
