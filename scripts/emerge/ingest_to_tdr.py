@@ -99,16 +99,15 @@ def call_ingest_dataset(control_file_path, target_table_name, dataset_id, load_t
     ingest_response = ingest_dataset(dataset_id, ingest_dataset_request) # call ingestDataset
     print(f"ingestDataset response body: \n {ingest_response} \n")
 
-    ingest_job_id = ingest_response["id"] # check for id in ingest_dataset()
+    ingest_job_id = ingest_response["id"] # check for presence of id in ingest_dataset()
     ingest_status_code = ingest_response["status_code"]
 
-    if ingest_status_code != 202: # job fails to start
+    if ingest_status_code != 202: # job submitted but fails
         print(f"{ingest_job_id} --> failed")
         raise ValueError(ingest_response)
 
-    # 202 = job starts running
+    # 202 = job is running
     job_status_code, job_status_response = get_job_status(ingest_job_id)
-    # job_status_code, job_response = get_job_status_and_result(ingest_job_id)
 
     while job_status_code == 202:           # while job is running
         print(f"{ingest_job_id} --> running")
@@ -119,6 +118,7 @@ def call_ingest_dataset(control_file_path, target_table_name, dataset_id, load_t
     # consider any combination other than 200 + succeeded as failure
     if job_status_code != 200 or job_status_response["job_status"] != "succeeded":
         print(f"{ingest_job_id} --> failed")
+        # if failed, get the resulting error message
         job_result_code, job_result_response = get_job_result(ingest_job_id)
         raise ValueError(job_result_response)    
 
