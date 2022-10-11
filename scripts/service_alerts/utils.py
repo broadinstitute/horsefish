@@ -5,8 +5,22 @@ import json
 def build_service_banner_json(title, message, link, incident_id):
     """Create a json banner using args if they exist, else implement default values."""
 
-    banner_dict = [{"title": title, "message": message, "link": link, "incident_id": incident_id}]
-    return json.dumps(banner_dict)
+    banner_dict = {"title": title, "message": message, "link": link, "incident_id": incident_id}
+    return banner_dict
+
+
+def get_banner(env):
+    storage_client = gcs.Client()
+
+    if env == "prod":
+        bucket = storage_client.get_bucket("firecloud-alerts")
+    else:
+        bucket = storage_client.get_bucket(f"firecloud-alerts-{env}")
+
+    blob = bucket.blob("alerts.json")
+    string = blob.download_as_string()
+
+    return json.loads(string)
 
 
 def push_service_banner_json(env, json_string=None):
