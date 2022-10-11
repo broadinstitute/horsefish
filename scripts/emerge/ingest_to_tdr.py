@@ -21,35 +21,40 @@ def get_access_token():
     return credentials.get_access_token().access_token
 
 
-def get_job_status_and_result(job_id):
-    # first check job status
+def get_job_result(job_id):
+    """retrieveJobResult"""
+
+    # first check job status - retrieveJob
+    uri = f"https://data.terra.bio/api/repository/v1/jobs/{job_id}/result"
+    
+    headers = {"Authorization": "Bearer " + get_access_token(),
+               "accept": "application/json"}
+
+    response = requests.get(uri, headers=headers)
+    response_json = json.loads(response.text)
+    status_code = response.status_code
+
+    return status_code, response_json
+
+
+def get_job_status(job_id):
+    """retrieveJobStatus"""
+
+    # first check job status - retrieveJob
     uri = f"https://data.terra.bio/api/repository/v1/jobs/{job_id}"
     
     headers = {"Authorization": "Bearer " + get_access_token(),
                "accept": "application/json"}
-    time.sleep(10)
-    retrieveJob_response = requests.get(uri, headers=headers)
-    retrieveJob_response_json = json.loads(retrieveJob_response.text)
-    retrieveJob_status_code = retrieveJob_response.status_code
 
-    # job_status = response_json['job_status']
-    if retrieveJob_status_code == 202:                                           # still running
-        print(f"load job {job_id} --> running")
-        return retrieveJob_status_code, retrieveJob_response_json
+    response = requests.get(uri, headers=headers)
+    response_json = json.loads(response.text)
+    status_code = response.status_code
 
-    if retrieveJob_status_code == 200:                                          # finished successfully
-        print(f"load job {job_id} --> success")
-        retrieveJobResult_response = requests.get(uri + "/result", headers=headers)
-        retrieveJobResult_response_json = json.loads(retrieveJobResult_response.text)
-        retrieveJobResult_status_code = retrieveJobResult_response.status_code
-        return retrieveJobResult_status_code, retrieveJobResult_response_json
-
-    print(f"load job {job_id} --> not successful")  # finished but not successfully
-    return retrieveJob_status_code, retrieveJob_response_json
+    return status_code, response_json
 
 
-def load_data(dataset_id, ingest_data):
-    """Load data into TDR"""
+def ingest_dataset(dataset_id, data):
+    """Load data into TDR with ingestDataset."""
 
     uri = f"https://data.terra.bio/api/repository/v1/datasets/{dataset_id}/ingest"
 
@@ -57,48 +62,71 @@ def load_data(dataset_id, ingest_data):
                "accept": "application/json",
                "Content-Type": "application/json"}
 
-    response = requests.post(uri, headers=headers, data=ingest_data)
+    response = requests.post(uri, headers=headers, data=data)
     status_code = response.status_code
 
-    if status_code != 202:
-        return response.text
+    if status_code != 202:  # if ingest start-up fails
+        raise ValueError(response.text)
 
+    # if ingest start-up succeeds
     return json.loads(response.text)
 
 
-def call_ingest_dataset(control_file_path, target_table_name, dataset_id):
+def create_ingest_dataset_request(control_file_path, target_table_name, load_tag=None):
+    """Create the ingestDataset request body."""
+
+    load_dict = {"format": "json",
+                 "path": control_file_path,
+                 "table": target_table_name,
+                 "resolve_existing_files": "true",
+                 "updateStrategy": "replace"
+                }
+    # if user provides a load_tag, add it to request body
+    if load_tag:
+        load_dict["load_tag"] = load_tag
+
+    load_json = json.dumps(load_dict) # dict -> json
+
+    return load_json
+
+
+def call_ingest_dataset(control_file_path, target_table_name, dataset_id, load_tag=None):
     """Create the ingestDataset API json request body and call API."""
 
-    load_json = json.dumps({"format": "json",
-                            "path": control_file_path,
-                            "table": target_table_name,
-                            "resolve_existing_files": "true",
-                            "updateStrategy": "replace"
-                            })
-    load_job_response = load_data(dataset_id, load_json)
+    ingest_dataset_request = create_ingest_dataset_request(control_file_path, target_table_name, load_tag) # create request for ingestDataset
+    print(f"ingestDataset request body: \n {ingest_dataset_request} \n")
 
-    print(f"ingestDataset request body: \n {load_json} \n")
-    print(f"ingestDataset response body: \n {load_job_response} \n")
+    ingest_response = ingest_dataset(dataset_id, ingest_dataset_request) # call ingestDataset
+    print(f"ingestDataset response body: \n {ingest_response} \n")
 
-    ingestDataset_job_id = load_job_response["id"]
-    ingestDataset_status_code = load_job_response["status_code"]
+    ingest_job_id = ingest_response["id"] # check for presence of id in ingest_dataset()
+    ingest_status_code = ingest_response["status_code"]
 
-    if ingestDataset_status_code != 202:
-        print("file ingest to TDR dataset failed.")
-        print(f"please refer to error message and retry ingest.")
-        print(f"ingestDataset response body: \n {load_job_response} \n")
-        raise ValueError(load_job_response)
+    # 202 = job is running as confirmed in ingest_dataset()
+    job_status_code, job_status_response = get_job_status(ingest_job_id)
 
-    # if ingestDataset_status_code == 202:  # if ingestDataset starts running successfully
-    job_status_code, job_response = get_job_status_and_result(ingestDataset_job_id)
-    while job_status_code == 202:           # while job is still running
-        time.sleep(10)  # wait 10 seconds
-        job_status_code, job_response = get_job_status_and_result(ingestDataset_job_id)
+    while job_status_code == 202:           # while job is running
+        print(f"{ingest_job_id} --> running")
+        time.sleep(10) # wait 10 seconds before getting job status
+        job_status_code, job_status_response = get_job_status(ingest_job_id) # get updated status info
 
-    if job_status_code != 200:              # when job completes but not success
-        error_message = job_response["errorDetail"]
-        print(f"Load job finished but did not succeed: {error_message}")
-        raise ValueError(error_message)
+    # job completes (‘failed’ or ‘succeeded’) with 200 status_code
+    # consider any combination other than 200 + succeeded as failure
+    if not (job_status_code == 200 and job_status_response["job_status"] == "succeeded"):
+        print(f"{ingest_job_id} --> failed")
+        # if failed, get the resulting error message
+        job_result_code, job_result_response = get_job_result(ingest_job_id)
+        raise ValueError(job_result_response)    
+
+    # job completes successfully
+    # success_code is 200 and "job_status" =is"succeeded"
+    print(f"{ingest_job_id} --> succeeded")
+    
+    # write load tag to output file from final succeeded job result response
+    job_result_code, job_result_response = get_job_result(ingest_job_id)
+    result_load_tag = job_result_response["load_tag"]
+    with open("load_tag.txt", "w") as loadfile:
+        loadfile.write(result_load_tag)
 
     print("File ingest to TDR dataset completed successfully.")
 
@@ -123,7 +151,6 @@ def create_newline_recoded_json(recoded_json_list, outfile_prefix):
 
     output_filename = f"{outfile_prefix}_newline_delimited.json"
     with open(output_filename, "w") as outfile:
-        # outfile.write('\n'.join(recoded_json_list))
         for recoded_dict in recoded_json_list:
             json.dump(recoded_dict, outfile)
             outfile.write("\n")
@@ -209,10 +236,11 @@ if __name__ == "__main__" :
     parser.add_argument('-b', '--bucket', required=True, type=str, help='workspace bucket to copy recoded json file')
     parser.add_argument('-d', '--dataset_id', required=True, type=str, help='id of TDR dataset for destination of outputs')
     parser.add_argument('-t', '--target_table_name', required=True, type=str, help='name of target table in TDR dataset')
+    parser.add_argument('-l', '--load_tag', required=False, type=str, help="load tag to allow for ingest of duplicate files in separate ingest calls")
 
     args = parser.parse_args()
 
     all_recoded_row_dicts, last_modified_date = parse_json_outputs_file(args.tsv)
     newline_recoded_outfile = create_newline_recoded_json(all_recoded_row_dicts, last_modified_date)
     control_file_path = write_load_json_to_bucket(args.bucket, newline_recoded_outfile)
-    call_ingest_dataset(control_file_path, args.target_table_name, args.dataset_id)
+    call_ingest_dataset(control_file_path, args.target_table_name, args.dataset_id, args.load_tag)
