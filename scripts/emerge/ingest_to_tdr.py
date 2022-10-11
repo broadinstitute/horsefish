@@ -236,7 +236,7 @@ if __name__ == "__main__" :
     parser.add_argument('-b', '--bucket', required=True, type=str, help='workspace bucket to copy recoded json file')
     parser.add_argument('-d', '--dataset_id', required=True, type=str, help='id of TDR dataset for destination of outputs')
     parser.add_argument('-t', '--target_table_name', required=True, type=str, help='name of target table in TDR dataset')
-    parser.add_argument('-l', '--load_tag', required=False, type=str, help="load tag allows for ingest of duplicate files in separate ingest calls")
+    parser.add_argument('-l', '--load_tag', required=False, type=str, help="load tag to allow for ingest of duplicate files in separate ingest calls")
 
     args = parser.parse_args()
 
