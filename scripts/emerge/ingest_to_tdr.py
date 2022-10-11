@@ -102,11 +102,7 @@ def call_ingest_dataset(control_file_path, target_table_name, dataset_id, load_t
     ingest_job_id = ingest_response["id"] # check for presence of id in ingest_dataset()
     ingest_status_code = ingest_response["status_code"]
 
-    if ingest_status_code != 202: # job submitted but fails
-        print(f"{ingest_job_id} --> failed")
-        raise ValueError(ingest_response)
-
-    # 202 = job is running
+    # 202 = job is running as confirmed in ingest_dataset()
     job_status_code, job_status_response = get_job_status(ingest_job_id)
 
     while job_status_code == 202:           # while job is running
@@ -116,7 +112,7 @@ def call_ingest_dataset(control_file_path, target_table_name, dataset_id, load_t
 
     # job completes (‘failed’ or ‘succeeded’) with 200 status_code
     # consider any combination other than 200 + succeeded as failure
-    if job_status_code != 200 or job_status_response["job_status"] != "succeeded":
+    if not (job_status_code == 200 and job_status_response["job_status"] == "succeeded"):
         print(f"{ingest_job_id} --> failed")
         # if failed, get the resulting error message
         job_result_code, job_result_response = get_job_result(ingest_job_id)
@@ -240,7 +236,7 @@ if __name__ == "__main__" :
     parser.add_argument('-b', '--bucket', required=True, type=str, help='workspace bucket to copy recoded json file')
     parser.add_argument('-d', '--dataset_id', required=True, type=str, help='id of TDR dataset for destination of outputs')
     parser.add_argument('-t', '--target_table_name', required=True, type=str, help='name of target table in TDR dataset')
-    parser.add_argument('-l', '--load_tag', required=False, type=str, help="load tag from a previous job")
+    parser.add_argument('-l', '--load_tag', required=False, type=str, help="load tag allows for ingest of duplicate files in separate ingest calls")
 
     args = parser.parse_args()
 
