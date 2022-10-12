@@ -15,4 +15,4 @@ if __name__ == '__main__':
     clear_banner_text = "[]"
 
     # push json string to bucket - clear banner
-    push_service_banner_json(env, clear_banner_text)
+    push_service_banner_json(args.env, clear_banner_text)
