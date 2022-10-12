@@ -35,16 +35,13 @@ if __name__ == '__main__':
 
     incident_id = str(uuid.uuid4())
 
-    existing_banner = get_banner(args.env)
-
-    print(existing_banner)
+    existing_banner = get_existing_banner_json(args.env)
 
     print(f"Publishing incident banner for incident ID {incident_id}")
 
     new_banner_entry = build_service_banner_json(args.title, args.message, args.link, incident_id)
 
-    print(new_banner_entry)
-
     existing_banner.append(new_banner_entry)
 
     push_service_banner_json(args.env, json.dumps(existing_banner))
+    

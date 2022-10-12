@@ -3,13 +3,12 @@ from google.cloud import storage as gcs
 import json
 
 def build_service_banner_json(title, message, link, incident_id):
-    """Create a json banner using args if they exist, else implement default values."""
-
     banner_dict = {"title": title, "message": message, "link": link, "incident_id": incident_id}
     return banner_dict
 
 
-def get_banner(env):
+def get_existing_banner_json(env):
+	#Get the existing banner so we can append or remove elements
     storage_client = gcs.Client()
 
     if env == "prod":
@@ -64,4 +63,4 @@ def push_service_banner_json(env, json_string=None):
     # delete the temporary file
     tmp_blob.delete()
 
-    print("Banner action complete.")
+    print("Banner upload complete.")

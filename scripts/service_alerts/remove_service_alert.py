@@ -16,7 +16,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    existing_banner = get_banner(args.env)
+    existing_banner = get_existing_banner_json(args.env)
 
     print(f"Removing incident banner for incident ID {args.incident_id}")
 
