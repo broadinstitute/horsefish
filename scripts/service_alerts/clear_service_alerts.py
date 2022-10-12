@@ -10,6 +10,8 @@ if __name__ == '__main__':
 
     parser.add_argument('--env', type=str, required=True,
                         help='"prod" or "dev" Terra environment for banner.')
+
+    args = parser.parse_args()
     
     # template json text for banner deletion
     clear_banner_text = "[]"
