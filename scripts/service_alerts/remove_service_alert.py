@@ -1,7 +1,7 @@
 import argparse
 from google.cloud import storage as gcs
 import json
-from utils import *
+import utils
 import uuid
 
 
@@ -16,10 +16,10 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    existing_banner = get_existing_banner_json(args.env)
+    existing_banner = utils.get_existing_banner_json(args.env)
 
     print(f"Removing incident banner for incident ID {args.incident_id}")
 
     filtered = filter(lambda incident: incident['incident_id'] != args.incident_id, existing_banner)
 
-    push_service_banner_json(args.env, json.dumps(list(filtered)))
+    utils.push_service_banner_json(args.env, json.dumps(list(filtered)))

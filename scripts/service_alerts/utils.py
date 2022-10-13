@@ -2,6 +2,7 @@ import argparse
 from google.cloud import storage as gcs
 import json
 
+
 def build_service_banner_json(title, message, link, incident_id):
     banner_dict = {"title": title, "message": message, "link": link, "incident_id": incident_id}
     return banner_dict

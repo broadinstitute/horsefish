@@ -1,7 +1,7 @@
 import argparse
 from google.cloud import storage as gcs
 import json
-from utils import *
+import utils
 
 
 if __name__ == '__main__':
@@ -17,4 +17,4 @@ if __name__ == '__main__':
     clear_banner_text = "[]"
 
     # push json string to bucket - clear banner
-    push_service_banner_json(args.env, clear_banner_text)
+    utils.push_service_banner_json(args.env, clear_banner_text)
