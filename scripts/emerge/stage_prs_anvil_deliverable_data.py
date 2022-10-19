@@ -75,19 +75,19 @@ def make_terra_data_table_tsvs(prs_dictionaries, dest_workspace, dest_namespace)
         upload_data_table(tsv, dest_workspace, dest_namespace)
 
 
-def copy_object(src_bucket_name, src_object_name, dest_bucket_name, dest_object_name):
+def copy_object(src_bucket_name, src_object_name, dest_bucket_name, dest_object_name, project_id=None):
     """Copies object from one bucket to another with a new name."""
 
     storage_client = gcs.Client()
 
-    source_bucket = storage_client.bucket(src_bucket_name)
+    source_bucket = storage_client.bucket(src_bucket_name, user_project=project_id)
     source_object = source_bucket.blob(src_object_name)
     destination_bucket = storage_client.bucket(dest_bucket_name)
 
     blob_copy = source_bucket.copy_blob(source_object, destination_bucket, dest_object_name)
 
 
-def rename_and_rehome_data_files(prs_entities_dicts, dest_bucket, snapshot_id):
+def rename_and_rehome_data_files(prs_entities_dicts, dest_bucket, snapshot_id, project_id=None):
     """For columns in the df that represent files, update paths pointing to the final bucket and copy files."""
 
     # file types and their file extensions to use for renaming files in delivery workspace
@@ -108,7 +108,13 @@ def rename_and_rehome_data_files(prs_entities_dicts, dest_bucket, snapshot_id):
             src_blob = "/".join(prs_entity[file_type].split("/")[3:]) # TDR source filepath
 
             print(f"Initiate copy of gs://{src_bucket}/{src_blob} to {dest_filepath}")
-            copy_object(src_bucket, src_blob, dest_bucket, dest_blob)
+
+            # if project provided for requester pays
+            if project_id:
+                copy_object(src_bucket, src_blob, dest_bucket, dest_blob, project_id)
+            # no requester pays project
+            else:
+                copy_object(src_bucket, src_blob, dest_bucket, dest_blob)
 
             # update dictionary with new paths in destiantion workspace
             prs_entity[file_type] = dest_filepath
@@ -190,9 +196,15 @@ if __name__ == "__main__" :
     parser.add_argument('-db', '--dest_bucket', required=True, type=str, help='bucket id (fc-) of destination workspace')
     parser.add_argument('-sw', '--src_workspace', required=True, type=str, help='name of source workspace')
     parser.add_argument('-sn', '--src_namespace', required=True, type=str, help='namespace/project of source workspace')
+    parser.add_argument('-p', '--project_id', type=str, help='project to use for requester pays')
 
     args = parser.parse_args()
 
     prs_entities_list, snapshot_id = get_prs_entities(args.src_workspace, args.src_namespace, args.ids_file)
-    prs_entities_rehomed = rename_and_rehome_data_files(prs_entities_list, args.dest_bucket, snapshot_id)
+
+    if args.project_id:
+        prs_entities_rehomed = rename_and_rehome_data_files(prs_entities_list, args.dest_bucket, snapshot_id, args.project_id)
+    else:
+        prs_entities_rehomed = rename_and_rehome_data_files(prs_entities_list, args.dest_bucket, snapshot_id)
+
     make_terra_data_table_tsvs(prs_entities_rehomed, args.dest_workspace, args.dest_namespace)
