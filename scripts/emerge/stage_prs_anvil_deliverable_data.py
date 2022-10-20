@@ -108,13 +108,7 @@ def rename_and_rehome_data_files(prs_entities_dicts, dest_bucket, snapshot_id, p
             src_blob = "/".join(prs_entity[file_type].split("/")[3:]) # TDR source filepath
 
             print(f"Initiate copy of gs://{src_bucket}/{src_blob} to {dest_filepath}")
-
-            # if project provided for requester pays
-            if project_id:
-                copy_object(src_bucket, src_blob, dest_bucket, dest_blob, project_id)
-            # no requester pays project
-            else:
-                copy_object(src_bucket, src_blob, dest_bucket, dest_blob)
+            copy_object(src_bucket, src_blob, dest_bucket, dest_blob, project_id)
 
             # update dictionary with new paths in destiantion workspace
             prs_entity[file_type] = dest_filepath
@@ -196,15 +190,13 @@ if __name__ == "__main__" :
     parser.add_argument('-db', '--dest_bucket', required=True, type=str, help='bucket id (fc-) of destination workspace')
     parser.add_argument('-sw', '--src_workspace', required=True, type=str, help='name of source workspace')
     parser.add_argument('-sn', '--src_namespace', required=True, type=str, help='namespace/project of source workspace')
-    parser.add_argument('-p', '--project_id', type=str, help='project to use for requester pays')
+    parser.add_argument('-p', '--project_id', default=None, type=str, help='project to use for requester pays')
 
     args = parser.parse_args()
 
+    # get back all the file paths for required files to deliver based on the list of input ids
     prs_entities_list, snapshot_id = get_prs_entities(args.src_workspace, args.src_namespace, args.ids_file)
-
-    if args.project_id:
-        prs_entities_rehomed = rename_and_rehome_data_files(prs_entities_list, args.dest_bucket, snapshot_id, args.project_id)
-    else:
-        prs_entities_rehomed = rename_and_rehome_data_files(prs_entities_list, args.dest_bucket, snapshot_id)
-
+    # rename the files and move them to the destination
+    prs_entities_rehomed = rename_and_rehome_data_files(prs_entities_list, args.dest_bucket, snapshot_id, args.project_id)
+    # create the terra data table tsv files pointing to the files in their new locations
     make_terra_data_table_tsvs(prs_entities_rehomed, args.dest_workspace, args.dest_namespace)
