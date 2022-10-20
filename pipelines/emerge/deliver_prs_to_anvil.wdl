@@ -4,7 +4,7 @@ workflow DeliverPrstoAnVIL {
     meta {
         description: "Gather all deliverable files for selected PRS samples, rename, and deliver to final AnVIL data delivery workspace."
     }
-    String pipeline_version = "1.0.0"
+    String pipeline_version = "1.0.1"
 
     input {
         Array[String]   prs_entity_ids
@@ -17,6 +17,9 @@ workflow DeliverPrstoAnVIL {
         String          dest_workspace_name
         String          dest_workspace_namespace
         String          dest_workspace_bucket_id
+
+        # requester pays
+        String?         project_id
     }
 
     call DeliverPrsDatatoAnVILWorkspace {
@@ -26,7 +29,8 @@ workflow DeliverPrstoAnVIL {
         src_workspace_namespace     = src_workspace_namespace,
         dest_workspace_name         = dest_workspace_name,
         dest_workspace_namespace    = dest_workspace_namespace,
-        dest_workspace_bucket_id    = dest_workspace_bucket_id
+        dest_workspace_bucket_id    = dest_workspace_bucket_id,
+        project_id                  = project_id
     }
 
     output {
@@ -44,6 +48,7 @@ task DeliverPrsDatatoAnVILWorkspace {
         String          dest_workspace_name
         String          dest_workspace_namespace
         String          dest_workspace_bucket_id
+        String?         project_id
     }
 
     command {
@@ -52,7 +57,8 @@ task DeliverPrsDatatoAnVILWorkspace {
                                                                     -sn ~{src_workspace_namespace} \
                                                                     -dw ~{dest_workspace_name} \
                                                                     -dn ~{dest_workspace_namespace} \
-                                                                    -db ~{dest_workspace_bucket_id}
+                                                                    -db ~{dest_workspace_bucket_id} \
+                                                                    ~{"-p=" + project_id}
     }
 
     runtime {
