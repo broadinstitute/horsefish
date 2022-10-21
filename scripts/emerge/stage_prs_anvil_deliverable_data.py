@@ -82,9 +82,19 @@ def copy_object(src_bucket_name, src_object_name, dest_bucket_name, dest_object_
 
     source_bucket = storage_client.bucket(src_bucket_name, user_project=project_id)
     source_object = source_bucket.blob(src_object_name)
-    destination_bucket = storage_client.bucket(dest_bucket_name)
+    destination_bucket = storage_client.bucket(dest_bucket_name, user_project=project_id)
+    destination_object = destination_bucket.blob(dest_object_name)
 
-    blob_copy = source_bucket.copy_blob(source_object, destination_bucket, dest_object_name)
+    # rewrite instead of copy - https://cloud.google.com/storage/docs/json_api/v1/objects/copy
+    # TLDR; use rewrite vs copy: copy uses rewrite but only calls rewrite once.
+    # if using copy, larger objects can require multiple rewrite calls leading to "Payload too large errors."
+    # using rewrite in the following manner supports multiple rewrites
+    rewrite_token = False
+    while True:
+        rewrite_token, bytes_rewritten, bytes_to_rewrite = destination_object.rewrite(source_object, token=rewrite_token)
+        print(f"\n Progress so far: {bytes_rewritten}/{bytes_to_rewrite} bytes.\n")
+        if not rewrite_token:
+            break
 
 
 def rename_and_rehome_data_files(prs_entities_dicts, dest_bucket, snapshot_id, project_id=None):
