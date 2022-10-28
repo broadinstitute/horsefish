@@ -127,10 +127,17 @@ def list_bucket_files(project, bucket_name, referenced_files, verbose):
             return None
 
         full_file_path = "gs://" + bucket_name + "/" + blob_name
-        # Splits the bucket file: "gs://bucket_Id/submission_id/file_path", by the '/' symbol
-        # and stores values in a 5 length array: ['gs:', '' , 'bucket_Id', submission_id, file_path]
-        # to extract the submission id from the 4th element (index 3) of the array
-        submission_id = full_file_path.split('/', 4)[3]
+        # support new submissions directory structure in Terra bucket
+        submissions_dir = "submissions"
+        if full_file_path.split('/', 4)[3] == submissions_dir:
+            # new format is gs://bucket_id/submissions/submission_id/remaining_path
+            submission_id = full_file_path.split('/', 5)[4]
+        else:
+            # old format is gs://bucket_id/submission_id/remaining_path
+            # Splits the bucket file: "gs://bucket_Id/submission_id/file_path", by the '/' symbol
+            # and stores values in a 5 length array: ['gs:', '' , 'bucket_Id', submission_id, file_path]
+            # to extract the submission id from the 4th element (index 3) of the array
+            submission_id = full_file_path.split('/', 4)[3]
 
         file_metadata = {
             "file_name": blob_name.split('/')[-1],
