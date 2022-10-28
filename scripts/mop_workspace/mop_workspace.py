@@ -174,6 +174,8 @@ def delete_files_call(bucket_name, list_of_blobs_to_delete):
     print(type(on_error_list))
     print(type(on_error))
 
+    print("UM HELLO")
+
     storage_client = storage.Client()
 
     # # establish a storage client that will close
