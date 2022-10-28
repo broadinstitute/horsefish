@@ -205,6 +205,12 @@ def delete_files(bucket_name, files_to_delete, verbose):
 
     CHUNK_SIZE = 100
 
+    on_error_list = [lambda blob: None]
+    on_error = lambda blob: None
+    print(type(on_error_list))
+    print(type(on_error))
+
+
     if n_files_to_delete > CHUNK_SIZE:
         chunked_blobs = list(partition_all(CHUNK_SIZE, blobs))
         n_chunks = len(chunked_blobs)
