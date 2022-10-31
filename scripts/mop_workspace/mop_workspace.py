@@ -170,11 +170,6 @@ def list_bucket_files(project, bucket_name, referenced_files, verbose):
 def delete_files_call(bucket_name, list_of_blobs_to_delete):
     # don't throw an error if blob not found
     on_error_list = [lambda blob: None]
-    on_error = lambda blob: None
-    print(type(on_error_list))
-    print(type(on_error))
-
-    print("UM HELLO")
 
     storage_client = storage.Client()
 
@@ -207,7 +202,9 @@ def delete_files(bucket_name, files_to_delete, verbose):
 
     on_error_list = [lambda blob: None]
     on_error = lambda blob: None
+    print("on_error_list type:")
     print(type(on_error_list))
+    print("on_error type:")
     print(type(on_error))
 
 
