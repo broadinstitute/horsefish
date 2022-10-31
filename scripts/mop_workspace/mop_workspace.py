@@ -24,8 +24,6 @@ from datetime import timedelta, datetime
 from firecloud import api as fapi
 
 
-# show version of google storage
-print(f"google.cloud.storage version: {storage.__version__}")
 
 def _entity_paginator(namespace, workspace, etype, page_size=500,
                       filter_terms=None, sort_direction="asc"):
@@ -237,6 +235,9 @@ def get_parent_directory(filepath):
 
 def mop(project, workspace, include, exclude, dry_run, save_dir, yes, verbose, weeks_old):
     '''Clean up unreferenced data in a workspace'''
+
+    # show version of google storage
+    print(f"using google.cloud.storage version: {storage.__version__}")
 
     # First retrieve the workspace to get bucket information
     if verbose:
