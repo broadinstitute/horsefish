@@ -24,7 +24,6 @@ from datetime import timedelta, datetime
 from firecloud import api as fapi
 
 
-
 def _entity_paginator(namespace, workspace, etype, page_size=500,
                       filter_terms=None, sort_direction="asc"):
     """Pages through the get_entities_query endpoint to get all entities in
@@ -305,7 +304,7 @@ def mop(project, workspace, include, exclude, dry_run, save_dir, yes, verbose, w
     # List files present in the bucket
     bucket_dict = list_bucket_files(project, bucket, referenced_files, verbose)
 
-    all_bucket_files = set(file_metadata['file_path'] for file_metadata in bucket_dict.values())
+    # all_bucket_files = set(file_metadata['file_path'] for file_metadata in bucket_dict.values())
 
     # Check to see if bucket file path contain the user's submission id
     # to ensure deletion of files in the submission directories only.
