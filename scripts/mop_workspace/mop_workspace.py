@@ -24,6 +24,9 @@ from datetime import timedelta, datetime
 from firecloud import api as fapi
 
 
+# show version of google storage
+print(f"google.cloud.storage version: {storage.__version__}")
+
 def _entity_paginator(namespace, workspace, etype, page_size=500,
                       filter_terms=None, sort_direction="asc"):
     """Pages through the get_entities_query endpoint to get all entities in
