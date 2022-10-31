@@ -170,14 +170,14 @@ def list_bucket_files(project, bucket_name, referenced_files, verbose):
 # todo add retries
 def delete_files_call(bucket_name, list_of_blobs_to_delete):
     # don't throw an error if blob not found
-    on_error_list = [lambda blob: None]
+    on_error = lambda blob: None
 
     storage_client = storage.Client()
 
     # # establish a storage client that will close
     # with storage.Client as storage_client:
     bucket = storage_client.bucket(bucket_name)
-    bucket.delete_blobs(list_of_blobs_to_delete, on_error=on_error_list)
+    bucket.delete_blobs(list_of_blobs_to_delete, on_error=on_error)
 
     # storage_client.close()
 
@@ -200,13 +200,6 @@ def delete_files(bucket_name, files_to_delete, verbose):
     # storage_client.close()
 
     CHUNK_SIZE = 100
-
-    on_error_list = [lambda blob: None]
-    on_error = lambda blob: None
-    print("on_error_list type:")
-    print(type(on_error_list))
-    print("on_error type:")
-    print(type(on_error))
 
 
     if n_files_to_delete > CHUNK_SIZE:
