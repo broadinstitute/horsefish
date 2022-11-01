@@ -169,14 +169,14 @@ def list_bucket_files(project, bucket_name, referenced_files, verbose):
 # todo add retries
 def delete_files_call(bucket_name, list_of_blobs_to_delete):
     # don't throw an error if blob not found
-    on_error_list = [lambda blob: None]
+    on_error = lambda blob: None
 
     storage_client = storage.Client()
 
     # # establish a storage client that will close
     # with storage.Client as storage_client:
     bucket = storage_client.bucket(bucket_name)
-    bucket.delete_blobs(list_of_blobs_to_delete, on_error_list)
+    bucket.delete_blobs(list_of_blobs_to_delete, on_error=on_error)
 
     # storage_client.close()
 
@@ -199,6 +199,7 @@ def delete_files(bucket_name, files_to_delete, verbose):
     # storage_client.close()
 
     CHUNK_SIZE = 100
+
 
     if n_files_to_delete > CHUNK_SIZE:
         chunked_blobs = list(partition_all(CHUNK_SIZE, blobs))
@@ -226,6 +227,9 @@ def get_parent_directory(filepath):
 
 def mop(project, workspace, include, exclude, dry_run, save_dir, yes, verbose, weeks_old):
     '''Clean up unreferenced data in a workspace'''
+
+    # show version of google storage
+    print(f"using google.cloud.storage version: {storage.__version__}")
 
     # First retrieve the workspace to get bucket information
     if verbose:
@@ -300,7 +304,7 @@ def mop(project, workspace, include, exclude, dry_run, save_dir, yes, verbose, w
     # List files present in the bucket
     bucket_dict = list_bucket_files(project, bucket, referenced_files, verbose)
 
-    all_bucket_files = set(file_metadata['file_path'] for file_metadata in bucket_dict.values())
+    # all_bucket_files = set(file_metadata['file_path'] for file_metadata in bucket_dict.values())
 
     # Check to see if bucket file path contain the user's submission id
     # to ensure deletion of files in the submission directories only.
