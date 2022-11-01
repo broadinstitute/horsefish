@@ -1,27 +1,14 @@
-
-# import json
-# import sys
-import os
-# import time
-# from inspect import getsourcelines
-# from traceback import print_tb as print_traceback
-from io import open
-# from fnmatch import fnmatchcase
-# from math import ceil
 import argparse
-# import re
-# import requests
-# import warnings
-# import pandas as pd
+import os
+
 from concurrent.futures import ThreadPoolExecutor
-from google.cloud import storage
-from six import string_types #, iteritems, itervalues, u, text_type
-# from six.moves import input
+from datetime import timedelta, datetime
+from firecloud import api as fapi
+from google.cloud import storage  # note: please use version 2.5.0
+from io import open
+from six import string_types
 from toolz.itertoolz import partition_all
 from tqdm import tqdm
-from datetime import timedelta, datetime
-
-from firecloud import api as fapi
 
 
 def _entity_paginator(namespace, workspace, etype, page_size=500,
@@ -173,12 +160,8 @@ def delete_files_call(bucket_name, list_of_blobs_to_delete):
 
     storage_client = storage.Client()
 
-    # # establish a storage client that will close
-    # with storage.Client as storage_client:
     bucket = storage_client.bucket(bucket_name)
     bucket.delete_blobs(list_of_blobs_to_delete, on_error=on_error)
-
-    # storage_client.close()
 
 
 def delete_files(bucket_name, files_to_delete, verbose):
@@ -190,13 +173,10 @@ def delete_files(bucket_name, files_to_delete, verbose):
     # extract blob_name (full path minus bucket name)
     blob_names = [full_path.replace("gs://" + bucket_name + "/", "") for full_path in files_to_delete]
 
-    # with storage.Client as storage_client:
     storage_client = storage.Client()
 
     bucket = storage_client.bucket(bucket_name)
     blobs = [bucket.blob(blob_name) for blob_name in blob_names]
-
-    # storage_client.close()
 
     CHUNK_SIZE = 100
 
@@ -303,8 +283,6 @@ def mop(project, workspace, include, exclude, dry_run, save_dir, yes, verbose, w
 
     # List files present in the bucket
     bucket_dict = list_bucket_files(project, bucket, referenced_files, verbose)
-
-    # all_bucket_files = set(file_metadata['file_path'] for file_metadata in bucket_dict.values())
 
     # Check to see if bucket file path contain the user's submission id
     # to ensure deletion of files in the submission directories only.
