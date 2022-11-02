@@ -13,7 +13,7 @@ All the above steps are idempotent EXCEPT the creation of the WFL workload. If y
 
 
 # to run using Docker:
-Authorize as the user you use for TDR and WFL that has access to the appropriate resources (TDR dataset, Terra workspace, WFL).
+Authorize (`gcloud auth login`) as the user you use for TDR and WFL that has access to the appropriate resources (TDR dataset, Terra workspace, WFL).
 
 Given a TDR dataset uuid `MY-TDR-UUID`, run:
 
