@@ -10,6 +10,8 @@ from datetime import datetime
 from google.cloud import storage as gcs
 from oauth2client.client import GoogleCredentials
 
+# DEVELOPER: update this field anytime you make a new docker image and update changelog
+version = "1.0"
 
 def get_access_token():
     """Get access token."""
@@ -72,11 +74,11 @@ def ingest_dataset(dataset_id, data):
     return json.loads(response.text)
 
 
-def create_ingest_dataset_request(control_file_path, target_table_name, load_tag=None):
+def create_ingest_dataset_request(ingest_records, target_table_name, load_tag=None):
     """Create the ingestDataset request body."""
 
-    load_dict = {"format": "json",
-                 "path": control_file_path,
+    load_dict = {"format": "array",
+                 "records": ingest_records,
                  "table": target_table_name,
                  "resolve_existing_files": "true",
                  "updateStrategy": "replace"
@@ -129,33 +131,6 @@ def call_ingest_dataset(control_file_path, target_table_name, dataset_id, load_t
         loadfile.write(result_load_tag)
 
     print("File ingest to TDR dataset completed successfully.")
-
-
-def write_load_json_to_bucket(bucket, filename):
-    """Copy newline delimited json file to workspace bucket."""
-
-    control_file_destination = f"{bucket}/control_files"
-
-    storage_client = gcs.Client()
-    dest_bucket = storage_client.get_bucket(bucket)
-
-    blob = dest_bucket.blob(f"control_files/{filename}")
-    blob.upload_from_filename(filename)
-
-    print(f"Successfully copied {filename} to {control_file_destination}/{filename}.")
-    return f"gs://{control_file_destination}/{filename}"
-
-
-def create_newline_recoded_json(recoded_json_list, outfile_prefix):
-    """Create a newline delimited json file from recoded dictionaries in list."""
-
-    output_filename = f"{outfile_prefix}_newline_delimited.json"
-    with open(output_filename, "w") as outfile:
-        for recoded_dict in recoded_json_list:
-            json.dump(recoded_dict, outfile)
-            outfile.write("\n")
-
-    return output_filename
 
 
 def create_recoded_json(row_json):
@@ -241,6 +216,4 @@ if __name__ == "__main__" :
     args = parser.parse_args()
 
     all_recoded_row_dicts, last_modified_date = parse_json_outputs_file(args.tsv)
-    newline_recoded_outfile = create_newline_recoded_json(all_recoded_row_dicts, last_modified_date)
-    control_file_path = write_load_json_to_bucket(args.bucket, newline_recoded_outfile)
-    call_ingest_dataset(control_file_path, args.target_table_name, args.dataset_id, args.load_tag)
+    call_ingest_dataset(all_recoded_row_dicts, args.target_table_name, args.dataset_id, args.load_tag)
