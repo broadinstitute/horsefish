@@ -6,7 +6,7 @@ ENV HOME=/
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 
-COPY ingest_to_tdr.py /scripts/emerge/ingest_to_tdr.py
+COPY * /scripts/emerge/
 
 ENV PYTHONPATH "/scripts:${PYTHONPATH}"
 

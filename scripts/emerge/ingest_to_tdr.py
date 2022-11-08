@@ -92,10 +92,10 @@ def create_ingest_dataset_request(ingest_records, target_table_name, load_tag=No
     return load_json
 
 
-def call_ingest_dataset(control_file_path, target_table_name, dataset_id, load_tag=None):
+def call_ingest_dataset(recoded_row_dicts, target_table_name, dataset_id, load_tag=None):
     """Create the ingestDataset API json request body and call API."""
 
-    ingest_dataset_request = create_ingest_dataset_request(control_file_path, target_table_name, load_tag) # create request for ingestDataset
+    ingest_dataset_request = create_ingest_dataset_request(recoded_row_dicts, target_table_name, load_tag) # create request for ingestDataset
     print(f"ingestDataset request body: \n {ingest_dataset_request} \n")
 
     ingest_response = ingest_dataset(dataset_id, ingest_dataset_request) # call ingestDataset
@@ -208,7 +208,6 @@ if __name__ == "__main__" :
     parser = argparse.ArgumentParser(description='Push Arrays.wdl outputs to TDR dataset.')
 
     parser.add_argument('-f', '--tsv', required=True, type=str, help='tsv file of files to ingest to TDR')
-    parser.add_argument('-b', '--bucket', required=True, type=str, help='workspace bucket to copy recoded json file')
     parser.add_argument('-d', '--dataset_id', required=True, type=str, help='id of TDR dataset for destination of outputs')
     parser.add_argument('-t', '--target_table_name', required=True, type=str, help='name of target table in TDR dataset')
     parser.add_argument('-l', '--load_tag', required=False, type=str, help="load tag to allow for ingest of duplicate files in separate ingest calls")
