@@ -11,3 +11,9 @@ workflows:
    primaryDescriptorPath: /pipelines/emerge/deliver_prs_to_anvil.wdl
    testParameterFiles:
     - empty.json
+
+ - name: simulations_demo
+   subclass: WDL
+   primaryDescriptorPath: /pipelines/idm_gates/simulations_demo.wdl
+   testParameterFiles:
+    - empty.json
