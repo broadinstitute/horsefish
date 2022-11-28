@@ -188,7 +188,7 @@ def create_recoded_json(row_json):
 def parse_json_outputs_file(input_tsv):
     """Create a recoded json dictionary per row in input."""
 
-    tsv_df = pd.read_csv(input_tsv, sep="\t")
+    tsv_df = pd.read_csv(input_tsv, sep="\t", dtype=object)
     all_recoded_row_dicts = []
 
     for index, row in tsv_df.iterrows():
