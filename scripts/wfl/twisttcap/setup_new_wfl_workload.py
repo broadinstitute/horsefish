@@ -37,12 +37,15 @@ def get_dataset_id(dataset_name):
 
     uri = f"https://data.terra.bio/api/repository/v1/datasets?offset=0&limit=10&filter={dataset_name}"
 
+    print("pizzacake")
+    print(get_headers())
     response = requests.get(uri, get_headers())
-
-    response_data = response.json()
 
     if response.status_code != 200:
         raise ValueError(f"Failed to retrieve dataset id, response code {response.status_code}, text: {response.text}")
+
+    print(response)
+    response_data = response.json()
 
     assert response_data["filteredTotal"] == 1
 
