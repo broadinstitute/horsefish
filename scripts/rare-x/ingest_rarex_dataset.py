@@ -1,14 +1,10 @@
 # imports and environment variables
 import argparse
 import json
-import pandas as pd
-import pytz
 import requests
 import time
 
-from datetime import datetime
 from google.cloud import storage
-from google.cloud import storage as gcs
 from oauth2client.client import GoogleCredentials
 
 
@@ -23,7 +19,7 @@ def get_access_token():
 
 
 def get_job_result(job_id):
-    """retrieveJobResult"""
+    """Call retrieveJobResult."""
 
     # first check job status - retrieveJob
     uri = f"https://data.terra.bio/api/repository/v1/jobs/{job_id}/result"
@@ -39,7 +35,7 @@ def get_job_result(job_id):
 
 
 def get_job_status(job_id):
-    """retrieveJobStatus"""
+    """Call retrieveJobStatus."""
 
     # first check job status - retrieveJob
     uri = f"https://data.terra.bio/api/repository/v1/jobs/{job_id}"
@@ -138,7 +134,7 @@ def run_ingest(dataset_id, data_filepaths):
         print(f"Submit ingest response body: \n {ingest_response} \n")
 
         ingest_complete_response = monitor_ingest(ingest_response)
-        print(f"Finished ingest response body: \n {ingest_response} \n")
+        print(f"Finished ingest response body: \n {ingest_complete_response} \n")
 
         print(f"Finished ingest for table {table_name}. \n\n")
 
@@ -160,18 +156,20 @@ def get_json_paths(bucket_name, subdir):
     if not paths:
         raise ValueError(f"Error: There were no .json files found at gs://{bucket_name}{subdir}. Please confirm path and try again.")
     
-    print(f"Gathered all json files from gs://{bucket_name}/{subdir}.")
+    print(f"Finished gathering {len(paths)} json files from gs://{bucket_name}/{subdir} for ingest.")
     return paths
 
 
 if __name__ == "__main__" :
-    parser = argparse.ArgumentParser(description='Push Arrays.wdl outputs to TDR dataset.')
+    parser = argparse.ArgumentParser(description="Ingest data from json files in a GCP bucket into a TDR dataset.")
 
-    parser.add_argument('-b', '--bucket_path', required=True, type=str, help='gs://bucket_name/subdir/ pointing to new-line delimited json files for ingest to dataset')
-    parser.add_argument('-d', '--dataset_id', required=True, type=str, help='id of TDR dataset for destination of outputs')
+    parser.add_argument('-b', '--bucket_path', required=True, type=str, help="gs://bucket_name/subdir/ pointing to new-line delimited json files for ingest to dataset")
+    parser.add_argument('-d', '--dataset_id', required=True, type=str, help="id of TDR dataset for destination of outputs")
 
     args = parser.parse_args()
 
+    # parse bucket_name and subdirectories
+    # TODO: handle if there is no subdir
     if args.bucket_path.startswith("gs://"):
         bucket_name = args.bucket_path.split("/")[2] # bucket_name
         subdir = "/".join(args.bucket_path.split("/")[3:]).strip("/") # subdirectory path in bucket
