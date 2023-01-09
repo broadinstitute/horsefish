@@ -144,8 +144,15 @@ def get_json_paths(bucket_name, subdir):
 
     storage_client = storage.Client()
 
-    # add tailing "/" for subdir as required by storage_client
-    blobs = storage_client.list_blobs(bucket_name, prefix=f"{subdir}/", delimiter='/')
+    if not subdir:
+        prefix = None
+        delimiter = None
+    else:
+        # add tailing "/" for subdir as required by storage_client
+        prefix = f"{subdir}/"
+        delimiter = "/"
+
+    blobs = storage_client.list_blobs(bucket_name, prefix=prefix, delimiter=delimiter)
 
     # get paths to json files at listed bucket path
     paths = []
@@ -154,7 +161,7 @@ def get_json_paths(bucket_name, subdir):
             paths.append(f"gs://{bucket_name}/{blob.name}")
 
     if not paths:
-        raise ValueError(f"Error: There were no .json files found at gs://{bucket_name}{subdir}. Please confirm path and try again.")
+        raise ValueError(f"Error: There were no .json files found at gs://{bucket_name}/{subdir}. Please confirm path and try again.")
     
     print(f"Finished gathering {len(paths)} json files from gs://{bucket_name}/{subdir} for ingest.")
     return paths
@@ -176,6 +183,6 @@ if __name__ == "__main__" :
     else:
         bucket_name = args.bucket_path.split("/")[0] # bucket_name
         subdir = "/".join(args.bucket_path.split("/")[1:]).strip("/") # subdirectory path in bucket
-    
+
     paths = get_json_paths(bucket_name, subdir)
     run_ingest(args.dataset_id, paths)
