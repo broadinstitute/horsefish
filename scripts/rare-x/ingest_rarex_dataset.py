@@ -176,7 +176,6 @@ if __name__ == "__main__" :
     args = parser.parse_args()
 
     # parse bucket_name and subdirectories
-    # TODO: handle if there is no subdir
     if args.bucket_path.startswith("gs://"):
         bucket_name = args.bucket_path.split("/")[2] # bucket_name
         subdir = "/".join(args.bucket_path.split("/")[3:]).strip("/") # subdirectory path in bucket
