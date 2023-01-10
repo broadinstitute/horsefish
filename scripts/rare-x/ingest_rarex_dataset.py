@@ -116,10 +116,10 @@ def create_ingest_dataset_request(ingest_filepath, target_table_name):
     return load_json
 
 
-def run_ingest(dataset_id, data_filepaths):
-    """For each json path, create ingest request and ingest to TDR dataset."""
+def run_ingest(dataset_id, ingest_data_json_filepaths):
+    """For each json path containing data to ingest, create ingest request and ingest to corresponding TDR dataset table."""
 
-    for path in data_filepaths:
+    for path in ingest_data_json_filepaths:
         # path = gs://bucket_name/subdir/filename.json
         # filename = ingest destination table in dataset 
         table_name = path.split("/")[-1].split(".")[0]
@@ -127,11 +127,11 @@ def run_ingest(dataset_id, data_filepaths):
 
         # create request for ingestDataset
         ingest_request = create_ingest_dataset_request(path, table_name) 
-        print(f"Submit ingest request body: \n {ingest_request} \n")
+        print(f"Submitted ingest request body: \n {ingest_request} \n")
 
         # call ingestDatset
         ingest_response = ingest_dataset(dataset_id, ingest_request) # call ingestDataset
-        print(f"Submit ingest response body: \n {ingest_response} \n")
+        print(f"Submitted ingest response body: \n {ingest_response} \n")
 
         ingest_complete_response = monitor_ingest(ingest_response)
         print(f"Finished ingest response body: \n {ingest_complete_response} \n")
@@ -139,8 +139,8 @@ def run_ingest(dataset_id, data_filepaths):
         print(f"Finished ingest for table {table_name}. \n\n")
 
 
-def get_json_paths(bucket_name, subdir):
-    """Get list of gs:// paths for each new-line delimited json."""
+def get_ingest_data_json_filepaths(bucket_name, subdir):
+    """Get list of gs:// paths for each new-line delimited json containing data to ingest into TDR dataset table."""
 
     storage_client = storage.Client()
 
@@ -154,7 +154,7 @@ def get_json_paths(bucket_name, subdir):
 
     blobs = storage_client.list_blobs(bucket_name, prefix=prefix, delimiter=delimiter)
 
-    # get paths to json files at listed bucket path
+    # capture paths to json files containing data to ingest at listed bucket path
     paths = []
     for blob in blobs:
         if blob.name.endswith(".json"):
@@ -163,7 +163,7 @@ def get_json_paths(bucket_name, subdir):
     if not paths:
         raise ValueError(f"Error: There were no .json files found at gs://{bucket_name}/{subdir}. Please confirm path and try again.")
     
-    print(f"Finished gathering {len(paths)} json files from gs://{bucket_name}/{subdir} for ingest.")
+    print(f"Finished gathering {len(paths)} json files from gs://{bucket_name}/{subdir} for ingest into TDR dataset.")
     return paths
 
 
@@ -183,5 +183,7 @@ if __name__ == "__main__" :
         bucket_name = args.bucket_path.split("/")[0] # bucket_name
         subdir = "/".join(args.bucket_path.split("/")[1:]).strip("/") # subdirectory path in bucket
 
-    paths = get_json_paths(bucket_name, subdir)
+    # get list of gs:// paths pointing to data ingest json files
+    paths = get_ingest_data_json_filepaths(bucket_name, subdir)
+    # run ingest of each json file to corresponding TDR dataset table
     run_ingest(args.dataset_id, paths)
