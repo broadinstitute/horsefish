@@ -101,14 +101,14 @@ def ingest_dataset(dataset_id, data):
     return json.loads(response.text)
 
 
-def create_ingest_dataset_request(ingest_filepath, target_table_name):
+def create_ingest_dataset_request(ingest_filepath, target_table_name, update_strategy="replace"):
     """Create the ingestDataset request body."""
 
     load_dict = {"format": "json",
                  "path": ingest_filepath,
                  "table": target_table_name,
                  "resolve_existing_files": "true",
-                 "updateStrategy": "replace"
+                 "updateStrategy": update_strategy
                 }
 
     load_json = json.dumps(load_dict) # dict -> json
@@ -116,7 +116,7 @@ def create_ingest_dataset_request(ingest_filepath, target_table_name):
     return load_json
 
 
-def run_ingest(dataset_id, ingest_data_json_filepaths):
+def run_ingest(dataset_id, ingest_data_json_filepaths, update_strategy="replace"):
     """For each json path containing data to ingest, create ingest request and ingest to corresponding TDR dataset table."""
 
     for path in ingest_data_json_filepaths:
@@ -126,7 +126,7 @@ def run_ingest(dataset_id, ingest_data_json_filepaths):
         print(f"Starting ingest of {path} to table: {table_name}.")
 
         # create request for ingestDataset
-        ingest_request = create_ingest_dataset_request(path, table_name) 
+        ingest_request = create_ingest_dataset_request(path, table_name, update_strategy) 
         print(f"Submitted ingest request body: \n {ingest_request} \n")
 
         # call ingestDatset
@@ -172,6 +172,7 @@ if __name__ == "__main__" :
 
     parser.add_argument('-b', '--bucket_path', required=True, type=str, help="gs://bucket_name/subdir/ pointing to new-line delimited json files for ingest to dataset")
     parser.add_argument('-d', '--dataset_id', required=True, type=str, help="id of TDR dataset for destination of outputs")
+    parser.add_argument('-u', '--update_strategy', default="replace", type=str, help="update strategy choices: merge, replace, or append. default = replace")
 
     args = parser.parse_args()
 
@@ -186,4 +187,4 @@ if __name__ == "__main__" :
     # get list of gs:// paths pointing to data ingest json files
     paths = get_ingest_data_json_filepaths(bucket_name, subdir)
     # run ingest of each json file to corresponding TDR dataset table
-    run_ingest(args.dataset_id, paths)
+    run_ingest(args.dataset_id, paths, args.update_strategy)
