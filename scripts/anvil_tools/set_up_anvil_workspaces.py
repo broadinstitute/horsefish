@@ -16,6 +16,7 @@ from utils import add_user_to_authorization_domain, \
 
 
 ADMIN_ANVIL_EMAIL = "anvil-admins@firecloud.org"
+DEVELOPER_ANVIL_EMAIL = "AnVIL_Devs@firecloud.org"
 
 
 def add_members_to_workspace(workspace_name, auth_domain_name, project="anvil_datastorage"):
@@ -23,7 +24,8 @@ def add_members_to_workspace(workspace_name, auth_domain_name, project="anvil_da
 
     acls = []
     # add auth domain as READER, anvil-admins as OWNER
-    acls.append({'email': f'{auth_domain_name}@firecloud.org', 'accessLevel': 'READER', 'canShare': False, 'canCompute': False})
+    if not pd.isna(auth_domain_name):
+        acls.append({'email': f'{auth_domain_name}@firecloud.org', 'accessLevel': 'READER', 'canShare': False, 'canCompute': False})
     acls.append({'email': 'anvil-admins@firecloud.org', 'accessLevel': 'OWNER', 'canShare': True, 'canCompute': True})
 
     json_request = json.dumps(acls)
@@ -108,7 +110,8 @@ def make_create_workspace_request(workspace_name, auth_domain_name, project="anv
 
     create_ws_request["namespace"] = project
     create_ws_request["name"] = workspace_name
-    create_ws_request["authorizationDomain"] = [{"membersGroupName": f'{auth_domain_name}'}]
+    if not pd.isna(auth_domain_name):
+        create_ws_request["authorizationDomain"] = [{"membersGroupName": f'{auth_domain_name}'}]
     create_ws_request["attributes"] = {}
     # TODO: set noWorkspaceOwner = True for data delivery workspaces - picard svc is the only owner
     create_ws_request["noWorkspaceOwner"] = False
@@ -125,14 +128,15 @@ def setup_auth_domain(auth_domain_name):
     if not ad_success:  # AD create fail
         return False, ad_message
 
-    # AD create successful
-    permission = "ADMIN"
-    is_add_user, add_user_message = add_user_to_authorization_domain(auth_domain_name, ADMIN_ANVIL_EMAIL, permission)
+    # AD create successful -- Add admin and developer user groups to Auth Domain
+    is_add_admin_user, add_admin_user_message = add_user_to_authorization_domain(auth_domain_name, ADMIN_ANVIL_EMAIL, "ADMIN")
+    is_add_dev_user, add_dev_user_message = add_user_to_authorization_domain(auth_domain_name, DEVELOPER_ANVIL_EMAIL, "MEMBER")
 
-    if not is_add_user:  # add user to AD fail - create AD success
+    if not is_add_admin_user or not is_add_dev_user:  # add users to AD failure
+        add_user_message = "; ".join([add_admin_user_message, add_dev_user_message])
         return False, add_user_message
 
-    return True, None  # add user to AD success - create AD success
+    return True, None  # add users to AD success - create AD success
 
 
 def setup_single_workspace(workspace, project="anvil-datastorage"):
@@ -141,9 +145,9 @@ def setup_single_workspace(workspace, project="anvil-datastorage"):
     # initialize workspace dictionary with default values assuming failure
     workspace_dict = {"input_workspace_name": "NA",
                       "input_auth_domain_name": "NA",
-                      "auth_domain_email": "Incomplete",
+                      "auth_domain_email": "NA",
                       "auth_domain_setup_error": "NA",
-                      "email_added_to_AD": "Incomplete",
+                      "email_added_to_AD": "NA",
                       "workspace_link": "Incomplete",
                       "workspace_creation_error": "NA",
                       "workspace_ACLs": "Incomplete",
@@ -152,18 +156,19 @@ def setup_single_workspace(workspace, project="anvil-datastorage"):
 
     # start authorization domain
     auth_domain_name = workspace['auth_domain_name']
-    workspace_dict["input_auth_domain_name"] = auth_domain_name
-    setup_ad_success, setup_ad_message = setup_auth_domain(auth_domain_name)
+    if not pd.isna(auth_domain_name):
+        workspace_dict["input_auth_domain_name"] = auth_domain_name
+        setup_ad_success, setup_ad_message = setup_auth_domain(auth_domain_name)
 
-    if not setup_ad_success:
-        workspace_dict["auth_domain_setup_error"] = setup_ad_message
-        return workspace_dict
+        if not setup_ad_success:
+            workspace_dict["auth_domain_setup_error"] = setup_ad_message
+            return workspace_dict
 
-    # AD creation and add member to AD success
-    workspace_dict["auth_domain_email"] = f"{auth_domain_name}@firecloud.org"   # update dict with created AD email
-    workspace_dict["email_added_to_AD"] = ADMIN_ANVIL_EMAIL                     # update dict with member added to AD
+        # AD creation and add member to AD success
+        workspace_dict["auth_domain_email"] = f"{auth_domain_name}@firecloud.org"   # update dict with created AD email
+        workspace_dict["email_added_to_AD"] = ", ".join([ADMIN_ANVIL_EMAIL, DEVELOPER_ANVIL_EMAIL])   # update dict with member added to AD
 
-    # workspace creation if AD set up succeeds
+    # workspace creation if AD set up succeeds or no AD specified
     workspace_name = workspace["workspace_name"]
     workspace_dict["input_workspace_name"] = workspace_name
 
