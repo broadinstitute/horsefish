@@ -253,3 +253,17 @@
     1. `--tsv`, `-t`: input .tsv file (required)
     2. `--array_columns`, `-a`: .txt file, new line delimited, to capture columns/attributes that are or array type (default = NO array type columns/attributes)
     3. `--json_output`: parameter to set if a local json file of the final json request is required (default = NO local json output file created)
+
+
+#### **examine_gcs_contents.py**
+##### Description
+    Outputs the contents of up to two GCS paths, comparing if multiple paths are specified.
+    
+    Input is one or two GCS paths.
+##### Usage
+    Locally
+        `python3 examine_gcs_contents.py -s GCS_PATH_1 [-t GCS_PATH_2]`
+##### Flags
+    1. `--source_path`, `-s`: First GCS path to output contents for.
+    2. `--target_path`, `-t`: Optional second GCS path to output contents for, and compare to first GCS path.
+ 
