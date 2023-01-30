@@ -12,19 +12,6 @@ import numpy as np
 import re
 import subprocess
 
-#
-def run_subprocess(cmd, errorMessage):
-    if isinstance(cmd, list):
-        cmd = ' '.join(cmd)
-    try:
-        # print("running command: " + cmd)
-        return subprocess.check_output(
-            cmd, shell=True, universal_newlines=True)
-    except subprocess.CalledProcessError as e:
-        print(errorMessage)
-        print("Exited with " + str(e.returncode) + "-" + e.output)
-        exit(1)
-
 # Function to parse gsutil ls -L contents into dict structure
 def parse_ls_output(subprocess_output):
     records = []
@@ -50,6 +37,8 @@ def parse_ls_output(subprocess_output):
                 elif "Update time:" in line:
                     m = re.match("\s*Update time:\s*(.*)", line).group(1)
                     file_dict["Modified"] = m
+    if file_dict:
+        records.append(file_dict)
     return records
 
 # Function to compare contents of two specified GCS paths
