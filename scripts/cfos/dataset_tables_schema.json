@@ -1,13 +1,198 @@
-{
-    "inph" : {"donor": ["donor_id", "hasOrganismType", "age_at_biopsy", "APOE_atDonorAge", "APOE_value", "follow_up_years",
-                            "has_disease", "has_phenotypic_sex", "MMSE_Biopsy_atDonorAge", "MMSE_Biopsy_value",
-                            "MMSE_Final_atDonorAge", "MMSE_Final_value", "neuropathology"],
-                  "biosample": ["biosample_id", "donor_id", "hasAnatomicalSite", "hasDonorAge", "hasBioSampleType", "biosample_id_of_file"],
-                  "file": ["biosample_id", "DataModality", "donor_id", "summary_file_path", "features_file_path",
-                           "matrix_file_path", "barcode_file_path", "library_id"],
-                  "library": ["library_id", "comment", "donor_id", "UMI_threshold"]
-                },
+{"fields" : {
+  "donor_id" : {
+    "field_name" : "donor_id",
+    "field_type" : "id",
+    "is_unique" : "True"
+  },
+    "age_at_biopsy" : {
+      "field_name" : "age_at_biopsy",
+      "field_type" : "number",
+      "integer_only" : "True"
+    }, 
+    "APOE_atDonorAge" : {
+      "field_name" : "APOE_atDonorAge",
+      "field_type" : "number",
+      "integer_only" : "True"
+    }, 
+    "APOE_value" : {
+      "field_name" : "APOE_value",
+      "field_type" : "number",
+      "integer_only" : "True"
+    }, 
+    "follow_up_years" : {
+      "field_name" : "follow_up_years",
+      "field_type" : "number",
+      "integer_only" : "True"
+    },
+    "MMSE_Biopsy_atDonorAge" : {
+      "field_name" : "MMSE_Biopsy_atDonorAge",
+      "field_type" : "number",
+      "integer_only" : "True"
+    }, 
+    "MMSE_Biopsy_value" : {
+      "field_name" : "MMSE_Biopsy_value",
+      "field_type" : "number",
+      "integer_only" : "True"
+    },
+    "MMSE_Final_atDonorAge" : {
+      "field_name" : "MMSE_Final_atDonorAge",
+      "field_type" : "number",
+      "integer_only" : "True"
+    },
+    "MMSE_Final_value" : {
+      "field_name" : "MMSE_Final_value",
+      "field_type" : "number",
+      "integer_only" : "True"
+    },
+    "hasAnatomicalSite" : {
+      "field_name" : "hasAnatomicalSite",
+      "field_type" : "free_text"
+    },
+    "hasDonorAge": {
+      "field_name" : "hasDonorAge",
+      "field_type" : "number",
+      "integer_only" : "True"
+    },
+    "biosample_id_of_file" : {
+      "field_name" : "biosample_id_of_file",
+      "field_type" : "free_text",
+      "value_required" : "True"
+    },
+    "biosample_id" : {
+      "field_name" : "biosample_id",
+      "field_type" : "id",
+      "is_unique" : "True"
+    },
+    "summary_file_path" : {
+      "field_name" : "summary_file_path",
+      "field_type" : "file_path",
+      "pattern_to_match" : "^gs://"
+    },
+    "features_file_path" : {
+      "field_name" : "features_file_path",
+      "field_type" : "file_path",
+      "pattern_to_match" : "^gs://"
+    },
+    "matrix_file_path" : {
+      "field_name" : "matrix_file_path",
+      "field_type" : "file_path",
+      "pattern_to_match" : "^gs://"
+    },
+    "barcode_file_path" : {
+      "field_name" : "barcode_file_path",
+      "field_type" : "file_path",
+      "pattern_to_match" : "^gs://"
+    },
+    "comment" : {
+      "field_name" : "comment",
+      "field_type" : "free_text"
+    },
+    "UMI_threshold" : {
+      "field_name" : "UMI_threshold",
+      "field_type" : "number",
+      "integer_only" : "True"
+    },
+    "hasOrganismType" : {
+      "field_name" : "hasOrganismType",
+      "field_type" : "category",
+      "allowed_values" : ["C elegans", "Canis lupus familiaris (dog)", "Ciona intestinalis (Ascidian)",
+                          "Danio rerio (zebrafish)", "Drosophila melanogaster (fruit fly)", 
+                          "Homo sapiens (human)", "Mus musculus (mouse)", "Oryctolagus cuniculus (rabbit)",
+                          "Paracentrotus lividus (Rock sea urchin)", "Rattus norvegicus (rat)",
+                          "Sphaerechinus granularis (Violet sea urchin)"]
+    },
+
+    "has_phenotypic_sex" : {
+      "field_name" : "has_phenotypic_sex",
+      "field_type" : "category",
+      "allowed_values" : ["Male", "Female", "Intersex"]
+    },
+
+    "neuropathology" : {
+      "field_name" : "neuropathology",
+      "field_type" : "category",
+      "allowed_values" : ["Abeta", "AbetaTau", "None reported"]
+    },
+
+    "hasBioSampleType" : {
+      "field_name" : "hasBioSampleType",
+      "field_type" : "category",
+      "allowed_values" : ["CellLine", "Derived_In vitro differentiated", "Derived_Induced pluripotent stem cell",
+                          "Derived_Organoid", "BodyFluid_Amniotic fluid", "Blood_Buffy coat", "Blood_Erythrocyte",
+                          "Blood_Leukocyte", "Blood_PBMC", "Blood_Plasma", "Blood_Platelet", "Blood_Serum",
+                          "Blood_Whole Blood", "BodyFluid_BreastMilk", "BodyFluid_Cerebrospinal fluid",
+                          "BodyFluid_Saliva", "BodyFluid_Semen", "BodyFluid_Synovial fluid", "BodyFluid_Urine",
+                          "BodyFluid_Vaginal secretions", "Cell free DNA", "Cell_BCell", "Cell_Lymphocyte",
+                          "Cell_Monocyte", "Cell_T cell", "Primary Culture", "Stool", "Tissue"]
+    },
+
+    "DataModality" : {
+      "field_name" : "DataModality",
+      "field_type" : "category",
+      "allowed_values" : ["Epigenomic", "Epigenomic_3D Contact Maps", "Epigenomic_DNABinding",
+                                "Epigenomic_DNABinding_HistoneModificationLocation", "Epigenomic_DNABinding_TranscriptionFactorLocation",
+                                "Epigenomic_DNAChromatinAccessibility", "Epigenomic_DNAMethylation", "Epigenomic_RNABinding", "Genomic",
+                                "Genomic_Assembly", "Genomic_Exome", "Genomic_Genotyping_Targeted", "Genomic_WholeGenome",
+                                "Imaging_Electrophysiology", "Imaging_Microscopy", "Medical imaging _CTScan", "Medical imaging _Electrocardiogram",
+                                "Medical imaging _MRI", "Medical imaging _Xray", "Metabolomic", "Microbiome", "Metagenomic", "Proteomic",
+                                "Transcriptomic", "SpatialTranscriptomics", "Trascriptomic_Targeted", "Trascriptomic_NonTargeted"]
+    },
+
+    "has_disease" : {
+      "field_name" : "has_disease",
+      "field_type" : "category",
+      "allowed_values": ["y", "n"]
+    },
+
+    "not_here" : {
+      "field_name" : "not_here"
+    }
+  },
+  
+  "schema_definitions" : {
+    "inph" : {
+      "donor": [
+        "donor_id",
+        "hasOrganismType", 
+        "age_at_biopsy", 
+        "APOE_atDonorAge", 
+        "APOE_value", 
+        "follow_up_years",
+        "has_disease", 
+        "has_phenotypic_sex", 
+        "MMSE_Biopsy_atDonorAge",
+        "MMSE_Biopsy_value",
+        "MMSE_Final_atDonorAge",
+        "MMSE_Final_value",
+        "neuropathology"
+      ],
+      "biosample": [
+        "biosample_id",
+        "donor_id",
+        "hasAnatomicalSite",
+        "hasDonorAge",
+        "hasBioSampleType",
+        "biosample_id_of_file"
+      ],
+      "file": [
+        "biosample_id",
+        "DataModality",
+        "donor_id",
+        "summary_file_path",
+        "features_file_path",
+        "matrix_file_path",
+        "barcode_file_path",
+        "library_id"
+      ],
+      "library": [
+        "library_id",
+        "comment",
+        "donor_id",
+        "UMI_threshold"
+      ]
+    },
     "imgl" : {},
     "imperial" : {},
     "dataset4" : {}
+  }  
 }
