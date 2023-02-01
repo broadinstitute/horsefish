@@ -1,22 +1,15 @@
 """Parse user supplied input to create data tables in Terra workspaces for the appropriate type/format of dataset.
 
 Usage:
-    > python3 make_dataset_data_tables.py -d DATASET_TYPE -x EXCEL_FILE -w TERRA_WORKSPACE_NAME -p TERRA_WORKSPACE_PROJECT 
-"""
+    > python3 make_dataset_data_tables.py -d DATASET_TYPE -x EXCEL_FILE -w TERRA_WORKSPACE_NAME -p TERRA_WORKSPACE_PROJECT """
 import argparse
-import os
 from firecloud import api as fapi
 import json
+import os
 import pandas as pd
 from pandas_schema import*
 from pandas_schema.validation import*
-import validate
-# from validate import DATA_TABLE_VALIDATE_AND_FORMAT_SCHEMA as schema_validator
-from data_tables_class import cfos_data
-# from dataset_custom_errors import EmptySchemaDefinitionException
-
-
-
+from validate import dynamically_validate_df as validate_df
 
 
 def upload_dataset_table_to_workspace(tsv_filenames_list, workspace_name, workspace_project):
@@ -95,32 +88,35 @@ def generate_load_table_files(dataset_tables_dict):
     return tsv_filenames_list
 
 
-def create_dataset_tables_dictionary(validated_dataset, dataset_name, dataset_table_names, schema_dict):
-    """For a given dataset, subset/separate input columns into individual table dataframes."""
+def validate_dataset(dataset, schema_dict, field_dict):
+    for table in list(schema_dict.keys()):
+        if table not in list(dataset.keys()):
+            print(f"Failed: Missing required table {table}.")
+            print(dataset.keys())
+            exit()
 
-    # instantiate empty dictionary to capture {table_name: table_metadata_dataframe}
-    dataset_tables_dict = {}
+        errors = validate_df(field_dict=field_dict, schema_column_list=schema_dict[table], data_df=dataset[table])
+        # get indices of the failed rows
+        errors_index_rows = [e.row for e in errors]
 
-    # create a subset df for each table defined in the chosen dataset
-    for table in dataset_table_names:
-        # get subset dataframe for specific table for given dataset name
-        table_df = dataset_metadata[schema_dict[dataset_name][table]]
+        # if any errors, print error message and exit
+        if errors_index_rows:
+            print(f"Failed: Dataset validation errors found in table {table}. Please retry after correcting errors listed in validation_errors.csv.")
+            pd.DataFrame({'validation_error':errors}).to_csv('validation_errors.csv')
+            exit()
 
-        # TODO: edit the value = dataframe for a table to have the entity:table_name_id format
-
-        # add KVP {table name : table_df} entry to all tables dictionary
-        dataset_tables_dict[table] = table_df
-
-    print(f"Success: Dataset has been partitioned into {len(dataset_table_names)} tables: {dataset_table_names}")
-    return dataset_tables_dict
-
-
-def validate_dataset(data, field_definition_dict):
-    # Validate the full dataset metadata with Schema validator.
-
-    # Build validation based on field definitions dictionary
-
-    """ # capture errors from the validation against the pre-defined validations per column
+        # TODO: determine how to handle drops of failed rows/columns to get cleaned data
+        # errors_index_rows = [e.row for e in errors]
+        # data_clean = dataset_metadata_df.drop(index=errors_index_rows, axis=1)
+        # data_clean.to_csv('clean_data.csv')
+        print(f"Success: Table {table} has been validated.")
+    
+    print(f"Success: Dataset has been validated.")
+    return dataset
+    
+    """Validate the full dataset metadata with Schema validator."""
+    """
+    # capture errors from the validation against the pre-defined validations per column
     errors = schema_validator.validate(dataset, columns=schema_validator.get_column_names())
     # get indices of the failed rows
     errors_index_rows = [e.row for e in errors]
@@ -136,125 +132,59 @@ def validate_dataset(data, field_definition_dict):
     # data_clean = dataset_metadata_df.drop(index=errors_index_rows, axis=1)
     # data_clean.to_csv('clean_data.csv')
     print(f"Success: Dataset has been validated.")
-    return dataset """
+    return dataset
+    """
 
 
-def load_excel_input(excel, field_definitions_dict):
-    # Read excel file input into a dataframe and validate for required columns.
+def col_is_in_defined_fields(col_name, field_dict):
+    list_of_fields = list(field_dict.keys())
+    if col_name in list_of_fields:
+        return True
+
+    return False
+
+
+def load_excel_input(excel, allowed_dataset_cols):
+    """Read excel file input into a dataframe and validate for required columns."""
 
     try:
-        raw_dataset_df = pd.read_excel(excel, sheet_name=None, skiprows=2, index_col=None)
+        raw_dataset_df = pd.read_excel(excel, sheet_name=None, skiprows=2, index_col=None, usecols=lambda x: x in allowed_dataset_cols)
         
     # TODO: Add better file error handling    
     except ValueError as e:
         print(e)
         exit()
-
-    return flatten_dataframe_columns(raw_df=raw_dataset_df, field_definitions_dict=field_definitions_dict)
-
-def flatten_dataframe_columns(raw_df, field_definitions_dict):
-    all_columns_df = pd.DataFrame()
     
-    for sheet in list(raw_df.keys()):
-        for column_name in list(raw_df[sheet].keys()):
-            if column_name in list(field_definitions_dict.keys()):
-                all_columns_df[column_name] = raw_df[sheet][column_name]
-                
+    """    
+    try:
+        dataset_metadata_df = pd.read_excel(excel, sheet_name="Sheet1", skiprows=2, usecols=expected_dataset_cols, index_col=None)
+
+    except ValueError as e:
+        # if the value error is about missing columns in input file
+        if len(e.args) > 0 and e.args[0].startswith("Usecols do not match columns, columns expected but not found"):
+            missing_cols = e.args[0].split(":")[1]
+            print(f"Failed: Input excel file has the following missing columns that are required: {missing_cols}")
+        else:
+            print(e)
+        exit()
+    """
+
     print("Success: Excel file has been loaded into a dataframe.")
-    return all_columns_df
+    return raw_dataset_df #dataset_metadata_df
 
 
-"""
-    for table_name in dataset_table_names:
-        try:
-            dataset_metadata_df = pd.read_excel(excel, sheet_name=table_name, skiprows=2, usecols=schema_dict[table_name], index_col=None)
-            print(dataset_metadata_df)
-
-        except ValueError as e:
-            # if the value error is about missing columns in input file
-            if len(e.args) > 0 and e.args[0].startswith("Usecols do not match columns, columns expected but not found"):
-                missing_cols = e.args[0].split(":")[1]
-                print(f"Failed: Input excel file sheet {table_name} has the following missing columns that are required: {missing_cols}")
-            else:
-                print(e)
-            exit()
-    
-    print("Success: Excel file has been loaded into a dataframe.")
-    return dataset_metadata_df
-"""
-
-"""
-def get_expected_columns_list(schema_json, dataset_name):
-    # Get list of expected columns in excel based on selected dataset schema.
+def parse_config_file(schema_json, dataset_name):
+    """Get list of expected columns in excel based on selected dataset schema."""
 
     # read schema into dictionary
     with open(schema_json) as schema:
-        schema_dict = json.load(schema)
+        config_dict = json.load(schema)
 
-    # get list of tables for a given dataset name
-    dataset_table_names = list(schema_dict["schema_definitions"][dataset_name].keys())
+    schema_dict = config_dict["schema_definitions"]
+    column_dict = config_dict["fields"]
 
-    # get all cols (attributes) from all tables for dataset
-    # returns nested list of lists with column names
-    nested_dataset_cols = [schema_dict["schema_definitions"][dataset_name][table] for table in dataset_table_names]
-    # unnest for flat list of columns to parse from excel file
-    expected_dataset_cols = [col for table_cols in nested_dataset_cols for col in table_cols]
-
-    print("Success: Expected list of columns has been determined.")
-    return expected_dataset_cols, dataset_table_names, schema_dict["schema_definitions"][dataset_name]
-"""
-
-def load_config_file(config_json, schema_type):
-    if schema_type is None or schema_type == "":
-        schema_type = "all_fields"
-
-    with open(config_json) as config:
-        config_dict = json.load(config)
-
-    fields = get_config_field_dict(config_dict=config_dict)
-    schemas = get_config_schema_dict(config_dict=config_dict, schema_type=schema_type)
-
-    return schemas, fields
-
-def get_config_field_dict(config_dict):
-    return config_dict["fields"]
-
-def get_config_schema_dict(config_dict, schema_type):
-    if schema_type is None or str.strip(schema_type) == "":
-        field_list = list(config_dict["schema_definitions"].keys())
-        return {"data" : field_list}
-
-    # print("schema: ")
-    # print(config_dict["schema_definitions"][schema_type])
-    
-    return config_dict["schema_definitions"][schema_type]
-    
-    """ try:
-        schema_dict = config_dict["schema_definitions"][schema_type]
-        if schema_dict is None or len(list(schema_dict.keys())) < 1:
-            raise EmptySchemaDefinitionException
-
-    except EmptySchemaDefinitionException:
-        quit() """
-
-
-def extract_config_fields(raw_df, field_dict):
-    processed_data_df = pd.DataFrame()
-
-    # if field exists in the data frame, add it to the new data frame
-    for table in raw_df:
-        for field in table:
-            if field in list(field_dict.keys()):
-                processed_data_df[field] = raw_df[table][field]
-    # if field doesn't exist in the data frame, skip it for now
-    return processed_data_df
-
-def flatten_df_one_level(df):
-    flat_df = pd.DataFrame()
-    for table in df:
-        pd.concat(flat_df, table)
-    
-    return flat_df
+    print("Success: Config file parsed.")
+    return schema_dict, column_dict
 
 
 if __name__ == "__main__":
@@ -276,7 +206,7 @@ if __name__ == "__main__":
         '-x', 
         '--excel', 
         required=False, 
-        default=os.path.expanduser('~/Documents/CFoS_Multi_Sheet.xlsx'), 
+        default=os.path.expanduser('~/Documents/CFoS_Multi_Sheet_No_Headers.xlsx'), 
         type=str, 
         help='CFoS data excel file (.xlsx) - based on CFoS data intake template file.'
     )
@@ -316,42 +246,23 @@ if __name__ == "__main__":
         action='store_true', 
         help='Set parameter to upload data table files to workspace. default = no upload'
     )
+
     args = parser.parse_args()
 
     # parse schema using dataset name to get list of expected columns
-    # expected_dataset_cols, dataset_table_names, schema_dict = get_expected_columns_list(args.schema, args.dataset_name)
-    schema_definition_dict, field_definition_dict = load_config_file(schema_type='inph', config_json=args.schema)
-    
+    schema_dict, column_dict = parse_config_file(schema_json=args.schema, dataset_name=args.dataset_name)
     # load excel to dataframe validating to check if all expected columns present
-    dataset_df = load_excel_input(args.excel, field_definitions_dict=field_definition_dict)
-    # validate_data_frame(field_definition_dict=field_definition_dict, data_df=dataset_df)
-    print("data:")
-    print(dataset_df)
-    print("")
-    field_validation_list = validate.create_field_validation_list(field_dict=field_definition_dict,data_dict=dataset_df)
-    print("Validation:")
-    print(field_validation_list)
-    validation_build_dict = validate.create_validation_build_dict(fields_dict=field_definition_dict, fields_to_validate_list=field_validation_list)
-    print("")
-    print("validation build dictionary:")
-    print(validation_build_dict)
-    validate.dynamically_validate_df(data_df=dataset_df, field_dict=field_definition_dict)
+    dataset_metadata = load_excel_input(args.excel, list(column_dict.keys()))
 
-
-
-
-
-    """ 
     # if validation flag, only validate
     if args.validate:
         validated_dataset = validate_dataset(dataset_metadata)
     else:
-        validated_dataset = validate_dataset(dataset_metadata)
-        dataset_tables_dict = create_dataset_tables_dictionary(validated_dataset, args.dataset_name, dataset_table_names, schema_dict)
-        tsv_filenames_list = generate_load_table_files(dataset_tables_dict)
+        validated_dataset = validate_dataset(dataset=dataset_metadata, schema_dict=schema_dict[args.dataset_name], field_dict=column_dict)
+        tsv_filenames_list = generate_load_table_files(validate_dataset)
     
     # if upload flag, upload generated tsv files to Terra workspace
     if args.upload and args.workspace and args.project:
         upload_dataset_table_to_workspace(tsv_filenames_list, args.workspace, args.project)
-    """
-    # python3 make_dataset_data_tables.py -d inph -x test_data/CFoS_Template.xlsx -j dataset_tables_schema.json -p broad-cfos-data-platform1 -w cFOS_automation_testing 
+
+    # python3 make_dataset_data_tables.py -d inph -x test_data/CFoS_Template.xlsx -j dataset_tables_schema.json -p broad-cfos-data-platform1 -w cFOS_automation_testing
