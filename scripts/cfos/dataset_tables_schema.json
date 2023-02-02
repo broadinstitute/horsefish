@@ -114,6 +114,11 @@
       "allowed_values" : ["Abeta", "AbetaTau", "None reported"]
     },
 
+    "file_id" : {
+      "field_name" : "file_id",
+      "field_type" : "id"
+    },
+
     "hasBioSampleType" : {
       "field_name" : "hasBioSampleType",
       "field_type" : "category",
@@ -142,6 +147,11 @@
       "field_name" : "has_disease",
       "field_type" : "category",
       "allowed_values": ["y", "n"]
+    },
+
+    "library_id": {
+        "field_name" : "library_id",
+        "field_type" : "id"
     },
 
     "not_here" : {
@@ -179,6 +189,7 @@
         "biosample_id_of_file"
       ],
       "file": [
+        "file_id",
         "biosample_id",
         "DataModality",
         "donor_id",

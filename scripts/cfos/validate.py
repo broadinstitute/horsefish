@@ -5,9 +5,7 @@ import re
 
 # validators
 # column values cannot be null
-null_validation = [CustomElementValidation(lambda d: d is not np.nan, 'this field cannot be null')]
-column_exists = [CustomElementValidation(False, "this adds the field to the schema to handle\
-                  cases where a column doesn't have validation rules added")]
+null_validation = CustomElementValidation(lambda d: d is not np.nan, 'this field cannot be null')
 
 
 def create_field_validation_list(field_dict, schema_column_list):
@@ -29,6 +27,8 @@ def field_exists_in_df(field_id, df):
 
 # unclear if this is necessary
 def required_field(field_id, field_dict):
+   if field_id not in list(field_dict.keys()):
+      return False
    field_id_keys = list(field_dict[field_id].keys())
 
    if get_optional_field_key() not in field_id_keys:
@@ -43,13 +43,10 @@ def required_field(field_id, field_dict):
 def field_attribute_is_true(field_id, field_dict, attribute_to_check):
    # handle null defaults to "true" on a field-by-field basis outside this function
    if attribute_to_check not in list(field_dict[field_id].keys()):
-      # print(f"attribute {attribute_to_check} not in field key list")
       return False
 
    if field_dict[field_id][attribute_to_check] == "True":
-      # print(f"attribute {attribute_to_check} is true")
       return True
-   # print(f"attribute {attribute_to_check} not true")
    return False
 
 
@@ -67,12 +64,9 @@ def field_attribute_value_exists(field_id, field_dict, attribute_to_check):
 def check_field_type(field_id, field_dict, expected_type):
    type_key = get_field_type_key()
    if type_key not in list(field_dict[field_id].keys()):
-      # print(f"{type_key} is not in the list of keys for {field_id}")
       return False
 
    field_type = field_dict[field_id][type_key]
-
-   # print(f"{field_type} should match {expected_type}")
 
    if field_type == expected_type:
       return True
@@ -138,13 +132,6 @@ def create_validation_build_dict(fields_dict, fields_to_validate_list):
             field_dict=fields_dict,
             validation_dict=dynamic_validation_build_dict
          )
-      """
-      if must_be_unique_column():
-         add_unique_validation(
-            field_id=field_id,
-            validation_dict=dynamic_validation_build_dict
-         )
-      """
 
    return dynamic_validation_build_dict      
 
@@ -181,7 +168,11 @@ def add_matches_pattern_validation(validation_dict, field_dict, field_id):
    should look into whether there's a way to consolidate this logic more
    """
    pattern = str()
-   if field_attribute_value_exists(field_id=field_id, field_dict=field_dict, attribute_to_check=get_field_pattern_to_match_key()):
+   if field_attribute_value_exists(
+      field_id=field_id, 
+      field_dict=field_dict, 
+      attribute_to_check=get_field_pattern_to_match_key()
+   ):
       pattern = str(field_dict[field_id][get_field_pattern_to_match_key()]).strip()
 
    # TODO: allow JSON to specify custom default patterns for file_path fields
@@ -189,7 +180,7 @@ def add_matches_pattern_validation(validation_dict, field_dict, field_id):
       and is_file_path_field_type(field_id=field_id,field_dict=field_dict):
       pattern = "^gs://"
    
-   validation = MatchesPatternValidation({pattern})
+   validation = MatchesPatternValidation(pattern)
    add_validation(validation_dict=validation_dict, field_id=field_id, validation_object_to_add=validation)
 
 
@@ -214,14 +205,6 @@ def add_integer_only_validation(validation_dict, field_id):
    validation = IsDtypeValidation(int)
    add_validation(validation_dict=validation_dict, field_id=field_id, validation_object_to_add=validation)
 
-""" def add_valid_range(validation_dict, field_id, min, max):
-   # waiting for use case before instantiating this, but here's the idea --> 
-   if min is None or max is None:
-      quit()
-   
-   validation = f"InRangeValidation({min}, {max})"
-   validation_dict[field_id].append(validation) """
-
 
 
 # MAIN VALIDATION CODE
@@ -229,30 +212,31 @@ def dynamically_validate_df(data_df, field_dict, schema_column_list):
    fields_to_validate_list = create_field_validation_list(schema_column_list=schema_column_list, field_dict=field_dict)
 
    dynamic_validation_build_guide_dict = create_validation_build_dict(fields_dict=field_dict, fields_to_validate_list=fields_to_validate_list)
-   validation_code = create_validation_code_from_logic(validation_build_guide_dict=dynamic_validation_build_guide_dict)
    
-   errors = validation_code.validate(data_df)
+   validation_code = create_validation_code_from_logic(
+      validation_build_guide_dict=dynamic_validation_build_guide_dict, 
+      fields_to_validate=fields_to_validate_list
+   )
+
+   errors = validation_code.validate(data_df, columns=(validation_code.get_column_names()))
    for error in errors:
       print(error)
 
-   print("validation field list:")
-   print(fields_to_validate_list)
-   print("")
-   print("fields:")
-   for key in list(data_df.keys()):
-      if key not in fields_to_validate_list:
-         print(key)
-   #print(data_df.keys())
    return errors
 
 
-def create_validation_code_from_logic(validation_build_guide_dict):
+def create_validation_code_from_logic(validation_build_guide_dict, fields_to_validate):
    columns_logic_list = []
    
-   for column_id in list(validation_build_guide_dict.keys()):
-      validation_logic_list = validation_build_guide_dict[column_id]
-      # validation_logic_string = ", ".join(validation_logic_list)
-      columns_logic_list.append(Column(column_id, validation_logic_list))
+   for column_id in list(fields_to_validate):
+      if column_id not in list(validation_build_guide_dict.keys()):
+         column = Column(name=column_id)
+      
+      else:
+         validation_logic_list = validation_build_guide_dict[column_id]
+         column = Column(name=column_id, validations=validation_logic_list)
+         
+      columns_logic_list.append(column)
    
    return Schema(columns_logic_list)
 
@@ -288,9 +272,3 @@ def get_file_path_type_val():
 
 def get_numeric_field_type_val():
    return "number"
-
-def get_category_field_type_val():
-   return "category"
-
-def get_file_path_field_type_val():
-   return "file_path"
