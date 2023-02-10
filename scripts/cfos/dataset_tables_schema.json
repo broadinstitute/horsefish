@@ -152,12 +152,6 @@
     "library_id": {
         "field_name" : "library_id",
         "field_type" : "id"
-    },
-
-    "not_here" : {
-      "field_name" : "not_here",
-      "field_type" : "number",
-      "integer_only" : "False"
     }
   },
   
