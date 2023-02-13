@@ -7,17 +7,6 @@ import re
 # column values cannot be null
 null_validation = CustomElementValidation(lambda d: d is not np.nan, 'this field cannot be null')
 
-
-def create_field_validation_list(field_dict, schema_column_list):
-   field_dict_keys_list = list(field_dict.keys())
-   validation_fields = set()
-
-   for field_id in schema_column_list:
-      # can add "or field_exists_in_df(field_id=field_id, df=data_dict)" to allow users to include additional columns
-      if required_field(field_id=field_id, field_dict=field_dict):
-         validation_fields.add(field_id)
-
-   return validation_fields
       
 def field_exists_in_df(field_id, df):
     if field_id in list(df.keys()):
@@ -109,7 +98,6 @@ def create_validation_build_dict(fields_dict, fields_to_validate_list):
    dynamic_validation_build_dict = {}
 
    for field_id in fields_to_validate_list:
-      # TODO: add explicit field type validation later
       if null_value_invalid(field_id=field_id, fields_dict=fields_dict):
          add_null_validation(
             field_id=field_id,
@@ -208,9 +196,7 @@ def add_integer_only_validation(validation_dict, field_id):
 
 
 # MAIN VALIDATION CODE
-def dynamically_validate_df(data_df, field_dict, schema_column_list):
-   fields_to_validate_list = create_field_validation_list(schema_column_list=schema_column_list, field_dict=field_dict)
-
+def dynamically_validate_df(data_df, field_dict, fields_to_validate_list):
    dynamic_validation_build_guide_dict = create_validation_build_dict(fields_dict=field_dict, fields_to_validate_list=fields_to_validate_list)
    
    validation_code = create_validation_code_from_logic(

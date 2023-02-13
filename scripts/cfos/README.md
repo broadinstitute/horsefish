@@ -27,7 +27,7 @@
             - requires workspace name and workspace project arguments
 
 ##### Usage
-    1. only validate input excel file
+    1. only validate input excel file - if provided, this overrides the tsv creation and "upload" settings
         `python3 /scripts/cfos/make_dataset_data_tables.py -x EXCEL_FILE -d DATASET_NAME -j SCHEMA_JSON -v`
     
     2. only validate and create load tsv files locally but no upload to Terra workspace
@@ -70,12 +70,10 @@ SCHEMA SETUP
 
 This is a JSON file used to set up validation for expected columns, values, and input schemas for data being loaded into Terra. 
 
-[Future to-do: Each workspace within the project has its own configuration file.]
-
-The JSON is split into two sections. One section lists and describes all the columns of data expected in the input. By default, these columns are treated as required for successful data ingest. [Future to-do: They can be specified individually as optional.] Another section defines various schemas which indicate the expected organization of the files, both in the input file and upon upload to the database.
+The JSON is split into two sections. One section lists and describes all the columns of data expected in the input. By default, these columns are treated as required for successful data ingest. Another section defines various schemas which indicate the expected organization of the files, both in the input file and upon upload to the database.
 
 What are schemas? 
-Schemas are different ways of organizing the columns of data. This will determine how many tables will be created to store the data in Terra, and which columns appear in which tables. All columns specified in the schema being used must be present in the input file for successful data upload. [Future to-do: If no schema is provided/specified, the data will be uploaded all into the same table in Terra and in no particular order.]
+Schemas are different ways of organizing the columns of data. This will determine how many tables will be created to store the data in Terra, and which columns appear in which tables. All columns specified in the schema being used must be present in the input file for successful data upload.
 
 Which schema to use is specified as an input to the upload script at run time.
 
@@ -83,6 +81,9 @@ How do you define columns?
  Columns of data are defined in the “Fields” section of the JSON document. Each column must have a unique column_ID, which is used to identify the column in the input document. The column_ID is the value under which the rest of the column information is stored in the JSON dictionary. 
 
 Each field has the following attributes. Attributes that are “type-specific” are listed under the corresponding field “data type”. 
+
+Note: if you have the same field in multiple tables, the same validation will apply to both, unless they are named something unique. AKA: if "filename" in one table should be alphanumeric and in another table should be an integer, you need to name the fields "tablex_filename" and tabley_filename" to apply different validation.
+
 
 Field:
 column_ID
@@ -156,42 +157,5 @@ Format for JSON:
 	}
 
 
-
-Notes about running the script:
-
-it is assumed that all rows are sent in the same order. Rows will be concatenated together in the order they are in the sheet
-
-
-
-Random notes (to be removed before publishing):
-# loop over JSON field_defs to create the schema validation
-
-# ingest JSON
-
-# access field_defs and loop over fields
- 
-each field_def will have the following defined:
-   - field_name
-   - field_type: (default: free_text)
-      - category
-         - allowed_values
-      - free_text
-      - number
-         - integer_only
-         - valid_range
-      - file_path
-      - id
-   
-for each field:
-   if field_type == category:
-      - add "InListValidation" for allowed_values list
-   if field_type == number:
-      if "integer_only" == True:
-         - add "IsDtypeValidation(int)
-      if "valid_range" exists:
-         - add "InRangeValidation(min,max)"
-   if field_type == file_path:
-      - add "MatchesPatternValidation("^gs://")"
-
-"""
-
+Considered but not done:
+    - explicit field type validation. Determined that we can always add validation based on keywords alone and trust those updating the file to only add appropriate validation for the expected format of the column.

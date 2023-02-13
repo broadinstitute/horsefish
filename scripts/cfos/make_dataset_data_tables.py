@@ -10,7 +10,7 @@ from os import path
 from sys import exit
 from pandas_schema import*
 from pandas_schema.validation import*
-from validate import dynamically_validate_df as validate_df
+from validate import dynamically_validate_df
 
 
 def upload_dataset_table_to_workspace(tsv_filenames_list, workspace_name, workspace_project):
@@ -67,7 +67,11 @@ def validate_dataset(dataset, schema_dict, field_dict):
             print(dataset.keys())
             exit()
 
-        errors = validate_df(field_dict=field_dict, schema_column_list=schema_dict[table], data_df=dataset[table])
+        errors = dynamically_validate_df(
+            field_dict=field_dict, 
+            fields_to_validate_list=schema_dict[table], 
+            data_df=dataset[table]
+            )
         # get indices of the failed rows
         errors_index_rows = [e.row for e in errors]
 
@@ -110,11 +114,14 @@ def load_excel_input(excel, allowed_dataset_cols):
         exit()
 
     print("Success: Excel file has been loaded into a dataframe.")
-    return raw_dataset_df #dataset_metadata_df
+    return raw_dataset_df
 
 
-def parse_config_file(schema_json):
-    """Get list of expected columns in excel based on selected dataset schema."""
+def parse_config_file(schema_json, dataset_name):
+    """
+    Return the dictionary of schemas which define the tables and columns in the data, 
+    plus the dictionary of fields which contains all valid fields and their validation rules.
+    """
     # read schema into dictionary
     try: 
         with open(schema_json) as schema:
@@ -125,7 +132,7 @@ def parse_config_file(schema_json):
         exit(e)
     
 
-    schema_dict = config_dict["schema_definitions"]
+    schema_dict = config_dict["schema_definitions"][dataset_name]
     column_dict = config_dict["fields"]
 
     print("Success: Config file parsed.")
@@ -149,7 +156,7 @@ if __name__ == "__main__":
     parser.add_argument(
         '-x', 
         '--excel', 
-        required=False,
+        required=True,
         type=str, 
         help='CFoS data excel file (.xlsx) - based on CFoS data intake template file.'
     )
@@ -169,7 +176,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         '-v', 
-        '--validate', 
+        '--validate_only', 
         required=False, 
         action='store_true', 
         help='Set parameter to run only validation on input excel file.'
@@ -190,16 +197,17 @@ if __name__ == "__main__":
     # https://therenegadecoder.com/code/how-to-check-if-a-file-exists-in-python/#check-if-a-file-exists-with-a-try-block indicates try block is more robust.
 
     # parse schema using dataset name to get list of expected columns
-    schema_dict, column_dict = parse_config_file(schema_json=schema_json)
+    schema_dict, column_dict = parse_config_file(schema_json=schema_json, dataset_name=args.dataset_name)
     # load excel to dataframe validating to check if all expected columns present
     dataset_metadata = load_excel_input(args.excel, list(column_dict.keys()))
 
-    # if validation flag, only validate
-    if args.validate:
-        validated_dataset = validate_dataset(dataset_metadata)
-    else:
-        validated_dataset = validate_dataset(dataset=dataset_metadata, schema_dict=schema_dict[args.dataset_name], field_dict=column_dict)
-        tsv_filenames_list = generate_load_table_files(validated_dataset)
+    validated_dataset = validate_dataset(dataset=dataset_metadata, field_dict=column_dict, schema_dict=schema_dict)
+    
+    if args.validate_only:
+        print("Validation only run complete")
+        quit()
+
+    tsv_filenames_list = generate_load_table_files(validated_dataset)
     
     # if upload flag, upload generated tsv files to Terra workspace
     if args.upload and args.workspace and args.project:
