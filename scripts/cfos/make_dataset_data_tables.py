@@ -98,21 +98,17 @@ def col_is_in_defined_fields(col_name, field_dict):
 
 
 def load_excel_input(excel, allowed_dataset_cols):
-    """Read excel file input into a dataframe and validate for required columns."""
+    """
+    Read excel file input into a dataframe and validate for required columns.
+        Skipping first two rows, as the input excel has two rows of headers before the data starts.
+        Usecols uses a lambda function to filter out columns that aren't defined in the schema.json file's 
+            fields definition section. This is used instead of a list of expected columns, because providing
+            a list enforces that exactly those columns must exist in the data frame, and we don't want to
+            enforce the schema until we're checking it during validation. This should solely be data import.
+    """
 
-    try:
-        raw_dataset_df = pd.read_excel(excel, sheet_name=None, skiprows=2, index_col=None, usecols=lambda x: x in allowed_dataset_cols)
+    raw_dataset_df = pd.read_excel(excel, sheet_name=None, skiprows=2, index_col=None, usecols=lambda x: x in allowed_dataset_cols)
         
-    # TODO: Add better file error handling    
-    except ValueError as e:
-        # if the value error is about missing columns in input file
-        if len(e.args) > 0 and e.args[0].startswith("Usecols do not match columns, columns expected but not found"):
-            missing_cols = e.args[0].split(":")[1]
-            print(f"Failed: Input excel file has the following missing columns that are required: {missing_cols}")
-        else:
-            print(e)
-        exit()
-
     print("Success: Excel file has been loaded into a dataframe.")
     return raw_dataset_df
 
@@ -123,14 +119,8 @@ def parse_config_file(schema_json, dataset_name):
     plus the dictionary of fields which contains all valid fields and their validation rules.
     """
     # read schema into dictionary
-    try: 
-        with open(schema_json) as schema:
-            config_dict = json.load(schema)
-    
-    except FileNotFoundError as e:
-        # if the value error is about missing columns in input file
-        exit(e)
-    
+    with open(schema_json) as schema:
+        config_dict = json.load(schema)
 
     schema_dict = config_dict["schema_definitions"][dataset_name]
     column_dict = config_dict["fields"]
@@ -143,7 +133,6 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Create, validate, and upload (optionally ) Terra dataset specific data tables to a Terra workspace.')
 
-    # REK TODO: update so JSON is assumed to live in an internal directory location and not as an input file. 
     # Goal: allow qualified people to make easy updates to schemas, but don't encourage random users to play with it.
 
     parser.add_argument(
@@ -197,7 +186,7 @@ if __name__ == "__main__":
     # https://therenegadecoder.com/code/how-to-check-if-a-file-exists-in-python/#check-if-a-file-exists-with-a-try-block indicates try block is more robust.
 
     # parse schema using dataset name to get list of expected columns
-    schema_dict, column_dict = parse_config_file(schema_json=schema_json, dataset_name=args.dataset_name)
+    schema_dict, column_dict = parse_config_file(schema_json, args.dataset_name)
     # load excel to dataframe validating to check if all expected columns present
     dataset_metadata = load_excel_input(args.excel, list(column_dict.keys()))
 

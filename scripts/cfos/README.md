@@ -27,7 +27,7 @@
             - requires workspace name and workspace project arguments
 
 ##### Usage
-    1. only validate input excel file - if provided, this overrides the tsv creation and "upload" settings
+    1. only validate input excel file - overrides the tsv creation and "upload" settings
         `python3 /scripts/cfos/make_dataset_data_tables.py -x EXCEL_FILE -d DATASET_NAME -j SCHEMA_JSON -v`
     
     2. only validate and create load tsv files locally but no upload to Terra workspace
