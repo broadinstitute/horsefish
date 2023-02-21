@@ -9,13 +9,13 @@ The scripts in this directory can be used to delete Terra workspaces in bulk. Pr
 These scripts use the Terra APIs, so they can only delete workspaces that the running user has access to. If your goal is to view as many workspaces as possible in the project, it's best to make sure the person running the script is a project owner on the Terra project. Note that any workspace covered by an Authorization Domain (AD) will not be able to be deleted (or have cost information returned) by these scripts unless the person running the script is in the workspace's AD.
 
 ## Docker image & run command
-To run the scripts in this directory, you can use the Docker image `broadinstitute/horsefish:latest`. \
+To run the scripts in this directory, you can use the Docker image `broadinstitute/horsefish:v2.0`. \
 This image is built from the Dockerfile in the top level `horsefish` directory in this repo. 
 
 Authorize (`gcloud auth login`) as the user you use for Terra that has access to the Terra workspaces you want to delete or list - see above for more details.
 
 Run the scripts using the following command **from the scripts/workspace_cleanup directory**: \
-`docker run --rm -v "$HOME"/.config:/.config -v $(pwd):/workspace_cleanup broadinstitute/horsefish:latest python3 workspace_cleanup/<script.py> <args>`
+`docker run --rm -v "$HOME"/.config:/.config -v $(pwd):/workspace_cleanup broadinstitute/horsefish:v2.0 python3 workspace_cleanup/<script.py> <args>`
 where `<script.py>` is the script you want to run.
 
 ## Running `get_workspace_list.py`
