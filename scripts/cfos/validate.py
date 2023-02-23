@@ -31,7 +31,7 @@ def field_attribute_value_exists(field_id, field_dict, attribute_to_check):
 
 
 def check_field_type(field_id, field_dict, expected_type):
-   type_key = get_field_type_key()
+   type_key = FIELD_TYPE_KEY
    if type_key not in field_dict[field_id]:
       return False
 
