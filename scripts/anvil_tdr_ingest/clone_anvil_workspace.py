@@ -5,8 +5,6 @@ Usage:
 
 import argparse
 import json
-import pandas as pd
-import requests
 
 from utils import add_user_to_workspace, add_workspace_data, \
     check_workspace_exists, clone_workspace, \
