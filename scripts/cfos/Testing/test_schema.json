@@ -63,7 +63,7 @@
       "table2": [
         "id_unique",
         "file_path_explicit_pattern",
-        "file_path_implicit_pattern",
+        "file_path_implicit_pattern"
       ],
       "table3": [
         "id_unique",
@@ -81,7 +81,7 @@
           "table2": [
             "id_unique",
             "file_path_explicit_pattern",
-            "file_path_implicit_pattern",
+            "file_path_implicit_pattern"
           ],
           "table3": [
             "id_unique",
