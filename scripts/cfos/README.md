@@ -76,7 +76,7 @@ Which schema to use is specified as an input to the upload script at run time.
 How do you define columns?
  Columns of data are defined in the “Fields” section of the JSON document. Each column must have a unique column_ID, which is used to identify the column in the input document. The column_ID is the value under which the rest of the column information is stored in the JSON dictionary. 
 
-Note: if you have the same field in multiple tables, the same validation will apply to both, unless they are named something unique. AKA: if "filename" in one table should be alphanumeric and in another table should be an integer, you need to name the fields "tablex_filename" and tabley_filename" to apply different validation.
+Note: if you have the same field in multiple tables, the same validation will apply to both, unless they are named something unique. AKA: if "filename" in one table should be alphanumeric and in another table should be an integer, you need to name the fields "tablex_filename" and "tabley_filename" to apply different validation.
 
 
 Each field has the following attributes. Attributes that are “type-specific” are listed under the corresponding field “data type”. 
@@ -84,9 +84,8 @@ Each field has the following attributes. Attributes that are “type-specific”
 
 Field:
 column_ID
-field_name
 field_type
-value_required (optional - defaults to “yes?”)
+value_required (optional - defaults to "no")
 is_unique (optional - defaults to “no”)
 
 Field_Type Specific Attributes:
@@ -96,19 +95,16 @@ free_text
 category
 allowed_values
 id
-pattern_to_match (optional)?
+pattern_to_match (optional)
 file_path
-pattern_to_match (optional)?
 
 Format for JSON:
 {“fields” : {
 	column_ID1 : {
-		“field_name” : field_name1,
 		“field_type” : field_type1,
 		“other_attributes” : other_values
 	},
 	column_ID2 : {
-		“field_name” : field_name2,
 		“field_type” : field_type2,
 		“other_attributes” : other_values
 	}

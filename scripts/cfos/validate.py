@@ -10,16 +10,16 @@ null_validation = CustomSeriesValidation(lambda d: d.notna(), 'this field cannot
 
 
 # Keys
-OPTIONAL_FIELD_KEY="optional"
-VALUE_REQUIRED_KEY="value_required"
-INT_ONLY_VAL_KEY="integer_only"
-FIELD_TYPE_KEY="field_type"
-PATTERN_TO_MATCH_KEY="pattern_to_match"
-ALLOWED_VALUES_KEY="allowed_values"
+OPTIONAL_FIELD_KEY = "optional"
+VALUE_REQUIRED_KEY = "value_required"
+INT_ONLY_VAL_KEY = "integer_only"
+FIELD_TYPE_KEY = "field_type"
+PATTERN_TO_MATCH_KEY = "pattern_to_match"
+ALLOWED_VALUES_KEY = "allowed_values"
 
 # Values
-FILE_PATH_FIELD_TYPE_VAL="file_path"
-NUMERIC_FIELD_TYPE_VAL="number"
+FILE_PATH_FIELD_TYPE_VAL = "file_path"
+NUMERIC_FIELD_TYPE_VAL = "number"
 
 
 # Generic functions used to check attributes
