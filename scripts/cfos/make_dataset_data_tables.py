@@ -97,7 +97,7 @@ def col_is_in_defined_fields(col_name, field_dict):
     return False
 
 
-def load_excel_input(excel, allowed_dataset_cols):
+def load_excel_input(excel, allowed_dataset_cols, skiprows):
     """
     Read excel file input into a dataframe and validate for required columns.
         Skipping first two rows, as the input excel has two rows of headers before the data starts.
@@ -107,7 +107,7 @@ def load_excel_input(excel, allowed_dataset_cols):
             enforce the schema until we're checking it during validation. This should solely be data import.
     """
 
-    raw_dataset_df = pd.read_excel(excel, sheet_name=None, skiprows=2, index_col=None, usecols=lambda x: x in allowed_dataset_cols)
+    raw_dataset_df = pd.read_excel(excel, sheet_name=None, skiprows=skiprows, index_col=None, usecols=lambda x: x in allowed_dataset_cols)
         
     print("Success: Excel file has been loaded into a dataframe.")
     return raw_dataset_df
@@ -177,9 +177,19 @@ if __name__ == "__main__":
         action='store_true', 
         help='Set parameter to upload data table files to workspace. default = no upload'
     )
+    parser.add_argument(
+        '-r',
+        '--skip_rows',
+        required=False,
+        type=int,
+        default=2,
+        help='Choose the number of rows to skip before column headers. Default: skip 2 rows, \
+            column headers expected on row 3'
+    )
 
     args = parser.parse_args()
     schema_json = 'dataset_tables_schema.json'
+
 
     # TODO: Validate that schema exists; error and quit if not. Store validation code in new requirements or file_paths validation file.
     # ask John - why write separate validation? Why not just use a Try block? 
@@ -188,7 +198,7 @@ if __name__ == "__main__":
     # parse schema using dataset name to get list of expected columns
     schema_dict, column_dict = parse_config_file(schema_json, args.dataset_name)
     # load excel to dataframe validating to check if all expected columns present
-    dataset_metadata = load_excel_input(args.excel, list(column_dict.keys()))
+    dataset_metadata = load_excel_input(args.excel, list(column_dict.keys()), skiprows=args.skip_rows)
 
     validated_dataset = validate_dataset(dataset=dataset_metadata, field_dict=column_dict, schema_dict=schema_dict)
     

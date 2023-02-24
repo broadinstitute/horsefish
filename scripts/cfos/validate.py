@@ -115,23 +115,32 @@ def create_validation_build_dict(fields_dict, fields_to_validate_list):
             validation_dict=dynamic_validation_build_dict, 
             validation_object_to_add=null_validation
          )
+
       if has_valid_pattern_match_value(field_id=field_id, field_dict=fields_dict):
          add_matches_pattern_validation(
             field_id=field_id, 
             field_dict=fields_dict,
             validation_dict=dynamic_validation_build_dict
          )
+         
+      if has_category_value_validation(field_id=field_id, field_dict=fields_dict):
+         add_category_value_validation(
+            field_id=field_id,
+            field_dict=fields_dict,
+            allowed_values_list=fields_dict[field_id][ALLOWED_VALUES_KEY]
+         )
+
       if only_int_values_allowed(field_id=field_id, field_dict=fields_dict):
          add_validation(
             field_id=field_id,
             validation_dict=dynamic_validation_build_dict, 
             validation_object_to_add=IsDtypeValidation(int)
          )
-      if has_category_value_validation(field_id=field_id, field_dict=fields_dict):
-         add_category_value_validation(
-            field_id=field_id,
-            field_dict=fields_dict,
-            allowed_values_list=fields_dict[field_id][ALLOWED_VALUES_KEY]
+      elif check_field_type(field_id, fields_dict, expected_type=NUMERIC_FIELD_TYPE_VAL):
+         add_validation(
+            field_id = field_id,
+            validation_dict=dynamic_validation_build_dict,
+            validation_object_to_add=IsDtypeValidation(float)
          )
 
    return dynamic_validation_build_dict      
