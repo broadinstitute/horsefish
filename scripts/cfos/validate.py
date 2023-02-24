@@ -5,7 +5,8 @@ import re
 
 # validators
 # column values cannot be null
-null_validation = CustomElementValidation(lambda d: d is not np.nan, 'this field cannot be null')
+#null_validation = CustomElementValidation(lambda d: d is not np.nan, 'this field cannot be null')
+null_validation = CustomSeriesValidation(lambda d: d.notna(), 'this field cannot be null')
 
 
 # Keys
@@ -27,7 +28,7 @@ def field_attribute_value_exists(field_id, field_dict, attribute_to_check):
       return False
 
    attribute_value = str(field_dict[field_id][attribute_to_check]).strip()
-   return attribute_value is not None & attribute_value != ""
+   return attribute_value is not None and attribute_value != ""
 
 
 def check_field_type(field_id, field_dict, expected_type):
@@ -43,7 +44,7 @@ def check_field_type(field_id, field_dict, expected_type):
 def has_valid_pattern_match_value(field_id, field_dict):
    # right now, all file paths have a default pattern to match if none is provided
    return check_field_type(field_id=field_id, field_dict=field_dict, expected_type=FILE_PATH_FIELD_TYPE_VAL)\
-      & field_attribute_value_exists(field_id=field_id, field_dict=field_dict, attribute_to_check=PATTERN_TO_MATCH_KEY)
+      or field_attribute_value_exists(field_id=field_id, field_dict=field_dict, attribute_to_check=PATTERN_TO_MATCH_KEY)
 
 
 def has_category_value_validation(field_id, field_dict):
@@ -56,15 +57,14 @@ def has_category_value_validation(field_id, field_dict):
 
 def only_int_values_allowed(field_id, field_dict):
    return check_field_type(field_id, field_dict, NUMERIC_FIELD_TYPE_VAL)\
-      & INT_ONLY_VAL_KEY in field_dict[field_id]\
-      & field_dict[field_id][INT_ONLY_VAL_KEY] == "True"
+      and INT_ONLY_VAL_KEY in field_dict[field_id]\
+      and field_dict[field_id][INT_ONLY_VAL_KEY] == "True"
 
 
 def null_value_invalid(fields_dict, field_id):
-   value_required_key = VALUE_REQUIRED_KEY
-   return value_required_key in fields_dict[field_id] \
-      & VALUE_REQUIRED_KEY in fields_dict[field_id]\
-      & fields_dict[field_id][VALUE_REQUIRED_KEY] == "True"
+   return VALUE_REQUIRED_KEY in fields_dict[field_id] \
+      and VALUE_REQUIRED_KEY in fields_dict[field_id]\
+      and fields_dict[field_id][VALUE_REQUIRED_KEY] == "True"
    
 
 # Functions to add validation to schema
@@ -83,11 +83,11 @@ def add_matches_pattern_validation(validation_dict, field_dict, field_id):
    - If no pattern is explicitly provided, the default file path pattern is applied.
    """
    pattern = str()
-   if not field_attribute_value_exists(field_id=field_id, field_dict=field_dict, attribute_to_check=PATTERN_TO_MATCH_KEY):
-      pattern = "^gs://"
+   if field_attribute_value_exists(field_id=field_id, field_dict=field_dict, attribute_to_check=PATTERN_TO_MATCH_KEY):
+      pattern = str(field_dict[field_id][PATTERN_TO_MATCH_KEY]).strip()
       
    else:
-      pattern = str(field_dict[field_id][PATTERN_TO_MATCH_KEY]).strip()
+      pattern = "^gs://"
    
    validation = MatchesPatternValidation(pattern)
    add_validation(validation_dict=validation_dict, field_id=field_id, validation_object_to_add=validation)
@@ -109,6 +109,9 @@ def create_validation_build_dict(fields_dict, fields_to_validate_list):
    dynamic_validation_build_dict = {}
 
    for field_id in fields_to_validate_list:
+      if field_id not in fields_dict:
+         continue
+
       if null_value_invalid(field_id=field_id, fields_dict=fields_dict):
          add_validation(
             field_id=field_id,
@@ -122,11 +125,11 @@ def create_validation_build_dict(fields_dict, fields_to_validate_list):
             field_dict=fields_dict,
             validation_dict=dynamic_validation_build_dict
          )
-         
+
       if has_category_value_validation(field_id=field_id, field_dict=fields_dict):
          add_category_value_validation(
             field_id=field_id,
-            field_dict=fields_dict,
+            validation_dict=dynamic_validation_build_dict,
             allowed_values_list=fields_dict[field_id][ALLOWED_VALUES_KEY]
          )
 
@@ -149,15 +152,13 @@ def create_validation_build_dict(fields_dict, fields_to_validate_list):
 # MAIN VALIDATION CODE
 def dynamically_validate_df(data_df, field_dict, fields_to_validate_list):
    dynamic_validation_build_guide_dict = create_validation_build_dict(fields_dict=field_dict, fields_to_validate_list=fields_to_validate_list)
-   
+
    validation_code = create_validation_code_from_logic(
       validation_build_guide_dict=dynamic_validation_build_guide_dict, 
       fields_to_validate=fields_to_validate_list
    )
 
    errors = validation_code.validate(data_df, columns=(validation_code.get_column_names()))
-   for error in errors:
-      print(error)
 
    return errors
 

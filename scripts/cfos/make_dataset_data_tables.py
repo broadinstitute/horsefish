@@ -60,9 +60,11 @@ def generate_load_table_files(dataset_tables_dict):
 
 def validate_dataset(dataset, schema_dict, field_dict):
     validated_dataset = {}
+    has_err = False
+    errlog = open("validation_errors.csv", "w")
 
     for table in list(schema_dict.keys()):
-        if table not in list(dataset.keys()):
+        if table not in dataset:
             print(f"Failed: Missing required table {table}.")
             print(dataset.keys())
             exit()
@@ -77,14 +79,25 @@ def validate_dataset(dataset, schema_dict, field_dict):
 
         # if any errors, print error message and exit
         if errors_index_rows:
-            print(f"Failed: Dataset validation errors found in table {table}. Please retry after correcting errors listed in validation_errors.csv.")
-            pd.DataFrame({'validation_error':errors}).to_csv('validation_errors.csv')
-            exit()
+            errlog.write(f"Failed: Dataset validation errors found in table {table}. Please retry after correcting errors listed in validation_errors.csv.")
+            errlog.write(f"{table} Errors: \n")
+            for error in errors:
+                errlog.write(f"'validation_error':{error}\n")
+            errlog.write("\n")
+            has_err = True
 
         # TODO: determine how to handle drops of failed rows/columns to get cleaned data
-        validated_dataset[table] = dataset[table]
-        print(f"Success: Table {table} has been validated.")
-    
+        else:
+            validated_dataset[table] = dataset[table]
+            print(f"Success: Table {table} has been validated.")
+
+    if not errlog.closed:
+        errlog.close()
+
+    if has_err:
+        print("Errors found, see validation_errors.csv for details.")
+        exit()
+
     print(f"Success: Dataset has been validated.")
     return validated_dataset
 
@@ -108,7 +121,7 @@ def load_excel_input(excel, allowed_dataset_cols, skiprows):
     """
 
     raw_dataset_df = pd.read_excel(excel, sheet_name=None, skiprows=skiprows, index_col=None, usecols=lambda x: x in allowed_dataset_cols)
-        
+
     print("Success: Excel file has been loaded into a dataframe.")
     return raw_dataset_df
 
