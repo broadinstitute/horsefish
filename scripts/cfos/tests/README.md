@@ -4,9 +4,11 @@ You can either:
 - change the code in make_dataset_data_tables.py so that schema_json points to the test schema file instead of the real one
 
 ### How to Run ###
-test fail: python3 make_dataset_data_tables.py -d schema1 -x Testing/CFoS_Template_Test_Schema1_Fail.xlsx -p broad-cfos-data-platform1 -w cFOS_automation_testing
+#####test fail##### 
+python3 make_dataset_data_tables.py -d schema1 -x tests/CFoS_Template_Test_Schema1_Fail.xlsx -p broad-cfos-data-platform1 -w cFOS_automation_testing
 
-test pass: python3 make_dataset_data_tables.py -d schema1 -x Testing/CFoS_Template_Test_Schema1_Pass.xlsx -p broad-cfos-data-platform1 -w cFOS_automation_testing
+#####test pass##### 
+python3 make_dataset_data_tables.py -d schema1 -x tests/CFoS_Template_Test_Schema1_Pass.xlsx -p broad-cfos-data-platform1 -w cFOS_automation_testing
 
 
 ### Validating outcomes ###
