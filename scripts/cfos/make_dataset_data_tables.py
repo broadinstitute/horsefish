@@ -203,11 +203,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     schema_json = 'dataset_tables_schema.json'
 
-
-    # TODO: Validate that schema exists; error and quit if not. Store validation code in new requirements or file_paths validation file.
-    # ask John - why write separate validation? Why not just use a Try block? 
-    # https://therenegadecoder.com/code/how-to-check-if-a-file-exists-in-python/#check-if-a-file-exists-with-a-try-block indicates try block is more robust.
-
     # parse schema using dataset name to get list of expected columns
     schema_dict, column_dict = parse_config_file(schema_json, args.dataset_name)
     # load excel to dataframe validating to check if all expected columns present
