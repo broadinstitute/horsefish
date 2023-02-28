@@ -47,22 +47,6 @@
     "field_not_in_data" : {
       "field_type" : "free_text"
     },
-    "table1_id" : {
-      "field_type" : "id",
-      "value_required" : "True"
-    },
-    "table2_id" : {
-      "field_type" : "id",
-      "value_required" : "True"
-    },
-    "table3_id" : {
-      "field_type" : "id",
-      "value_required" : "True"
-    },
-    "table4_id" : {
-      "field_type" : "id",
-      "value_required" : "True"
-    },
     "file_path_all_null" : {
       "field_type" : "file_path",
       "value_required" : "False"
@@ -71,63 +55,76 @@
   
   "schema_definitions" : {
     "schema1" : {
-      "table1": [
-        "id_unique",
-        "integer_only_field",
-        "numeric_field",
-        "id_not_unique",
-        "id_unique_unspecified",
-        "category",
-        "field_not_in_data",
-        "field_not_in_schema",
-        "table1_id"
-      ],
-      "table2": [
-        "id_unique",
-        "file_path_explicit_pattern",
-        "file_path_implicit_pattern",
-        "table2_id",
-        "file_path_all_null"
-      ],
-      "table3": [
-        "id_unique",
-        "free_text_optional_value",
-        "free_text_optional_explicit",
-        "free_text_required_value",
-        "table3_id",
-        "table4_id"
-      ]
+      "table1": {
+        "primary_key" : "id_unique",
+        "columns" : [
+          "id_unique",
+          "integer_only_field",
+          "numeric_field",
+          "id_not_unique",
+          "id_unique_unspecified",
+          "category",
+          "field_not_in_data",
+          "field_not_in_schema"
+          ]
+      },
+      "table2": {
+        "primary_key" : "id_unique", 
+        "columns" : [
+          "id_unique",
+          "file_path_explicit_pattern",
+          "file_path_implicit_pattern",
+          "file_path_all_null"
+        ]
+      },
+      "table3": {
+        "primary_key" : "id_unique",
+        "columns" : [
+          "id_unique",
+          "free_text_optional_value",
+          "free_text_optional_explicit",
+          "free_text_required_value"
+        ]
+      }
     },
     "schema2" : {
-        "table1": [
+        "table1": {
+          "primary_key" : "id_unique",
+          "columns" : [
             "id_unique",
             "field_not_in_data",
-            "field_not_in_schema",
-            "table1_id"
-          ],
-          "table2": [
-            "id_unique",
-            "file_path_explicit_pattern",
-            "file_path_implicit_pattern",
-            "table2_id",
-            "file_path_all_null"
-          ],
-          "table3": [
-            "id_unique",
-            "free_text_optional_value",
-            "free_text_optional_explicit",
-            "free_text_required_value",
-            "table3_id"
-          ],
-          "table4": [
-            "id_unique",
-            "integer_only_field",
-            "numeric_field",
-            "id_not_unique",
-            "id_unique_unspecified",
-            "category",
-            "table4_id"
+            "field_not_in_schema"
           ]
+        },
+          "table2": {
+            "primary_key" : "id_unique",
+              "columns" : [
+              "id_unique",
+              "file_path_explicit_pattern",
+              "file_path_implicit_pattern",
+              "file_path_all_null"
+            ]
+          },
+          "table3": {
+            "primary_key" : "id_unique",
+              "columns" : [
+              "id_unique",
+              "free_text_optional_value",
+              "free_text_optional_explicit",
+              "free_text_required_value"
+            ]
+          },
+          "table4": {
+            "primary_key" : "id_unique",
+              "columns" : [
+              "id_unique",
+              "integer_only_field",
+              "numeric_field",
+              "id_not_unique",
+              "id_unique_unspecified",
+              "category"
+            ]
+          }
     }
   }  
 }

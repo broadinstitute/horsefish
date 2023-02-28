@@ -12,6 +12,8 @@ from pandas_schema import*
 from pandas_schema.validation import*
 from validate import dynamically_validate_df
 
+VALIDATION_ERROR_FILE = "validation_errors.csv"
+
 
 def upload_dataset_table_to_workspace(tsv_filenames_list, workspace_name, workspace_project):
     """Upload each of the tables in the chosen dataset to Terra workspace."""
@@ -33,18 +35,18 @@ def upload_dataset_table_to_workspace(tsv_filenames_list, workspace_name, worksp
     print("Success: All data tables have been loaded to workspace.")
 
 
-def generate_load_table_files(dataset_tables_dict):
+def generate_load_table_files(dataset_tables_dict, primary_keys_dict):
     """Generate load table tsv files for each of the dataset tables."""
 
     # instantiate empty list to hold names of generated tsv load files
     tsv_filenames_list = []
 
     # for each table in dictionary
-    for table_name in list(dataset_tables_dict.keys()):
+    for table_name in dataset_tables_dict:
         table_df = dataset_tables_dict[table_name]
-            
-        # change table name column to new name --> entity:table_name_id and set as index
-        table_df = table_df.rename(columns={f"{table_name}_id": f"entity:{table_name}_id"})
+        primary_key = primary_keys_dict[table_name]
+
+        table_df[f"entity:{table_name}_id"] = table_df[primary_key]
         table_df.set_index(f"entity:{table_name}_id", inplace=True)
 
         # set output tsv filename
@@ -61,7 +63,7 @@ def generate_load_table_files(dataset_tables_dict):
 def validate_dataset(dataset, schema_dict, field_dict):
     validated_dataset = {}
     has_err = False
-    errlog = open("validation_errors.csv", "w")
+    errlog = open(VALIDATION_ERROR_FILE, "w")
 
     for table in list(schema_dict.keys()):
         if table not in dataset:
@@ -79,7 +81,7 @@ def validate_dataset(dataset, schema_dict, field_dict):
 
         # if any errors, print error message and exit
         if errors_index_rows:
-            errlog.write(f"Failed: Dataset validation errors found in table {table}. Please retry after correcting errors listed in validation_errors.csv.")
+            errlog.write(f"Failed: Dataset validation errors found in table {table}. Please retry after correcting errors listed in {VALIDATION_ERROR_FILE}.")
             errlog.write(f"{table} Errors: \n")
             for error in errors:
                 errlog.write(f"'validation_error':{error}\n")
@@ -95,7 +97,7 @@ def validate_dataset(dataset, schema_dict, field_dict):
         errlog.close()
 
     if has_err:
-        print("Errors found, see validation_errors.csv for details.")
+        print(f"Errors found, see {VALIDATION_ERROR_FILE} for details.")
         exit()
 
     print(f"Success: Dataset has been validated.")
@@ -126,6 +128,16 @@ def load_excel_input(excel, allowed_dataset_cols, skiprows):
     return raw_dataset_df
 
 
+def parse_schema_dict(schema_dict):
+    primary_keys_dict = {}
+    tables_dict = {}
+    for table in schema_dict:
+        primary_keys_dict[table] = schema_dict[table]["primary_key"]
+        tables_dict[table] = schema_dict[table]["columns"]
+    
+    return tables_dict, primary_keys_dict
+
+
 def parse_config_file(schema_json, dataset_name):
     """
     Return the dictionary of schemas which define the tables and columns in the data, 
@@ -135,11 +147,11 @@ def parse_config_file(schema_json, dataset_name):
     with open(schema_json) as schema:
         config_dict = json.load(schema)
 
-    schema_dict = config_dict["schema_definitions"][dataset_name]
+    schema_dict, primary_keys_dict = parse_schema_dict(config_dict["schema_definitions"][dataset_name])
     column_dict = config_dict["fields"]
 
     print("Success: Config file parsed.")
-    return schema_dict, column_dict
+    return schema_dict, column_dict, primary_keys_dict
 
 
 if __name__ == "__main__":
@@ -153,7 +165,8 @@ if __name__ == "__main__":
         '--dataset_name', 
         required=False,
         type=str, 
-        help='Dataset type to apply validations and data table structure. ex. proteomics, atac-seq, transcriptomics, singe-cell'
+        help='Dataset type to apply validations and data table structure. ex. proteomics, atac-seq, transcriptomics, singe-cell. \
+            This should match with one of the dataset_key terms in the schema.json file.'
     )
     parser.add_argument(
         '-x', 
@@ -204,7 +217,7 @@ if __name__ == "__main__":
     schema_json = 'dataset_tables_schema.json'
 
     # parse schema using dataset name to get list of expected columns
-    schema_dict, column_dict = parse_config_file(schema_json, args.dataset_name)
+    schema_dict, column_dict, primary_keys_dict = parse_config_file(schema_json, args.dataset_name)
     # load excel to dataframe validating to check if all expected columns present
     dataset_metadata = load_excel_input(args.excel, list(column_dict.keys()), skiprows=args.skip_rows)
 
@@ -214,7 +227,7 @@ if __name__ == "__main__":
         print("Validation only run complete")
         quit()
 
-    tsv_filenames_list = generate_load_table_files(validated_dataset)
+    tsv_filenames_list = generate_load_table_files(validated_dataset, primary_keys_dict)
     
     # if upload flag, upload generated tsv files to Terra workspace
     if args.upload and args.workspace and args.project:
