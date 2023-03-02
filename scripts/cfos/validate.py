@@ -16,6 +16,7 @@ INT_ONLY_VAL_KEY = "integer_only"
 FIELD_TYPE_KEY = "field_type"
 PATTERN_TO_MATCH_KEY = "pattern_to_match"
 ALLOWED_VALUES_KEY = "allowed_values"
+IS_UNIQUE_KEY = "is_unique"
 
 # Values
 FILE_PATH_FIELD_TYPE_VAL = "file_path"
@@ -102,15 +103,27 @@ def add_category_value_validation(validation_dict, field_id, allowed_values_list
 
 
 
-def create_validation_build_dict(fields_dict, fields_to_validate_list):
+def create_validation_build_dict(fields_dict, fields_to_validate_list, primary_key):
    """
    Checks schema config JSON to determine what validation should be applied & applies it to the schema for validation
    """
    dynamic_validation_build_dict = {}
+   add_validation(
+      field_id=primary_key,
+      validation_dict=dynamic_validation_build_dict,
+      validation_object_to_add=IsDistinctValidation()
+   )
 
    for field_id in fields_to_validate_list:
       if field_id not in fields_dict:
          continue
+
+      if field_attribute_value_exists(field_id=field_id, field_dict=fields_dict, attribute_to_check=IS_UNIQUE_KEY):
+         add_validation(
+            field_id=field_id,
+            validation_dict=dynamic_validation_build_dict,
+            validation_object_to_add=IsDistinctValidation()
+         )
 
       if null_value_invalid(field_id=field_id, fields_dict=fields_dict):
          add_validation(
@@ -150,8 +163,8 @@ def create_validation_build_dict(fields_dict, fields_to_validate_list):
 
 
 # MAIN VALIDATION CODE
-def dynamically_validate_df(data_df, field_dict, fields_to_validate_list):
-   dynamic_validation_build_guide_dict = create_validation_build_dict(fields_dict=field_dict, fields_to_validate_list=fields_to_validate_list)
+def dynamically_validate_df(data_df, field_dict, fields_to_validate_list, primary_key):
+   dynamic_validation_build_guide_dict = create_validation_build_dict(fields_dict=field_dict, fields_to_validate_list=fields_to_validate_list, primary_key=primary_key)
 
    validation_code = create_validation_code_from_logic(
       validation_build_guide_dict=dynamic_validation_build_guide_dict, 

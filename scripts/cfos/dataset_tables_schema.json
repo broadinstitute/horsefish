@@ -1,79 +1,11 @@
 {"fields" : {
   "donor_id" : {
-    "field_type" : "id",
-    "is_unique" : "True"
-  },
-    "age_at_biopsy" : {
-      "field_type" : "number",
-      "integer_only" : "True"
-    }, 
-    "APOE_atDonorAge" : {
-      "field_type" : "number",
-      "integer_only" : "True"
-    }, 
-    "APOE_value" : {
-      "field_type" : "number",
-      "integer_only" : "True"
-    }, 
-    "follow_up_years" : {
-      "field_type" : "number",
-      "integer_only" : "True"
+    "field_type" : "id"
     },
-    "MMSE_Biopsy_atDonorAge" : {
-      "field_type" : "number",
-      "integer_only" : "True"
-    }, 
-    "MMSE_Biopsy_value" : {
-      "field_type" : "number",
-      "integer_only" : "True"
-    },
-    "MMSE_Final_atDonorAge" : {
-      "field_type" : "number",
-      "integer_only" : "True"
-    },
-    "MMSE_Final_value" : {
-      "field_type" : "number",
-      "integer_only" : "True"
-    },
-    "hasAnatomicalSite" : {
+    "xref" : {
       "field_type" : "free_text"
     },
-    "hasDonorAge": {
-      "field_type" : "number",
-      "integer_only" : "True"
-    },
-    "biosample_id_of_file" : {
-      "field_type" : "free_text",
-      "value_required" : "True"
-    },
-    "biosample_id" : {
-      "field_type" : "id",
-      "is_unique" : "True"
-    },
-    "summary_file_path" : {
-      "field_type" : "file_path",
-      "pattern_to_match" : "^gs://"
-    },
-    "features_file_path" : {
-      "field_type" : "file_path",
-      "pattern_to_match" : "^gs://"
-    },
-    "matrix_file_path" : {
-      "field_type" : "file_path",
-      "pattern_to_match" : "^gs://"
-    },
-    "barcode_file_path" : {
-      "field_type" : "file_path",
-      "pattern_to_match" : "^gs://"
-    },
-    "comment" : {
-      "field_type" : "free_text"
-    },
-    "UMI_threshold" : {
-      "field_type" : "number",
-      "integer_only" : "True"
-    },
-    "hasOrganismType" : {
+    "organism_type" : {
       "field_type" : "category",
       "allowed_values" : ["C elegans", "Canis lupus familiaris (dog)", "Ciona intestinalis (Ascidian)",
                           "Danio rerio (zebrafish)", "Drosophila melanogaster (fruit fly)", 
@@ -81,33 +13,30 @@
                           "Paracentrotus lividus (Rock sea urchin)", "Rattus norvegicus (rat)",
                           "Sphaerechinus granularis (Violet sea urchin)"]
     },
-
-    "has_phenotypic_sex" : {
-      "field_type" : "category",
-      "allowed_values" : ["Male", "Female", "Intersex"]
+    "biosample_id" : {
+      "field_type" : "id"
     },
-
-    "neuropathology" : {
-      "field_type" : "category",
-      "allowed_values" : ["Abeta", "AbetaTau", "None reported"]
-    },
-
     "file_id" : {
       "field_type" : "id"
     },
-
-    "hasBioSampleType" : {
-      "field_type" : "category",
-      "allowed_values" : ["CellLine", "Derived_In vitro differentiated", "Derived_Induced pluripotent stem cell",
-                          "Derived_Organoid", "BodyFluid_Amniotic fluid", "Blood_Buffy coat", "Blood_Erythrocyte",
-                          "Blood_Leukocyte", "Blood_PBMC", "Blood_Plasma", "Blood_Platelet", "Blood_Serum",
-                          "Blood_Whole Blood", "BodyFluid_BreastMilk", "BodyFluid_Cerebrospinal fluid",
-                          "BodyFluid_Saliva", "BodyFluid_Semen", "BodyFluid_Synovial fluid", "BodyFluid_Urine",
-                          "BodyFluid_Vaginal secretions", "Cell free DNA", "Cell_BCell", "Cell_Lymphocyte",
-                          "Cell_Monocyte", "Cell_T cell", "Primary Culture", "Stool", "Tissue"]
+    "assay_id" : {
+      "field_type" : "id"
     },
-
-    "DataModality" : {
+    "anatomical_site" : {
+      "field_type" : "free_text"
+    },
+    "anatomical_region" : {
+      "field_type" : "free_text"
+    },
+    "donor_age_at_collection" : {
+      "field_type" : "number",
+      "integer_only" : "True"
+    },
+    "disease_neuropathology" : {
+      "field_type" : "category",
+      "allowed_values": ["y", "n"]
+    },
+    "data_modality" : {
       "field_type" : "category",
       "allowed_values" : ["Epigenomic", "Epigenomic_3D Contact Maps", "Epigenomic_DNABinding",
                                 "Epigenomic_DNABinding_HistoneModificationLocation", "Epigenomic_DNABinding_TranscriptionFactorLocation",
@@ -117,63 +46,173 @@
                                 "Medical imaging _MRI", "Medical imaging _Xray", "Metabolomic", "Microbiome", "Metagenomic", "Proteomic",
                                 "Transcriptomic", "SpatialTranscriptomics", "Trascriptomic_Targeted", "Trascriptomic_NonTargeted"]
     },
-
-    "has_disease" : {
-      "field_type" : "category",
-      "allowed_values": ["y", "n"]
+    "genetic_mod" : {
+      "field_type" : "free_text"
     },
-
-    "library_id": {
+    "genetic_mod_type" : {
+      "field_type" : "category",
+      "allowed_values" : ["deletion", "interference", "insertion", "mutagenesis", "replacement", "episome", "activation", "knockout", 
+                          "disruption", "inhibition", "binding", "transgene insertion", "deactivation", "perturbation", "selection", "stimulation", 
+                          "non-specific target control", "repression", "tagging", "characterization", "expression", "in vivo enhancer characterization"]
+    },
+    "genetic_mod_method" : {
+      "field_type" : "category",
+      "allowed_values" : ["CRISPR", "mutagen treatment", "site-specific recombination", "TALEN", "homologous recombination"]
+    },
+    "sample_treatment" : {
+      "field_type" : "free_text"
+    },
+    "library_id" : {
       "field_type" : "id"
+    },
+    "xref_summary" : {
+      "field_type" : "file_path"
+    },
+    "xref_genes" : {
+      "field_type" : "file_path"
+    },
+    "xref_matrix" : {
+      "field_type" : "file_path"
+    },
+    "xref_barcode" : {
+      "field_type" : "file_path"
+    },
+    "file_format_summary" : {
+      "field_type" : "free_text"
+    },
+    "file_format_features" : {
+      "field_type" : "free_text"
+    },
+    "file_format_matrix" : {
+      "field_type" : "free_text"
+    },
+    "file_format_barcode" : {
+      "field_type" : "free_text"
+    },
+    "sample_treatment_id" : {
+      "field_type" : "id"
+    },
+    "sample_treatment_type" : {
+      "field_type" : "category",
+      "allowed_values" : ["antibody", "chemical", "exposure", "infection", "injection", 
+                          "irradiation", "protein", "transplantation", "RNAi", "activation", "deactivation", 
+                          "perturbation", "selection", "stimulation", "non-specific target control", "repression", 
+                          "tagging", "characterization", "expression", "in vivo enhancer characterization"]
+    },
+    "sample_treatment_method" : {
+      "field_type" : "free_text"
+    },
+    "antibody" : {
+      "field_type" : "free_text"
+    },
+    "duration" : {
+      "field_type" : "number",
+      "integer_only" : "True"
+    },
+    "duration_unit" : {
+      "field_type" : "category",
+      "allowed_values" : ["min", "seconds", "hours"]
+    },
+    "temperature" : {
+      "field_type" : "number"
+    },
+    "temperature_unit" : {
+      "field_type" : "category",
+      "allowed_values" : ["celsius", "kelvin", "fahrenheit"]
+    }, 
+    "amount" : {
+      "field_type" : "number"
+    },
+    "amount_unit" : {
+      "field_type" : "free_text"
+    },
+    "phenotypic_sex" : {
+      "field_type" : "category",
+      "allowed_values" : ["Female", "Male", "Intersex"]
     }
   },
   
   "schema_definitions" : {
-    "inph" : {
-      "donor": [
-        "donor_id",
-        "hasOrganismType", 
-        "age_at_biopsy", 
-        "APOE_atDonorAge", 
-        "APOE_value", 
-        "follow_up_years",
-        "has_disease", 
-        "has_phenotypic_sex", 
-        "MMSE_Biopsy_atDonorAge",
-        "MMSE_Biopsy_value",
-        "MMSE_Final_atDonorAge",
-        "MMSE_Final_value",
-        "neuropathology",
-        "hasDonorAge",
-        "hasAnatomicalSite"
-      ],
-      "biosample": [
-        "biosample_id",
-        "donor_id",
-        "hasAnatomicalSite",
-        "hasDonorAge",
-        "hasBioSampleType",
-        "biosample_id_of_file"
-      ],
-      "file": [
-        "file_id",
-        "biosample_id",
-        "DataModality",
-        "donor_id",
-        "summary_file_path",
-        "features_file_path",
-        "matrix_file_path",
-        "barcode_file_path",
-        "library_id"
-      ],
-      "library": [
-        "library_id",
-        "comment",
-        "donor_id",
-        "UMI_threshold"
-      ]
+    "inph" : {},
+    "imgl" : {
+      "Donor" : {
+        "primary_key" : "donor_id",
+        "columns" : [
+          "donor_id",
+          "xref",
+          "organism_type",
+          "phenotypic_sex",
+          "disease_neuropathology"
+        ]
+      },
+      "Biosample" : {
+        "primary_key" : "biosample_id",
+        "columns" : [
+          "biosample_id",
+          "donor_id",
+          "xref",
+          "file_id",
+          "assay_id",
+          "anatomical_site",
+          "donor_age_at_collection",
+          "disease_neuropathology",
+          "anatomical_region",
+          "data_modality",
+          "genetic_mod",
+          "genetic_mod_type",
+          "genetic_mod_method",
+          "sample_treatment",
+          "library_id"
+        ]
+      },
+      "File" : {
+        "primary_key" : "file_id",
+        "columns" : [
+          "file_id",
+          "xref",
+          "xref_summary",
+          "xref_genes",
+          "xref_matrix",
+          "xref_barcode",
+          "file_format_summary",
+          "file_format_features",
+          "file_format_matrix",
+          "file_format_barcode"
+        ]
+      },
+      "SampleTreatment" : {
+        "primary_key" : "sample_treatment_id",
+        "columns" : [
+          "sample_treatment_id",
+          "biosample_id",
+          "xref",
+          "sample_treatment_type",	
+          "sample_treatment_method",	
+          "antibody",	
+          "duration",	
+          "duration_unit",
+          "temperature",
+          "temperature_unit",
+          "amount",
+          "amount_unit"
+        ]
+      },
+      "Assay" : {
+        "primary_key" : "assay_id",
+        "columns" : [
+          "assay_id",
+          "xref"
+        ]
+      },
+      "Library" : {
+        "primary_key" : "library_id",
+        "columns" : [
+          "library_id",	
+          "biosample_id",
+          "xref"
+        ]
+      }
     },
-    "imgl" : {},
     "imperial" : {},
     "dataset4" : {}
   }  

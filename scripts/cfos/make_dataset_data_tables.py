@@ -60,12 +60,12 @@ def generate_load_table_files(dataset_tables_dict, primary_keys_dict):
     return tsv_filenames_list
 
 
-def validate_dataset(dataset, schema_dict, field_dict):
+def validate_dataset(dataset, schema_dict, field_dict, primary_key_dict):
     validated_dataset = {}
     has_err = False
     errlog = open(VALIDATION_ERROR_FILE, "w")
 
-    for table in list(schema_dict.keys()):
+    for table in schema_dict:
         if table not in dataset:
             print(f"Failed: Missing required table {table}.")
             print(dataset.keys())
@@ -74,13 +74,12 @@ def validate_dataset(dataset, schema_dict, field_dict):
         errors = dynamically_validate_df(
             field_dict=field_dict, 
             fields_to_validate_list=schema_dict[table], 
-            data_df=dataset[table]
+            data_df=dataset[table],
+            primary_key=primary_keys_dict[table]
             )
-        # get indices of the failed rows
-        errors_index_rows = [e.row for e in errors]
 
         # if any errors, print error message and exit
-        if errors_index_rows:
+        if errors:
             errlog.write(f"Failed: Dataset validation errors found in table {table}. Please retry after correcting errors listed in {VALIDATION_ERROR_FILE}.")
             errlog.write(f"{table} Errors: \n")
             for error in errors:
@@ -112,7 +111,7 @@ def col_is_in_defined_fields(col_name, field_dict):
     return False
 
 
-def load_excel_input(excel, allowed_dataset_cols, skiprows):
+def load_excel_input(excel, allowed_dataset_cols, allowed_dataset_tables, skiprows):
     """
     Read excel file input into a dataframe and validate for required columns.
         Skipping first two rows, as the input excel has two rows of headers before the data starts.
@@ -120,12 +119,14 @@ def load_excel_input(excel, allowed_dataset_cols, skiprows):
             fields definition section. This is used instead of a list of expected columns, because providing
             a list enforces that exactly those columns must exist in the data frame, and we don't want to
             enforce the schema until we're checking it during validation. This should solely be data import.
+
+        Returns: dictionary of data frames where each sheet is a separate dataframe in the dictionary
     """
 
     raw_dataset_df = pd.read_excel(excel, sheet_name=None, skiprows=skiprows, index_col=None, usecols=lambda x: x in allowed_dataset_cols)
 
-    print("Success: Excel file has been loaded into a dataframe.")
-    return raw_dataset_df
+    print("Success: Excel file has been loaded into a dataframe. Note that any columns that are not defined in the schema will be ignored.")
+    return {k:v for (k,v) in raw_dataset_df.items() if k in allowed_dataset_tables}
 
 
 def parse_schema_dict(schema_dict):
@@ -212,16 +213,26 @@ if __name__ == "__main__":
         help='Choose the number of rows to skip before column headers. Default: skip 2 rows, \
             column headers expected on row 3'
     )
+    parser.add_argument(
+        '-t',
+        '--test',
+        required=False,
+        type=bool,
+        default=False,
+        help='Choose this if you want to use the test schema stored in /tests instead of the released schema'
+    )
 
     args = parser.parse_args()
     schema_json = 'dataset_tables_schema.json'
+    if args.test:
+        schema_json = 'tests/test_schema.json'
 
     # parse schema using dataset name to get list of expected columns
     schema_dict, column_dict, primary_keys_dict = parse_config_file(schema_json, args.dataset_name)
     # load excel to dataframe validating to check if all expected columns present
-    dataset_metadata = load_excel_input(args.excel, list(column_dict.keys()), skiprows=args.skip_rows)
+    dataset_metadata = load_excel_input(args.excel, list(column_dict.keys()), list(schema_dict.keys()), skiprows=args.skip_rows)
 
-    validated_dataset = validate_dataset(dataset=dataset_metadata, field_dict=column_dict, schema_dict=schema_dict)
+    validated_dataset = validate_dataset(dataset=dataset_metadata, field_dict=column_dict, schema_dict=schema_dict, primary_key_dict=primary_keys_dict)
     
     if args.validate_only:
         print("Validation only run complete")

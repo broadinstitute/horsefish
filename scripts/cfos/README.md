@@ -30,6 +30,10 @@
         2. upload flag - pushes generated load table tsv files to Terra workspace
             - requires workspace name and workspace project arguments
 
+	Output: 
+		- If errors occur, generates and populates validation_errors.csv with a list of all errors found. 
+		- If successful, generates a separate .tsv file for each table in the schema
+
 ##### Usage
     1. only validate input excel file - overrides the tsv creation and "upload" settings
         `python3 /scripts/cfos/make_dataset_data_tables.py -x EXCEL_FILE -d DATASET_NAME -j SCHEMA_JSON -v`
@@ -74,7 +78,7 @@ Schemas are different ways of organizing the columns of data. This will determin
 Which schema to use is specified as an input to the upload script at run time.
 
 How do you define columns?
- Columns of data are defined in the “Fields” section of the JSON document. Each column must have a unique column_ID, which is used to identify the column in the input document. The column_ID is the value under which the rest of the column information is stored in the JSON dictionary. 
+ Columns of data are defined in the “Fields” section of the JSON document. Each column must have a unique column_name, which is used to identify the column in the input document. The column_name is the value under which the rest of the column information is stored in the JSON dictionary. 
 
 Note: if you have the same field in multiple tables, the same validation will apply to both, unless they are named something unique. AKA: if "filename" in one table should be alphanumeric and in another table should be an integer, you need to name the fields "tablex_filename" and "tabley_filename" to apply different validation.
 
@@ -82,70 +86,87 @@ Note: if you have the same field in multiple tables, the same validation will ap
 Each field has the following attributes. Attributes that are “type-specific” are listed under the corresponding field “data type”. 
 
 
-Field:
-column_ID
-field_type
-value_required (optional - defaults to "no")
-is_unique (optional - defaults to “no”)
+Validation:
+- pattern_to_match (optional)
+- integer_only (optional)
+- allowed_values
+- value_required (optional - defaults to "no")
+- is_unique (optional - defaults to “no”)
 
-Field_Type Specific Attributes:
-number
-integer_only (optional - defaults to “no”)
-free_text
-category
-allowed_values
-id
-pattern_to_match (optional)
-file_path
+
+FieldTypes:
+- number (expects float type data unless integer_only is set)
+- free_text
+- category
+- id
+- file_path (sets pattern_to_match = "^gs://" by default)
+
+
+**note**: Primary keys for each table must be present and unique within that column. Only one column can be designated as a primary key.
 
 Format for JSON:
 {“fields” : {
-	column_ID1 : {
+	column_name1 : {
 		“field_type” : field_type1,
-		“other_attributes” : other_values
+		<attribute_key>: <attribute_value>
 	},
-	column_ID2 : {
+	column_name2 : {
 		“field_type” : field_type2,
-		“other_attributes” : other_values
+		<attribute_key>: <attribute_value>
 	}
 },
 
 “schema_definitions” : {
 	schema_ID1 : {
 		table_ID1 : {
-			column_ID1,
-			column_ID2,
-			column_ID3,
-			column_ID4
+			"primary_key" : column_name1,
+			"columns" : [
+				column_name1,
+				column_name2,
+				column_name3,
+				column_name4
+			]
 		},
 		table_ID2 : {
-			column_ID1,
-			column_ID5,
-			column_ID10
+			"primary_key" : column_name1,
+			"columns" : [
+				column_name1,
+				column_name5,
+				column_name10
+			]
 		},
 		table_ID3 : {
-			column_ID2,
-			column_ID6,
-			column_ID7,
-			column_ID8,
-			column_ID9
+			"primary_key" : column_name2,
+			"columns" : [
+				column_name2,
+				column_name6,
+				column_name7,
+				column_name8,
+				column_name9
+			]
 		}
 	},
 	schema_ID2 : {
 		table_ID1 : {
-			column_ID1,
-			column_ID2,
-			column_ID3,
-			column_ID4,
-			column_ID5,
-			column_ID10
+			"primary_key" : column_name1,
+			"columns" : [
+				column_name1,
+				column_name2,
+				column_name3,
+				column_name4,
+				column_name5,
+				column_name10
+			]
 		},
 		table_ID3 : {
-			column_ID2,
-			column_ID6,
-			column_ID7,
-			column_ID8,
-			column_ID9
+			"primary_key" : column_name2,
+			"columns" : [
+				column_name2,
+				column_name6,
+				column_name7,
+				column_name8,
+				column_name9
+			]
 		}
 	}
 
