@@ -123,10 +123,10 @@ def load_excel_input(excel, allowed_dataset_cols, allowed_dataset_tables, skipro
         Returns: dictionary of data frames where each sheet is a separate dataframe in the dictionary
     """
 
-    raw_dataset_df = pd.read_excel(excel, sheet_name=None, skiprows=skiprows, index_col=None, usecols=lambda x: x in allowed_dataset_cols)
+    raw_dataset_dict = pd.read_excel(excel, sheet_name=None, skiprows=skiprows, index_col=None, usecols=lambda x: x in allowed_dataset_cols)
 
     print("Success: Excel file has been loaded into a dataframe. Note that any columns that are not defined in the schema will be ignored.")
-    return {k:v for (k,v) in raw_dataset_df.items() if k in allowed_dataset_tables}
+    return {k:v for (k,v) in raw_dataset_dict.items() if k in allowed_dataset_tables}
 
 
 def parse_schema_dict(schema_dict):
