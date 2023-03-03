@@ -118,7 +118,8 @@ def create_validation_build_dict(fields_dict, fields_to_validate_list, primary_k
       if field_id not in fields_dict:
          continue
 
-      if field_attribute_value_exists(field_id=field_id, field_dict=fields_dict, attribute_to_check=IS_UNIQUE_KEY):
+      if field_attribute_value_exists(field_id=field_id, field_dict=fields_dict, attribute_to_check=IS_UNIQUE_KEY)\
+         and fields_dict[field_id][IS_UNIQUE_KEY] == "True":
          add_validation(
             field_id=field_id,
             validation_dict=dynamic_validation_build_dict,

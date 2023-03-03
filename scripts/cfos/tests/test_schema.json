@@ -1,7 +1,6 @@
 {"fields" : {
   "id_unique" : {
     "field_type" : "id",
-    "is_unique" : "True",
     "value_required" : "True"
   },
   "integer_only_field" : {

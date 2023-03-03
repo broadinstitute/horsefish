@@ -3,6 +3,7 @@
 Usage:
     > python3 make_dataset_data_tables.py -d DATASET_TYPE -x EXCEL_FILE -w TERRA_WORKSPACE_NAME -p TERRA_WORKSPACE_PROJECT """
 import argparse
+import sys
 from firecloud import api as fapi
 import json
 import pandas as pd
@@ -119,6 +120,8 @@ def load_excel_input(excel, allowed_dataset_cols, allowed_dataset_tables, skipro
             fields definition section. This is used instead of a list of expected columns, because providing
             a list enforces that exactly those columns must exist in the data frame, and we don't want to
             enforce the schema until we're checking it during validation. This should solely be data import.
+        Sheet_name=None reads each sheet into a dataframe and puts all the dataframes into a dictionary where 
+            the sheet names are the keys. 
 
         Returns: dictionary of data frames where each sheet is a separate dataframe in the dictionary
     """
@@ -170,6 +173,13 @@ if __name__ == "__main__":
             This should match with one of the dataset_key terms in the schema.json file.'
     )
     parser.add_argument(
+        '-u', 
+        '--upload', 
+        required=False, 
+        action='store_true', 
+        help='Set parameter to upload data table files to workspace. default = no upload'
+    )
+    parser.add_argument(
         '-x', 
         '--excel', 
         required=True,
@@ -179,14 +189,14 @@ if __name__ == "__main__":
     parser.add_argument(
         '-p', 
         '--project', 
-        required=False, 
+        required='-v' not in sys.argv and '--validate_only' not in sys.argv and ('--upload' in sys.argv or '-u' in sys.argv), 
         type=str, 
         help='Terra workspace project (namespace).'
     )
     parser.add_argument(
         '-w', 
         '--workspace', 
-        required=False, 
+        required='-v' not in sys.argv and '--validate_only' not in sys.argv and ('--upload' in sys.argv or '-u' in sys.argv), 
         type=str, 
         help='Terra workspace name.'
     )
@@ -196,13 +206,6 @@ if __name__ == "__main__":
         required=False, 
         action='store_true', 
         help='Set parameter to run only validation on input excel file.'
-    )
-    parser.add_argument(
-        '-u', 
-        '--upload', 
-        required=False, 
-        action='store_true', 
-        help='Set parameter to upload data table files to workspace. default = no upload'
     )
     parser.add_argument(
         '-r',
