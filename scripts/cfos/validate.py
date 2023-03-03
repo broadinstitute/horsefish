@@ -5,7 +5,6 @@ import re
 
 # validators
 # column values cannot be null
-#null_validation = CustomElementValidation(lambda d: d is not np.nan, 'this field cannot be null')
 null_validation = CustomSeriesValidation(lambda d: d.notna(), 'this field cannot be null')
 
 
@@ -33,11 +32,10 @@ def field_attribute_value_exists(field_id, field_dict, attribute_to_check):
 
 
 def check_field_type(field_id, field_dict, expected_type):
-   type_key = FIELD_TYPE_KEY
-   if type_key not in field_dict[field_id]:
+   if FIELD_TYPE_KEY not in field_dict[field_id]:
       return False
 
-   field_type = field_dict[field_id][type_key]
+   field_type = field_dict[field_id][FIELD_TYPE_KEY]
    return field_type == expected_type
 
 
