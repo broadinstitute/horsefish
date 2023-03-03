@@ -32,7 +32,7 @@
 
 	Output: 
 		- If errors occur, generates and populates validation_errors.csv with a list of all errors found. 
-		- If successful, generates a separate .tsv file for each table in the schema
+		- If successful, generates a separate .tsv file for each table in the schema (these TSVs are then uploaded to Terra)
 
 ##### Usage
     1. only validate input excel file - overrides the tsv creation and "upload" settings
