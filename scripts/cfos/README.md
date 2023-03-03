@@ -189,7 +189,7 @@ General expected outcomes are explained above the column ID in the Fail.xlsx fil
 
 The code can fail in the following ways:
 - **primary key column contains non-unique values**: 'validation_error':{row: 6, column: "id_unique"}: "X1234B" contains values that are not unique
-- **value doesn't match an expected pattern** : 'validation_error':{row: 6, column: "file_path_explicit_pattern"}: "gs://456" does not match the pattern "^fs://"
+- **value doesn't match an expected pattern** : 'validation_error':{row: 6, column: "file_path_explicit_pattern"}: "fs://456" does not match the pattern "^gs://"
 - **value is an unexpected type**. If "number", it must be a float. If "integer", it must be an integer: 'validation_error':The column integer_only_field has a dtype of object which is not a subclass of the required type <class 'int'>
 - **category field value is not in list of allowed values**: 'validation_error':{row: 2, column: "category"}: "value12" is not in the list of legal options (value1, value2, value3, value4)
 - **column listed in schema table is not included in the data**: 'validation_error':The column field_not_in_data exists in the schema but not in the data frame

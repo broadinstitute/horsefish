@@ -127,9 +127,11 @@ def load_excel_input(excel, allowed_dataset_cols, allowed_dataset_tables, skipro
     """
 
     raw_dataset_dict = pd.read_excel(excel, sheet_name=None, skiprows=skiprows, index_col=None, usecols=lambda x: x in allowed_dataset_cols)
-
+    processed_dataset_dict = {k:v for (k,v) in raw_dataset_dict.items() if k in allowed_dataset_tables}
     print("Success: Excel file has been loaded into a dataframe. Note that any columns that are not defined in the schema will be ignored.")
-    return {k:v for (k,v) in raw_dataset_dict.items() if k in allowed_dataset_tables}
+    print(processed_dataset_dict)
+
+    return processed_dataset_dict
 
 
 def parse_schema_dict(schema_dict):
