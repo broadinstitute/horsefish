@@ -34,7 +34,6 @@ task calculate_file_size {
     }
 
     command {
-        # file_size_bytes=$(gsutil du ~{src_object_path} | tr "\t" " " | cut -d ' ' -f 1)
         file_size_gb=$(((~{file_size_bytes}/1000000000)+1))
         echo "$file_size_gb" > file_gb
     }
