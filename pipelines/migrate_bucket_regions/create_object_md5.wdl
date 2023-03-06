@@ -2,13 +2,14 @@ version 1.0
 
 workflow create_object_md5 {
     input {
-        String src_object_path
-        String tmp_object_path
+        String  src_object_path
+        String  tmp_object_path
+        Int     file_size_bytes
     }
 
     call calculate_file_size {
         input:
-            src_object_path = src_object_path
+            file_size_bytes = file_size_bytes
     }
 
     call copy_to_destination {
@@ -29,12 +30,12 @@ task calculate_file_size {
     }
 
     input {
-        String src_object_path
+        Int file_size_bytes
     }
 
     command {
-        file_size_bytes=$(gsutil du ~{src_object_path} | tr "\t" " " | cut -d ' ' -f 1)
-        file_size_gb=$(((file_size_bytes/1000000000)+1))
+        # file_size_bytes=$(gsutil du ~{src_object_path} | tr "\t" " " | cut -d ' ' -f 1)
+        file_size_gb=$(((~{file_size_bytes}/1000000000)+1))
         echo "$file_size_gb" > file_gb
     }
 
