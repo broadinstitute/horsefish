@@ -26,7 +26,7 @@ workflow create_object_md5 {
 
 task calculate_file_size {
     meta {
-        description: "Determine the size in GB of source object."
+        description: "Determine the size in GB of source object with the given file size in bytes."
     }
 
     input {
