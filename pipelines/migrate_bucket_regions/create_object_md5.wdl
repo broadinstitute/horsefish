@@ -62,7 +62,7 @@ task copy_to_destination {
     }
 
     command {
-        gsutil cat -u anvil-datastorage "~{src_object_path}" | gsutil -u anvil-datastorage cp -c -L create_md5_log.csv - "~{tmp_object_path}"
+        gsutil -u anvil-datastorage cat "~{src_object_path}" | gsutil -u anvil-datastorage cp -c -L create_md5_log.csv - "~{tmp_object_path}"
         gsutil -u anvil-datastorage mv "~{tmp_object_path}" "~{src_object_path}"
     }
 
