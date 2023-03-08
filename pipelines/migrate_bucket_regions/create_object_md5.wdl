@@ -62,7 +62,9 @@ task copy_to_destination {
     }
 
     command {
+        # stream from source and copy contents in memory to _tmp version of src object
         gsutil -u anvil-datastorage cat "~{src_object_path}" | gsutil -u anvil-datastorage cp -c -L create_md5_log.csv - "~{tmp_object_path}"
+        # move tmp object back to src object
         gsutil -u anvil-datastorage mv -c -L create_md5_log.csv "~{tmp_object_path}" "~{src_object_path}"
     }
 
