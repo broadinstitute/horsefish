@@ -14,8 +14,14 @@ workflow create_object_md5 {
             disk_size = file_size_gb
     }
 
+    call parse_md5 {
+        input:
+            copy_log = copy_to_destination.copy_log
+    }
+
     output {
         File md5_log = copy_to_destination.copy_log
+        String md5 = parse_md5.md5sum
     }
 }
 
@@ -48,5 +54,28 @@ task copy_to_destination {
 
     output {
         File copy_log = "create_md5_log.csv"
+    }
+}
+
+task parse_md5 {
+    meta {
+        description: "Parse gsutil cp log file to get md5."
+    }
+
+    input {
+        File  copy_log
+    }
+
+    command {
+        # get md5sum after the mv file command
+        sed '3q;d' ~{copy_log} | cut -d"," -f5 > md5
+    }
+
+    runtime {
+        docker: "gcr.io/google.com/cloudsdktool/cloud-sdk:305.0.0"
+    }
+
+    output {
+        String md5sum = read_string("md5")
     }
 }
