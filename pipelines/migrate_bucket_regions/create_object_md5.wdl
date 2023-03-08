@@ -4,46 +4,18 @@ workflow create_object_md5 {
     input {
         String  src_object_path
         String  tmp_object_path
-        Int     file_size_bytes
-    }
-
-    call calculate_file_size {
-        input:
-            file_size_bytes = file_size_bytes
+        Int     file_size_gb
     }
 
     call copy_to_destination {
         input:
             src_object_path = src_object_path,
             tmp_object_path = tmp_object_path,
-            disk_size = calculate_file_size.max_gb
+            disk_size = file_size_gb
     }
 
     output {
         File md5_log = copy_to_destination.copy_log
-    }
-}
-
-task calculate_file_size {
-    meta {
-        description: "Determine the size in GB of source object with the given file size in bytes."
-    }
-
-    input {
-        Int file_size_bytes
-    }
-
-    command {
-        file_size_gb=$(((~{file_size_bytes}/1000000000)+1))
-        echo "$file_size_gb" > file_gb
-    }
-
-    runtime {
-        docker: "gcr.io/google.com/cloudsdktool/cloud-sdk:305.0.0"
-    }
-
-    output {
-        Int max_gb = read_int("file_gb")
     }
 }
 
