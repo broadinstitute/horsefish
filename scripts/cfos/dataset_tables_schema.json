@@ -1,0 +1,219 @@
+{"fields" : {
+  "donor_id" : {
+    "field_type" : "id"
+    },
+    "xref" : {
+      "field_type" : "free_text"
+    },
+    "organism_type" : {
+      "field_type" : "category",
+      "allowed_values" : ["C elegans", "Canis lupus familiaris (dog)", "Ciona intestinalis (Ascidian)",
+                          "Danio rerio (zebrafish)", "Drosophila melanogaster (fruit fly)", 
+                          "Homo sapiens (human)", "Mus musculus (mouse)", "Oryctolagus cuniculus (rabbit)",
+                          "Paracentrotus lividus (Rock sea urchin)", "Rattus norvegicus (rat)",
+                          "Sphaerechinus granularis (Violet sea urchin)"]
+    },
+    "biosample_id" : {
+      "field_type" : "id"
+    },
+    "file_id" : {
+      "field_type" : "id"
+    },
+    "assay_id" : {
+      "field_type" : "id"
+    },
+    "anatomical_site" : {
+      "field_type" : "free_text"
+    },
+    "anatomical_region" : {
+      "field_type" : "free_text"
+    },
+    "donor_age_at_collection" : {
+      "field_type" : "number",
+      "integer_only" : "True"
+    },
+    "disease_neuropathology" : {
+      "field_type" : "category",
+      "allowed_values": ["y", "n"]
+    },
+    "data_modality" : {
+      "field_type" : "category",
+      "allowed_values" : ["Epigenomic", "Epigenomic_3D Contact Maps", "Epigenomic_DNABinding",
+                                "Epigenomic_DNABinding_HistoneModificationLocation", "Epigenomic_DNABinding_TranscriptionFactorLocation",
+                                "Epigenomic_DNAChromatinAccessibility", "Epigenomic_DNAMethylation", "Epigenomic_RNABinding", "Genomic",
+                                "Genomic_Assembly", "Genomic_Exome", "Genomic_Genotyping_Targeted", "Genomic_WholeGenome",
+                                "Imaging_Electrophysiology", "Imaging_Microscopy", "Medical imaging _CTScan", "Medical imaging _Electrocardiogram",
+                                "Medical imaging _MRI", "Medical imaging _Xray", "Metabolomic", "Microbiome", "Metagenomic", "Proteomic",
+                                "Transcriptomic", "SpatialTranscriptomics", "Trascriptomic_Targeted", "Trascriptomic_NonTargeted"]
+    },
+    "genetic_mod" : {
+      "field_type" : "free_text"
+    },
+    "genetic_mod_type" : {
+      "field_type" : "category",
+      "allowed_values" : ["deletion", "interference", "insertion", "mutagenesis", "replacement", "episome", "activation", "knockout", 
+                          "disruption", "inhibition", "binding", "transgene insertion", "deactivation", "perturbation", "selection", "stimulation", 
+                          "non-specific target control", "repression", "tagging", "characterization", "expression", "in vivo enhancer characterization"]
+    },
+    "genetic_mod_method" : {
+      "field_type" : "category",
+      "allowed_values" : ["CRISPR", "mutagen treatment", "site-specific recombination", "TALEN", "homologous recombination"]
+    },
+    "sample_treatment" : {
+      "field_type" : "free_text"
+    },
+    "library_id" : {
+      "field_type" : "id"
+    },
+    "xref_summary" : {
+      "field_type" : "file_path"
+    },
+    "xref_genes" : {
+      "field_type" : "file_path"
+    },
+    "xref_matrix" : {
+      "field_type" : "file_path"
+    },
+    "xref_barcode" : {
+      "field_type" : "file_path"
+    },
+    "file_format_summary" : {
+      "field_type" : "free_text"
+    },
+    "file_format_features" : {
+      "field_type" : "free_text"
+    },
+    "file_format_matrix" : {
+      "field_type" : "free_text"
+    },
+    "file_format_barcode" : {
+      "field_type" : "free_text"
+    },
+    "sample_treatment_id" : {
+      "field_type" : "id"
+    },
+    "sample_treatment_type" : {
+      "field_type" : "category",
+      "allowed_values" : ["antibody", "chemical", "exposure", "infection", "injection", 
+                          "irradiation", "protein", "transplantation", "RNAi", "activation", "deactivation", 
+                          "perturbation", "selection", "stimulation", "non-specific target control", "repression", 
+                          "tagging", "characterization", "expression", "in vivo enhancer characterization"]
+    },
+    "sample_treatment_method" : {
+      "field_type" : "free_text"
+    },
+    "antibody" : {
+      "field_type" : "free_text"
+    },
+    "duration" : {
+      "field_type" : "number",
+      "integer_only" : "True"
+    },
+    "duration_unit" : {
+      "field_type" : "category",
+      "allowed_values" : ["min", "seconds", "hours"]
+    },
+    "temperature" : {
+      "field_type" : "number"
+    },
+    "temperature_unit" : {
+      "field_type" : "category",
+      "allowed_values" : ["celsius", "kelvin", "fahrenheit"]
+    }, 
+    "amount" : {
+      "field_type" : "number"
+    },
+    "amount_unit" : {
+      "field_type" : "free_text"
+    },
+    "phenotypic_sex" : {
+      "field_type" : "category",
+      "allowed_values" : ["Female", "Male", "Intersex"]
+    }
+  },
+  
+  "schema_definitions" : {
+    "inph" : {},
+    "imgl" : {
+      "Donor" : {
+        "primary_key" : "donor_id",
+        "columns" : [
+          "donor_id",
+          "xref",
+          "organism_type",
+          "phenotypic_sex",
+          "disease_neuropathology"
+        ]
+      },
+      "Biosample" : {
+        "primary_key" : "biosample_id",
+        "columns" : [
+          "biosample_id",
+          "donor_id",
+          "xref",
+          "file_id",
+          "assay_id",
+          "anatomical_site",
+          "donor_age_at_collection",
+          "disease_neuropathology",
+          "anatomical_region",
+          "data_modality",
+          "genetic_mod",
+          "genetic_mod_type",
+          "genetic_mod_method",
+          "sample_treatment",
+          "library_id"
+        ]
+      },
+      "File" : {
+        "primary_key" : "file_id",
+        "columns" : [
+          "file_id",
+          "xref",
+          "xref_summary",
+          "xref_genes",
+          "xref_matrix",
+          "xref_barcode",
+          "file_format_summary",
+          "file_format_features",
+          "file_format_matrix",
+          "file_format_barcode"
+        ]
+      },
+      "SampleTreatment" : {
+        "primary_key" : "sample_treatment_id",
+        "columns" : [
+          "sample_treatment_id",
+          "biosample_id",
+          "xref",
+          "sample_treatment_type",	
+          "sample_treatment_method",	
+          "antibody",	
+          "duration",	
+          "duration_unit",
+          "temperature",
+          "temperature_unit",
+          "amount",
+          "amount_unit"
+        ]
+      },
+      "Assay" : {
+        "primary_key" : "assay_id",
+        "columns" : [
+          "assay_id",
+          "xref"
+        ]
+      },
+      "Library" : {
+        "primary_key" : "library_id",
+        "columns" : [
+          "library_id",	
+          "biosample_id",
+          "xref"
+        ]
+      }
+    },
+    "imperial" : {},
+    "dataset4" : {}
+  }  
+}
