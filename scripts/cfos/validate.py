@@ -177,13 +177,14 @@ def dynamically_validate_df(data_df, field_dict, fields_to_validate_list, primar
 def create_validation_code_from_logic(validation_build_guide_dict, fields_to_validate):
    columns_logic_list = []
    
-   for column_id in list(fields_to_validate):
+   for column_id in fields_to_validate:
       if column_id not in list(validation_build_guide_dict.keys()):
          column = Column(name=column_id)
       
       else:
+         allow_empty = VALUE_REQUIRED_KEY not in validation_build_guide_dict.get(column_id)
          validation_logic_list = validation_build_guide_dict[column_id]
-         column = Column(name=column_id, validations=validation_logic_list)
+         column = Column(column_id, validation_logic_list, allow_empty)
          
       columns_logic_list.append(column)
    
