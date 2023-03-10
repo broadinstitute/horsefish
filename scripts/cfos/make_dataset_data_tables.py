@@ -13,7 +13,7 @@ from pandas_schema import*
 from pandas_schema.validation import*
 from validate import dynamically_validate_df
 
-VALIDATION_ERROR_FILE = "validation_errors.csv"
+VALIDATION_ERROR_FILE = "validation_errors.txt"
 
 
 def upload_dataset_table_to_workspace(tsv_filenames_list, workspace_name, workspace_project):
@@ -215,8 +215,8 @@ if __name__ == "__main__":
         required=False,
         type=int,
         default=2,
-        help='Choose the number of rows to skip before column headers. Default: skip 2 rows, \
-            column headers expected on row 3'
+        help='Choose the number of rows at the top of the file to skip before column headers.  \
+            Default: skip the first 2 rows, column headers expected on row 3'
     )
     parser.add_argument(
         '-t',

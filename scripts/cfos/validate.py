@@ -62,7 +62,6 @@ def only_int_values_allowed(field_id, field_dict):
 
 def null_value_invalid(fields_dict, field_id):
    return VALUE_REQUIRED_KEY in fields_dict[field_id] \
-      and VALUE_REQUIRED_KEY in fields_dict[field_id]\
       and fields_dict[field_id][VALUE_REQUIRED_KEY] == "True"
    
 
