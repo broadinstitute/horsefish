@@ -1,7 +1,6 @@
 """Validate dataframes with validators."""
 from pandas_schema import*
 from pandas_schema.validation import*
-import re
 
 # validators
 # column values cannot be null
@@ -178,13 +177,14 @@ def dynamically_validate_df(data_df, field_dict, fields_to_validate_list, primar
 def create_validation_code_from_logic(validation_build_guide_dict, fields_to_validate):
    columns_logic_list = []
    
-   for column_id in list(fields_to_validate):
-      if column_id not in list(validation_build_guide_dict.keys()):
+   for column_id in fields_to_validate:
+      if column_id not in validation_build_guide_dict):
          column = Column(name=column_id)
       
       else:
+         allow_null = VALUE_REQUIRED_KEY not in validation_build_guide_dict[column_id]
          validation_logic_list = validation_build_guide_dict[column_id]
-         column = Column(name=column_id, validations=validation_logic_list)
+         column = Column(name=column_id, validations=validation_logic_list, allow_empty=allow_null)
          
       columns_logic_list.append(column)
    

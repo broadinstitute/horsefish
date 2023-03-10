@@ -11,9 +11,10 @@ from os import path
 from sys import exit
 from pandas_schema import*
 from pandas_schema.validation import*
+from datetime import datetime
 from validate import dynamically_validate_df
 
-VALIDATION_ERROR_FILE = "validation_errors.csv"
+VALIDATION_ERROR_FILE = "validation_errors_" + str(datetime.utcnow().strftime('%c')) + ".txt"
 
 
 def upload_dataset_table_to_workspace(tsv_filenames_list, workspace_name, workspace_project):
@@ -46,8 +47,12 @@ def generate_load_table_files(dataset_tables_dict, primary_keys_dict):
     for table_name in dataset_tables_dict:
         table_df = dataset_tables_dict[table_name]
         primary_key = primary_keys_dict[table_name]
+        new_name = table_name + "_id"
 
-        table_df[f"entity:{table_name}_id"] = table_df[primary_key]
+        if new_name.upper() == primary_key.upper():
+            table_df.rename(columns={primary_key: f"entity:{new_name}"}, inplace=True)
+        else:
+            table_df[f"entity:{table_name}_id"] = table_df[primary_key]
         table_df.set_index(f"entity:{table_name}_id", inplace=True)
 
         # set output tsv filename
@@ -129,7 +134,10 @@ def load_excel_input(excel, allowed_dataset_cols, allowed_dataset_tables, skipro
     raw_dataset_dict = pd.read_excel(excel, sheet_name=None, skiprows=skiprows, index_col=None, usecols=lambda x: x in allowed_dataset_cols)
     processed_dataset_dict = {k:v for (k,v) in raw_dataset_dict.items() if k in allowed_dataset_tables}
     print("Success: Excel file has been loaded into a dataframe. Note that any columns that are not defined in the schema will be ignored.")
-    print(processed_dataset_dict)
+    for key, value in processed_dataset_dict.items():
+        print("table: " + key)
+        print(key + " columns: " + str(value))
+        print("\n")
 
     return processed_dataset_dict
 
