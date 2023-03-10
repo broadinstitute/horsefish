@@ -13,7 +13,7 @@ from pandas_schema import*
 from pandas_schema.validation import*
 from validate import dynamically_validate_df
 
-VALIDATION_ERROR_FILE = "validation_errors.txt"
+VALIDATION_ERROR_FILE = "validation_errors_" + datetime.datetime.utcnow().isoformat() + ".txt"
 
 
 def upload_dataset_table_to_workspace(tsv_filenames_list, workspace_name, workspace_project):
@@ -46,8 +46,12 @@ def generate_load_table_files(dataset_tables_dict, primary_keys_dict):
     for table_name in dataset_tables_dict:
         table_df = dataset_tables_dict[table_name]
         primary_key = primary_keys_dict[table_name]
+        new_suffix = str(table_name) + "_id"
 
-        table_df[f"entity:{table_name}_id"] = table_df[primary_key]
+        if str(new_suffix).upper() == primary_key.upper():
+            table_df.rename(columns={primary_key: f"entity:{new_suffix}"}, inplace=True)
+        else:
+            table_df[f"entity:{table_name}_id"] = table_df[primary_key]
         table_df.set_index(f"entity:{table_name}_id", inplace=True)
 
         # set output tsv filename
@@ -63,8 +67,7 @@ def generate_load_table_files(dataset_tables_dict, primary_keys_dict):
 
 def validate_dataset(dataset, schema_dict, field_dict, primary_key_dict):
     validated_dataset = {}
-    has_err = False
-    errlog = open(VALIDATION_ERROR_FILE, "w")
+    errors = []
 
     for table in schema_dict:
         if table not in dataset:
@@ -72,32 +75,31 @@ def validate_dataset(dataset, schema_dict, field_dict, primary_key_dict):
             print(dataset.keys())
             exit()
 
-        errors = dynamically_validate_df(
+        table_errors = dynamically_validate_df(
             field_dict=field_dict, 
             fields_to_validate_list=schema_dict[table], 
             data_df=dataset[table],
             primary_key=primary_keys_dict[table]
             )
-
-        # if any errors, print error message and exit
-        if errors:
-            errlog.write(f"Failed: Dataset validation errors found in table {table}. Please retry after correcting errors listed in {VALIDATION_ERROR_FILE}.")
-            errlog.write(f"{table} Errors: \n")
-            for error in errors:
-                errlog.write(f"'validation_error':{error}\n")
-            errlog.write("\n")
-            has_err = True
+        
+        if table_errors:
+            errors.append(f"Failed: Dataset validation errors found in table {table}. Please retry after correcting errors listed in {VALIDATION_ERROR_FILE}.")
+            errors.append(f"{table} Errors: \n")
+            for error in table_errors:
+                errors.append(f"'validation_error':{error}\n")
+            errors.append("\n")
 
         # TODO: determine how to handle drops of failed rows/columns to get cleaned data
         else:
             validated_dataset[table] = dataset[table]
             print(f"Success: Table {table} has been validated.")
 
-    if not errlog.closed:
-        errlog.close()
 
-    if has_err:
+    if errors:
         print(f"Errors found, see {VALIDATION_ERROR_FILE} for details.")
+        with open(VALIDATION_ERROR_FILE, "w") as f:
+            for line in errors:
+                f.write(line)
         exit()
 
     print(f"Success: Dataset has been validated.")

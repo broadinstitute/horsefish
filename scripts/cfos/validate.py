@@ -1,7 +1,6 @@
 """Validate dataframes with validators."""
 from pandas_schema import*
 from pandas_schema.validation import*
-import re
 
 # validators
 # column values cannot be null
