@@ -135,8 +135,8 @@ def load_excel_input(excel, allowed_dataset_cols, allowed_dataset_tables, skipro
     processed_dataset_dict = {k:v for (k,v) in raw_dataset_dict.items() if k in allowed_dataset_tables}
     print("Success: Excel file has been loaded into a dataframe. Note that any columns that are not defined in the schema will be ignored.")
     for key, value in processed_dataset_dict.items():
-        print("table: " + key)
-        print(key + " columns: " + str(value))
+        print(key + " columns: ")
+        print(value.columns.values)
         print("\n")
 
     return processed_dataset_dict

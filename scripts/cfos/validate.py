@@ -178,7 +178,7 @@ def create_validation_code_from_logic(validation_build_guide_dict, fields_to_val
    columns_logic_list = []
    
    for column_id in fields_to_validate:
-      if column_id not in validation_build_guide_dict):
+      if column_id not in validation_build_guide_dict:
          column = Column(name=column_id)
       
       else:
