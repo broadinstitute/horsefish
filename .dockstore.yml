@@ -8,7 +8,7 @@ workflows:
 
  - name: create_object_md5
    subclass: WDL
-   primaryDescriptorPath: /pipelines/migrate_bucket_regions/create_object_md5.wdl
+   primaryDescriptorPath: /pipelines/create_object_md5.wdl
    testParameterFiles:
     - empty.json
 
