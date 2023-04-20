@@ -53,6 +53,7 @@ def output_and_compare_contents(gcs_path_1, gcs_path_2):
     df1["Directory"] = gcs_path_1
     df1["Path"] = df1["GlobalPath"].str.replace(gcs_path_1, "")
     df1["Name"] = df1.apply(lambda x: os.path.basename(x["GlobalPath"]), axis=1)
+    df1 = df1.fillna("")
     df1_final = df1[["Directory", "Path", "Name", "Size", "crc32c", "md5", "Modified"]].copy()
     df1_final = df1_final[df1_final["Name"] != ""].sort_values(by="Path")
     df1_final = df1_final.convert_dtypes()
@@ -67,6 +68,7 @@ def output_and_compare_contents(gcs_path_1, gcs_path_2):
         df2["Directory"] = gcs_path_2
         df2["Path"] = df2["GlobalPath"].str.replace(gcs_path_2, "")
         df2["Name"] = df2.apply(lambda x: os.path.basename(x["GlobalPath"]), axis=1)
+        df2 = df2.fillna("")
         df2_final = df2[["Directory", "Path", "Name", "Size", "crc32c", "md5", "Modified"]].copy()
         df2_final = df2_final[df2_final["Name"] != ""].sort_values(by="Path")
         df2_final = df2_final.convert_dtypes()
@@ -74,12 +76,14 @@ def output_and_compare_contents(gcs_path_1, gcs_path_2):
     # Join together dataframes and flag differences
     if gcs_path_2 != "UNSPECIFIED":
         df3 = pd.merge(df1_final, df2_final, suffixes=("_1", "_2"), how="outer", on="Path")
-        df3["Mismatch_Flag"] = np.where((df3["Directory_1"].isna()) | (df3["Directory_2"].isna()), "Y", "N")
+        df3 = df3.fillna("")
+        df3["Mismatch_Flag"] = np.where((df3["Directory_1"] == "") | (df3["Directory_2"] == ""), "Y", "N")
         df3["Size_Diff_Flag"] = np.where((df3["Mismatch_Flag"] == "N") & (df3["Size_1"] != df3["Size_2"]), "Y", "N")
         df3["crc32c_Diff_Flag"] = np.where((df3["Mismatch_Flag"] == "N") & (df3["crc32c_1"] != df3["crc32c_2"]), "Y", "N")
         df3["md5_Diff_Flag"] = np.where((df3["Mismatch_Flag"] == "N") & (df3["md5_1"] != df3["md5_2"]), "Y", "N")
-        df3["Check"] = np.where((df3["Mismatch_Flag"] == "Y") | (df3["Size_Diff_Flag"] == "Y") | (df3["crc32c_Diff_Flag"] == "Y") | (df3["md5_Diff_Flag"] == "Y"), "Y", "N")
-        df3_final = df3[["Path", "Check", "Mismatch_Flag", "Size_Diff_Flag", "crc32c_Diff_Flag", "md5_Diff_Flag", "Directory_1", "Name_1", "Size_1", "crc32c_1", "md5_1", "Modified_1", "Directory_2", "Name_2", "Size_2", "crc32c_2", "md5_2", "Modified_2"]].copy()
+        df3["md5_Missing_Flag"] = np.where(((df3["Directory_1"] != "") & (df3["md5_1"] == "")) | ((df3["Directory_2"] != "") & (df3["md5_2"] == "")), "Y", "N")
+        df3["Check"] = np.where((df3["Mismatch_Flag"] == "Y") | (df3["Size_Diff_Flag"] == "Y") | (df3["crc32c_Diff_Flag"] == "Y") | (df3["md5_Diff_Flag"] == "Y") | (df3["md5_Missing_Flag"] == "Y"), "Y", "N")
+        df3_final = df3[["Path", "Check", "Mismatch_Flag", "Size_Diff_Flag", "crc32c_Diff_Flag", "md5_Diff_Flag", "md5_Missing_Flag", "Directory_1", "Name_1", "Size_1", "crc32c_1", "md5_1", "Modified_1", "Directory_2", "Name_2", "Size_2", "crc32c_2", "md5_2", "Modified_2"]].copy()
     else:
         df3_final = df1_final[["Path", "Directory", "Name", "Size", "crc32c", "md5", "Modified"]]
 
