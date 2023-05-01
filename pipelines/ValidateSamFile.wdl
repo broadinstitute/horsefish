@@ -42,7 +42,8 @@ task GenerateQCReport {
     samtools view -c ~{input_sam_file}
   }
   runtime {
-    docker: "us.gcr.io/broad-gotc-prod/picard-cloud:2.26.10"
+    # docker: "us.gcr.io/broad-gotc-prod/picard-cloud:2.26.10"
+    docker: "us.gcr.io/broad-gotc-prod/samtools:1.0.0-1.11-1624651616"
     preemptible: preemptible_tries
     memory: "~{memory_size} MiB"
     disks: "local-disk " + disk_size + " HDD"
