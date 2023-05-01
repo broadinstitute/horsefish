@@ -9,6 +9,10 @@ workflow ValidateSamFile {
         input:
             input_sam_file = input_sam_file
     }
+
+    output {
+        File validation_report = GenerateQCReport.report
+    }
 }
 
 # adapted from warp QC tasks for production pipelines
@@ -16,22 +20,12 @@ workflow ValidateSamFile {
 task GenerateQCReport {
   input {
     File input_sam_file
-    # File? input_bam_index
     String report_filename = "validation_report"
-    # File ref_dict
-    # File ref_fasta
-    # File ref_fasta_index
-    # Int? max_output
-    # Array[String]? ignore
-    # Boolean? is_outlier_data
     Int preemptible_tries = 0
     Int memory_multiplier = 1
     Int additional_disk = 20
 
     Int disk_size = ceil(size(input_sam_file, "GiB") + additional_disk)
-                    # + size(ref_fasta, "GiB") 
-                    # + size(ref_fasta_index, "GiB")
-                    # + size(ref_dict, "GiB")) + additional_disk
   }
 
   Int memory_size = ceil(16000 * memory_multiplier)
@@ -44,12 +38,6 @@ task GenerateQCReport {
       INPUT=~{input_sam_file} \
       OUTPUT=~{report_filename} \
       MODE=VERBOSE
-    #   REFERENCE_SEQUENCE=~{ref_fasta} \
-    #   ~{"MAX_OUTPUT=" + max_output} \
-    #   IGNORE=~{default="null" sep=" IGNORE=" ignore} \
-    #   MODE=VERBOSE \
-    #   ~{default='SKIP_MATE_VALIDATION=false' true='SKIP_MATE_VALIDATION=true' false='SKIP_MATE_VALIDATION=false' is_outlier_data} \
-    #   IS_BISULFITE_SEQUENCED=false
   }
   runtime {
     docker: "us.gcr.io/broad-gotc-prod/picard-cloud:2.26.10"
