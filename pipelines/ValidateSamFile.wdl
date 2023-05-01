@@ -39,7 +39,7 @@ task GenerateQCReport {
     #   OUTPUT=~{report_filename} \
     #   MODE=VERBOSE
 
-    samtools view -c ~{input_sam_file}
+    samtools quickcheck ~{input_sam_file}
   }
   runtime {
     # docker: "us.gcr.io/broad-gotc-prod/picard-cloud:2.26.10"
