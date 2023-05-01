@@ -33,17 +33,17 @@ task GenerateQCReport {
   Int max_heap = memory_size - 500
 
   command {
-    # java -Xms~{java_memory_size}m -Xmx~{max_heap}m -jar /usr/picard/picard.jar \
-    #   ValidateSamFile \
-    #   INPUT=~{input_sam_file} \
-    #   OUTPUT=~{report_filename} \
-    #   MODE=VERBOSE
+    java -Xms~{java_memory_size}m -Xmx~{max_heap}m -jar /usr/picard/picard.jar \
+      ValidateSamFile \
+      INPUT=~{input_sam_file} \
+      OUTPUT=~{report_filename} \
+      MODE=VERBOSE
 
-    samtools quickcheck ~{input_sam_file}
+    # samtools quickcheck ~{input_sam_file}
   }
   runtime {
-    # docker: "us.gcr.io/broad-gotc-prod/picard-cloud:2.26.10"
-    docker: "us.gcr.io/broad-gotc-prod/samtools:1.0.0-1.11-1624651616"
+    docker: "us.gcr.io/broad-gotc-prod/picard-cloud:2.26.10"
+    # docker: "us.gcr.io/broad-gotc-prod/samtools:1.0.0-1.11-1624651616"
     preemptible: preemptible_tries
     memory: "~{memory_size} MiB"
     disks: "local-disk " + disk_size + " HDD"
