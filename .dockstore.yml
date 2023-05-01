@@ -17,3 +17,9 @@ workflows:
    primaryDescriptorPath: /pipelines/emerge/deliver_prs_to_anvil.wdl
    testParameterFiles:
     - empty.json
+
+ - name: validate_sam_file
+   subclass: WDL
+   primaryDescriptorPath: /pipelines/ValidateSamFile.wdl
+   testParameterFiles:
+    - empty.json
