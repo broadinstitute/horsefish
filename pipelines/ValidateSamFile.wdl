@@ -47,6 +47,7 @@ task GenerateQCReport {
     preemptible: preemptible_tries
     memory: "~{memory_size} MiB"
     disks: "local-disk " + disk_size + " HDD"
+    continueOnReturnCode: true
   }
 
   output {
