@@ -23,3 +23,9 @@ workflows:
    primaryDescriptorPath: /pipelines/ValidateSamFile.wdl
    testParameterFiles:
     - empty.json
+
+ - name: validate_cram_file
+   subclass: WDL
+   primaryDescriptorPath: /pipelines/SamtoolsQuickCheck.wdl
+   testParameterFiles:
+    - empty.json
