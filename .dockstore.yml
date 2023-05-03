@@ -29,3 +29,9 @@ workflows:
    primaryDescriptorPath: /pipelines/SamtoolsQuickCheck.wdl
    testParameterFiles:
     - empty.json
+
+ - name: run_shell_script
+   subclass: WDL
+   primaryDescriptorPath: /pipelines/RunShellScript.wdl
+   testParameterFiles:
+    - empty.json
