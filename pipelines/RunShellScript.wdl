@@ -41,10 +41,3 @@ task run_shell_script {
     File log_file = "log.txt"
   }
 }
-
-
-
-
-
-
-
