@@ -3,7 +3,7 @@
 if (( $# < 2 )); then
   echo "Usage: $0 TERRA_PROJECT_ID PATH_TO_TERRA_BUCKET_PATH"
   echo "The Terra bucket path can be formatted as gs://fc-XXXXX or fc-XXXXX"
-  echo "i.e you can run ./set_requester_pays.sh on project_id fc-12345"
+  echo "i.e you can run ./get_requester_pays_status.sh project_id fc-12345"
   echo "NOTE: this script requires you to be authed as your firecloud.org admin account."
   exit 0
 else
