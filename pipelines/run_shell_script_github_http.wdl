@@ -36,12 +36,14 @@ task run_shell_script {
     regex='(https?|ftp|file)://[-[:alnum:]\+&@#/%?=~_|!:,.;]*[-[:alnum:]\+&@#/%=~_|]'
     if [[ $shell_commands =~ $regex ]]
     then
+      echo -e "Entering bash SCRIPT block."
       echo -e "~{shell_commands}"
       curl "${shell_commands}"
       curl "${shell_commands}" > shell_script.sh
       chmod +x shell_script.sh
       bash shell_script.sh 2>&1 | tee log.txt
     else
+      echo -e "Entering bash COMMAND block."
       echo -e "~{shell_commands}" > shell_script.sh
       chmod +x shell_script.sh
       bash shell_script.sh 2>&1 | tee log.txt
