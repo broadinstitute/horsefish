@@ -34,16 +34,14 @@ task run_shell_script {
     regex='(https?|ftp|file)://[-[:alnum:]\+&@#/%?=~_|!:,.;]*[-[:alnum:]\+&@#/%=~_|]'
     if [[ $shell_commands =~ $regex ]]
     then
-      curl ~{shell_commands} > shell_script.sh
+      curl ~{shell_commands} > executed_commands.txt
       chmod +x shell_script.sh
       ./shell_script.sh 2>&1 | tee log.txt
     else
-      # remove bash
-      ~{shell_commands} 2>&1 | tee log.txt
+      echo ~{shell_commands} > executed_commands.txt
+      chmod +x shell_script.sh
+      ./shell_script.sh 2>&1 | tee log.txt
     fi
-
-    # write out contents of user input to file
-    echo "$(<$shell_commands)" > executed_commands.txt
   }
   runtime {
     docker: docker
