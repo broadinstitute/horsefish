@@ -36,9 +36,9 @@ task run_shell_script {
       then
         curl ~{shell_commands} > shell_script.sh
         chmod +x shell_script.sh
-        bash shell_script.sh 2>&1 | tee log.txt
+        ./shell_script.sh 2>&1 | tee log.txt
       else
-        bash ~{shell_commands} 2>&1 | tee log.txt
+        ~{shell_commands} 2>&1 | tee log.txt
     fi
 
     # write out contents of user input to file
