@@ -43,7 +43,7 @@ task run_shell_script {
     fi
 
     # write out contents of user input to file
-    echo "$(<~{shell_commands})" > executed_commands.txt
+    echo "$(<$shell_commands)" > executed_commands.txt
   }
   runtime {
     docker: docker
