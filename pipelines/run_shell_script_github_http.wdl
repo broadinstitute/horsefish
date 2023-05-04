@@ -34,7 +34,7 @@ task run_shell_script {
     regex='(https?|ftp|file)://[-[:alnum:]\+&@#/%?=~_|!:,.;]*[-[:alnum:]\+&@#/%=~_|]'
     if [[ $shell_commands =~ $regex ]]
     then
-      curl ~{shell_commands} > shell_script.
+      curl ~{shell_commands} > shell_script.sh
       chmod +x shell_script.sh
       ./shell_script.sh 2>&1 | tee log.txt
     else
