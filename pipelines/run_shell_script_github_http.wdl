@@ -34,8 +34,8 @@ task run_shell_script {
 
     # determine if input is url to script or single string bash command
     # regex='^(https?|ftp|file)://[-A-Za-z0-9\+&@#/%?=~_|!:,.;]*[-A-Za-z0-9\+&@#/%=~_|]\.[-A-Za-z0-9\+&@#/%?=~_|!:,.;]*[-A-Za-z0-9\+&@#/%=~_|]$'
-    # https?://raw.githubusercontent.com.*\
-    if [[ $shell_commands =~ https?://raw.githubusercontent.*\ ]]
+    regex='https?://*'
+    if [[ $shell_commands =~ $regex ]]
     then
       echo -e "Entering bash SCRIPT block."
       echo -e "~{shell_commands}"
