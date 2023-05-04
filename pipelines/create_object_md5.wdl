@@ -5,7 +5,7 @@ workflow create_object_md5 {
         String  src_object_path
         String  tmp_object_path
         String  dest_object_path
-        Int     file_size_gb
+        Int     disk_size
     }
 
     call copy_to_destination {
@@ -13,7 +13,7 @@ workflow create_object_md5 {
             src_object_path = src_object_path,
             tmp_object_path = tmp_object_path,
             dest_object_path = dest_object_path,
-            disk_size = file_size_gb
+            disk_size = disk_size
     }
 
     call parse_md5 {
@@ -53,6 +53,7 @@ task copy_to_destination {
 
     runtime {
         docker: "gcr.io/google.com/cloudsdktool/cloud-sdk:305.0.0"
+        disks: "local-disk" + disk_size + " SSD"
         # disks: "local-disk " + (disk_size + 2) + " SSD"
         memory: select_first([memory, 2]) + " GB"
     }
