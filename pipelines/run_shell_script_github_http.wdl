@@ -34,11 +34,11 @@ task run_shell_script {
     regex='(https?|ftp|file)://[-[:alnum:]\+&@#/%?=~_|!:,.;]*[-[:alnum:]\+&@#/%=~_|]'
     if [[ $shell_commands =~ $regex ]]
     then
-      curl ~{shell_commands} > executed_commands.txt
+      curl ~{shell_commands} > shell_script.
       chmod +x shell_script.sh
       ./shell_script.sh 2>&1 | tee log.txt
     else
-      echo ~{shell_commands} > executed_commands.txt
+      echo ~{shell_commands} > shell_script.sh
       chmod +x shell_script.sh
       ./shell_script.sh 2>&1 | tee log.txt
     fi
@@ -52,6 +52,6 @@ task run_shell_script {
   }
   output {
     File log_file   = "log.txt"
-    File commands    = "executed_commands.txt"
+    File commands    = "shell_script.sh"
   }
 }
