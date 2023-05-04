@@ -18,7 +18,6 @@ workflow RunShellScript {
 }
 
 # TASK DEFINITIONS
-
 task run_shell_script {
   input {
     String  shell_commands
@@ -33,7 +32,7 @@ task run_shell_script {
   command {
     # determine if input is url to script or single string bash command
     regex='(https?|ftp|file)://[-[:alnum:]\+&@#/%?=~_|!:,.;]*[-[:alnum:]\+&@#/%=~_|]'
-    if [[ ~{shell_commands} =~ $regex ]]
+    if [[ $shell_commands =~ $regex ]]
       then
         curl ~{shell_commands} > shell_script.sh
         chmod +x shell_script.sh
