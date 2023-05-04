@@ -33,12 +33,12 @@ task run_shell_script {
     # determine if input is url to script or single string bash command
     regex='(https?|ftp|file)://[-[:alnum:]\+&@#/%?=~_|!:,.;]*[-[:alnum:]\+&@#/%=~_|]'
     if [[ $shell_commands =~ $regex ]]
-      then
-        curl ~{shell_commands} > shell_script.sh
-        chmod +x shell_script.sh
-        ./shell_script.sh 2>&1 | tee log.txt
-      else
-        ~{shell_commands} 2>&1 | tee log.txt
+    then
+      curl ~{shell_commands} > shell_script.sh
+      chmod +x shell_script.sh
+      ./shell_script.sh 2>&1 | tee log.txt
+    else
+      bash ~{shell_commands} 2>&1 | tee log.txt
     fi
 
     # write out contents of user input to file
