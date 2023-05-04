@@ -38,6 +38,7 @@ task run_shell_script {
       chmod +x shell_script.sh
       ./shell_script.sh 2>&1 | tee log.txt
     else
+      # remove bash
       ~{shell_commands} 2>&1 | tee log.txt
     fi
 
