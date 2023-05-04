@@ -30,17 +30,20 @@ task run_shell_script {
   }  
 
   command {
+    set -e -o pipefail
+    
     # determine if input is url to script or single string bash command
     regex='(https?|ftp|file)://[-[:alnum:]\+&@#/%?=~_|!:,.;]*[-[:alnum:]\+&@#/%=~_|]'
     if [[ $shell_commands =~ $regex ]]
     then
-      curl ~{shell_commands} > shell_script.sh
+      echo -e ~{shell_commands}
+      curl ~{shell_commands} 2>&1 | tee shell_script.sh
       chmod +x shell_script.sh
-      ./shell_script.sh 2>&1 | tee log.txt
+      bash shell_script.sh 2>&1 | tee log.txt
     else
-      echo ~{shell_commands} > shell_script.sh
+      echo -e ~{shell_commands} > shell_script.sh
       chmod +x shell_script.sh
-      ./shell_script.sh 2>&1 | tee log.txt
+      bash shell_script.sh 2>&1 | tee log.txt
     fi
   }
   runtime {
