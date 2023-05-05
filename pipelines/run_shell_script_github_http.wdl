@@ -35,11 +35,10 @@ task run_shell_script {
     # determine if input is url to script or single string bash command
     regex='(https?|ftp|file)://[-[:alnum:]\+&@#/%?=~_|!:,.;]*[-[:alnum:]\+&@#/%=~_|]'
     # regex='https?://*'
-    url=~{shell_commands}
-    if [[ $url =~ $regex ]]
+    # url=~{shell_commands}
+    if [[ "${shell_commands}" =~ $regex ]]
     then
       echo -e "Entering bash SCRIPT block."
-      echo -e "~{shell_commands}"
       curl "${shell_commands}" > shell_script.sh
       chmod +x shell_script.sh
       bash shell_script.sh 2>&1 | tee log.txt
