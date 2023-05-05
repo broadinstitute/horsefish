@@ -14,6 +14,7 @@ workflow RunShellScript {
   output {
     File log_file = run_shell_script.log_file
     File input_script = run_shell_script.commands
+    File monitor_log  = run_shell_script.monitoring_log
   } 
 }
 
@@ -27,11 +28,13 @@ task run_shell_script {
     Int     memory = 8
     Int?    preemptible_attempts
     String  docker = "google/cloud-sdk:latest"
+
+    File    monitoring_script = "gs://broad-dsde-methods-monitoring/cromwell_monitoring_script.sh"
   }  
 
   command {
     set -e -o pipefail
-
+    bash ~{monitoring_script} > monitoring.log &
     # determine if input is url to script or single string bash command
     regex='(https?|ftp|file)://[-[:alnum:]\+&@#/%?=~_|!:,.;]*[-[:alnum:]\+&@#/%=~_|]'
 
@@ -57,7 +60,8 @@ task run_shell_script {
     preemptible: select_first([preemptible_attempts, 3])
   }
   output {
-    File log_file   = "log.txt"
-    File commands    = "shell_script.sh"
+    File log_file       = "log.txt"
+    File commands       = "shell_script.sh"
+    File monitoring_log = "monitoring.log"
   }
 }
