@@ -35,12 +35,11 @@ task run_shell_script {
     # determine if input is url to script or single string bash command
     # regex='^(https?|ftp|file)://[-A-Za-z0-9\+&@#/%?=~_|!:,.;]*[-A-Za-z0-9\+&@#/%=~_|]\.[-A-Za-z0-9\+&@#/%?=~_|!:,.;]*[-A-Za-z0-9\+&@#/%=~_|]$'
     regex='https?://*'
-    url="https://raw.githubusercontent.com/broadinstitute/horsefish/run_shell_script/pipelines/test_shell_script_input.sh"
+    url=~{shell_commands}
     if [[ $url =~ $regex ]]
     then
       echo -e "Entering bash SCRIPT block."
       echo -e "~{shell_commands}"
-      curl "${shell_commands}"
       curl "${shell_commands}" > shell_script.sh
       chmod +x shell_script.sh
       bash shell_script.sh 2>&1 | tee log.txt
