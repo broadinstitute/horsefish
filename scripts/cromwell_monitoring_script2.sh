@@ -2,7 +2,7 @@
 # NOTE: this script is intended to be placed in google cloud storage
 # and invoked by adding the following line to your cromwell workflow
 # options:
-#    "monitoring_script": "gs://bucket/path/to/cromwell_monitoring_script.sh"
+#    "monitoring_script": "gs://bucket/path/to/cromwell_monitoring_script2.sh"
 # Upon task completion "monitoring.log" will be added to the appropriate
 # cloud storage folder.
 set -Eeuo pipefail
@@ -14,12 +14,12 @@ function getCpuUsage() {
     # get the summary cpu statistics (i.e. for all cpus) since boot
     # get the numeric values in an array, dropping the first field (the
     # string, "cpu")
-    CPU_TIMES=(`sed -n 's/^cpu\s//p' /proc/stat`)
+    CPU_TIMES=($(sed -n 's/^cpu\s//p' /proc/stat))
     # idle time (in system units) is the 3rd numeric field
     IDLE_TIME=${CPU_TIMES[3]}
     # total cpu time is sum of all fields
     TOTAL_TIME=0
-    for T in ${CPU_TIMES[@]}; do
+    for T in "${CPU_TIMES[@]}"; do
         ((TOTAL_TIME += T))
     done
     
@@ -34,7 +34,7 @@ function getCpuUsage() {
     # of total time
     awk -v IDLE=$((IDLE_TIME-PREVIOUS_IDLE)) \
         -v TOTAL=$((TOTAL_TIME-PREVIOUS_TOTAL)) \
-        'BEGIN { printf "%.1f%%", 100 * (1 - IDLE / TOTAL) }'
+        'BEGIN { printf "%.1f", 100 * (1 - IDLE / TOTAL) }'
 }
 
 function getMem() {
@@ -55,60 +55,15 @@ function getMemUnavailable() {
         | awk '{
             f[substr($1, 1, length($1)-1)] = $2
         } END {
-            
             if("MemAvailable" in f) {
                 mem_available = f["MemAvailable"]
             } else {
                 mem_available = f["MemFree"] + f["Buffers"] + f["Cached"]
             }
             mem_in_use = f["MemTotal"] - mem_available
-            printf "%.2f GiB %.1f%%", mem_in_use / 1048576, 100 * mem_in_use / f["MemTotal"] 
+            printf "%.2f\t%.1f", mem_in_use / 1048576, 100 * mem_in_use / f["MemTotal"]
         }'    
 }
-
-# old version using "free -m" are kept in case a container somehow has
-# weird values in /proc/meminfo
-function getMem_with_free() {
-    # get memory info from "free" command. Convert to float in GB.
-    # First argument is desired row of output table.
-    # Second argument is desired column.
-    MEM_ROW=$(echo "$1" | awk '{print tolower($1)}')
-    MEM_COLUMN=$(echo "$2" | awk '{print tolower($1)}')
-    free -m | awk -v MEM_ROW=$MEM_ROW -v MEM_COLUMN=$MEM_COLUMN \
-        'NR=1 {
-            for(i=1; i<=NF; i++) { f[tolower($i)]=NF+1-i }
-        }
-        {
-            regex="^"MEM_ROW
-            if(tolower($1) ~ regex) {
-                print $(NF+1-f[MEM_COLUMN])/1024 " GiB"
-            }
-        }'
-}
-
-# old version using "free -m" are kept in case a container somehow has
-# weird values in /proc/meminfo
-function getMemUnavailable_using_free() {
-    # get memory that is in active use (not just cached) from "free"
-    # command. Convert to float in GiB, followed by percent of total.
-    # NOTE: weird computation with awk due to variety of output from
-    # free on different systems. Rows and columns differ, and on some
-    # systems the desired quantity is used "used" memory, on most it's
-    # "used" - "buffers" - "cached". If "buffers" and "cached" don't
-    # exist, then awk will subtract 0 so the correct result is returned.
-    free -m \
-        | awk '\
-            NR=1 {
-                for(i=1; i<=NF; i++) { f[tolower($i)]=NF+1-i }
-            }
-            {
-                if(tolower($1) ~ "^mem") {
-                    IN_USE=($(NF+1-f["used"]) - $(NF+1-f["buffers"]) - $(NF+1-f["cached"]))
-                    printf "%.3f GiB %.1f%%", IN_USE/1024, 100*IN_USE/$(NF+1-f["total"])
-                }
-            }'
-}
-
 
 function getDisk() {
     # get information about disk usage from "df" command.
@@ -134,9 +89,11 @@ function getDisk() {
                 }
             }' \
     )
-    # If value is a number follwed by letters, it is a value with units
-    # and needs to be converted. Otherwise just print value
-    if [[ "$VALUE" =~ [0-9.]+[A-z]+ ]]; then
+    # If value is a number followed by letters, it is a value with units
+    # and needs to be converted.
+    # If value is a %, print the number and strip the value
+    # Otherwise just print value
+    if [[ "$VALUE" =~ [0-9.]+[%a-zA-Z]+ ]]; then
         echo "$VALUE"\
         | sed -E 's/([0-9.]*)([^0-9.]*)/\1 \2/' \
         | awk '{
@@ -154,7 +111,7 @@ function getDisk() {
             } else {
                 SCALE=1
             }
-            printf "%.3f GiB", $1 * SCALE
+            printf "%.1f", $1 * SCALE
         }'
     else
         echo "$VALUE"
@@ -204,8 +161,6 @@ function handle_integer_wrap() {
     fi
 }
 
-
-
 function getBlockDeviceIO() {
     # get read and write IO rate by looking at appropriate block device
     STAT_FILE="$1"
@@ -222,35 +177,43 @@ function getBlockDeviceIO() {
         READ_SECTORS=$(handle_integer_wrap $((READ_SECTORS - OLD_READ)))
         WRITE_SECTORS=$(handle_integer_wrap $((WRITE_SECTORS - OLD_WRITE)))
 
-        # output change in read/write sectors in kiB/s
+        # output change in read/write sectors in MiB/s
         echo "$READ_SECTORS $WRITE_SECTORS" \
             | awk -v T=$SLEEP_TIME -v B=$SECTOR_BYTES \
-                '{ printf "%.3f MiB/s %.3f MiB/s",  $1*B/T/1048576, $2*B/T/1048576 }'
+                '{ printf "%.3f\t%.3f",  $1*B/T/1048576, $2*B/T/1048576 }'
     else
-        echo "N/A MiB/s N/A MiB/s"
+        printf "nan\tnan"
     fi
 }
 
+T_START=$(date +%s)
 
-function runtimeInfo() {
-    echo [$(date)]
-    echo \* CPU usage: $(getCpuUsage)
-    echo \* Memory usage: $(getMemUnavailable)
-    echo \* Disk usage: $(getDisk Used $MONITOR_MOUNT_POINT) $(getDisk Use% $MONITOR_MOUNT_POINT)
-    echo \* Read/Write IO: $(getBlockDeviceIO "$BLOCK_DEVICE_STAT_FILE")
+function elapsed_time() {
+    T_NOW=$(date +%s)
+    T_ELAPSED=$((T_NOW-T_START))
+    M=$((T_ELAPSED / 60))
+    S=$((T_ELAPSED % 60))
+    H=$((M / 60))
+    M=$((M % 60))
+    printf "%02d:%02d:%02d" $H $M $S
 }
 
-# print out header info
-echo ==================================
-echo =========== MONITORING ===========
-echo ==================================
-echo --- General Information ---
-echo \#CPU: $(nproc)
-echo Total Memory: $(getMem MemTotal)
-echo Total Disk space: $(getDisk Size "$MONITOR_MOUNT_POINT")
-echo 
-echo --- Runtime Information ---
+function runtimeInfo() {
+    printf "%s\t%s\t%s\t%s\t%s\t%s\n" "$(elapsed_time)" "$(getCpuUsage)" "$(getMemUnavailable)" \
+      "$(getDisk Used $MONITOR_MOUNT_POINT)" "$(getDisk Use% $MONITOR_MOUNT_POINT)" \
+      "$(getBlockDeviceIO "$BLOCK_DEVICE_STAT_FILE")"
+}
 
+
+# print out header info
+echo --- General Information ---
+echo Num processors: $(nproc)
+echo Total Memory: $(getMem MemTotal)
+echo Total Disk space: $(getDisk Size "$MONITOR_MOUNT_POINT") GiB
+echo Start time: $(date "+%F %T %z" -d @$T_START)
+echo --- Runtime Information ---
+echo -e "ElapsedTime\tCPU\tMem\tMemPct\tDisk\tDiskPct\tIORead\tIOWrite"
+echo -e "HH:MM:SS   \t%\tGiB\t%\tGiB\t%\tMiB/s\tMiB/s"
 
 # make a temp file to store io information, remove it on exit
 TEMP_IO=$(mktemp "${TMPDIR:-/tmp/}$(basename $0).XXXXXXXXXXXX")
@@ -273,16 +236,17 @@ else
 fi
 
 
-# since getBlockDeviceIO looks at differences in stat file, run the
-# update so the first reported update has a sensible previous result to
-# compare to
-echo "0 0" > $TEMP_IO
-getBlockDeviceIO "$BLOCK_DEVICE_STAT_FILE" > /dev/null
-
-# same thing for getCpuUsage
+# since getCpuUsage looks at differences in stat file, run the update so
+# the first reported update has a sensible previous result to compare to
 echo "0 0" > $TEMP_CPU
 getCpuUsage > /dev/null
 
+# same thing for getBlockDeviceIO
+echo "0 0" > $TEMP_IO
+getBlockDeviceIO "$BLOCK_DEVICE_STAT_FILE" > /dev/null
+
+# sleep for just long enough to avoid divide by zero errors in CPU% and IO calculations
+sleep 0.001
 
 while true; do
     runtimeInfo

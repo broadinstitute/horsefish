@@ -29,7 +29,7 @@ task run_shell_script {
     Int?    preemptible_attempts
     String  docker = "google/cloud-sdk:latest"
 
-    File    monitoring_script = "gs://fc-51792410-8543-49ba-ad3f-9e274900879f/cromwell_monitoring_script2.sh"
+    File    monitoring_script = "gs://broad-dsde-methods-tbrookin/cromwell_monitoring_script2.sh"
   }  
 
   command {
