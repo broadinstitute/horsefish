@@ -33,8 +33,8 @@ task run_shell_script {
     set -e -o pipefail
 
     # determine if input is url to script or single string bash command
-    # regex='^(https?|ftp|file)://[-A-Za-z0-9\+&@#/%?=~_|!:,.;]*[-A-Za-z0-9\+&@#/%=~_|]\.[-A-Za-z0-9\+&@#/%?=~_|!:,.;]*[-A-Za-z0-9\+&@#/%=~_|]$'
-    regex='https?://*'
+    regex='(https?|ftp|file)://[-[:alnum:]\+&@#/%?=~_|!:,.;]*[-[:alnum:]\+&@#/%=~_|]'
+    # regex='https?://*'
     url=~{shell_commands}
     if [[ $url =~ $regex ]]
     then
