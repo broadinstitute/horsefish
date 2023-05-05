@@ -34,19 +34,33 @@ task run_shell_script {
 
   command {
     set -e -o pipefail
-    bash ~{monitoring_script} > monitoring.log &
-    # determine if input is url to script or single string bash command
+
+    # regex to determine if input string is valid URL
     regex='(https?|ftp|file)://[-[:alnum:]\+&@#/%?=~_|!:,.;]*[-[:alnum:]\+&@#/%=~_|]'
 
-    # url=~{shell_commands}
+    # monitoring script
+    if [[ "${monitoring_script}" =~ $regex ]]
+    then
+      echo -e "Monitoring script from URL source."
+      curl "${monitoring_script}" > monitoring_script.sh
+      chmod +x monitoring_script.sh
+      bash monitoring_script.sh > monitoring.log &
+    else
+      echo -e "Monitoring script from STRING/FILE source."
+      echo -e "~{monitoring_script}" > monitoring_script.sh
+      chmod +x monitoring_script.sh
+      bash monitoring_script.sh > monitoring.log &
+    fi
+  
+    # user input shell commands
     if [[ "${shell_commands}" =~ $regex ]]
     then
-      echo -e "Entering bash SCRIPT block."
+      echo -e "Shell commands from URL source."
       curl "${shell_commands}" > shell_script.sh
       chmod +x shell_script.sh
       bash shell_script.sh 2>&1 | tee log.txt
     else
-      echo -e "Entering bash COMMAND block."
+      echo -e "Shell commands from STRING/FILE source."
       echo -e "~{shell_commands}" > shell_script.sh
       chmod +x shell_script.sh
       bash shell_script.sh 2>&1 | tee log.txt
