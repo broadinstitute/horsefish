@@ -34,7 +34,7 @@ task run_shell_script {
 
     # determine if input is url to script or single string bash command
     regex='(https?|ftp|file)://[-[:alnum:]\+&@#/%?=~_|!:,.;]*[-[:alnum:]\+&@#/%=~_|]'
-    # regex='https?://*'
+
     # url=~{shell_commands}
     if [[ "${shell_commands}" =~ $regex ]]
     then
