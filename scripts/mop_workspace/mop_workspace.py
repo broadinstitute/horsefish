@@ -212,7 +212,7 @@ def delete_files(bucket_name, files_to_delete, verbose, retry=0):
     except Exception:
         #try again
         incremented_retry = retry + 1
-        print(f"Retrying deleting files")
+        print("Encountered internal error. Retrying...")
         sleep(sleep_time)
         return delete_files(bucket_name, files_to_delete, incremented_retry)
 
