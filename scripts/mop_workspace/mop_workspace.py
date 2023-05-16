@@ -172,9 +172,9 @@ def delete_files(bucket_name, files_to_delete, verbose, retry=0):
         print("Exiting.")
         exit(1)
 
-    sleep_time = 1 #seconds to wait between retries
+    sleep_time = 1 # seconds to wait between retries
 
-    #try to delete files
+    # try to delete files
     try:
         '''Delete files in a GCP bucket. Input is a list of full file paths to delete.'''
         n_files_to_delete = len(files_to_delete)
@@ -210,7 +210,7 @@ def delete_files(bucket_name, files_to_delete, verbose, retry=0):
         if verbose:
             print(f"Successfully deleted {len(blobs)} files from bucket.")
     except Exception:
-        #try again
+        # try again
         incremented_retry = retry + 1
         print("Encountered internal error. Retrying...")
         sleep(sleep_time)
