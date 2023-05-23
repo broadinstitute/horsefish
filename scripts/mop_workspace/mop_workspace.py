@@ -152,7 +152,7 @@ def list_bucket_files(project, bucket_name, referenced_files, verbose):
 
     return bucket_dict
 
-# todo add retries
+
 def delete_files_call(bucket_name, list_of_blobs_to_delete):
     # don't throw an error if blob not found
     on_error = lambda blob: None
@@ -217,7 +217,8 @@ def delete_files(bucket_name, files_to_delete, verbose, retry=0):
 
 
 def get_parent_directory(filepath):
-    """Given input `gs://some/file/path/to_object.txt` returns parent directory `gs://some/file/path`."""
+    """Given input `gs://some/file/path/to_object.txt` returns parent directory `gs://some/file/path`.
+    If file is already at top level, the function returns bucket name"""
     return '/'.join(filepath.split('/')[:-1])
 
 
