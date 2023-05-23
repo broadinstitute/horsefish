@@ -9,6 +9,7 @@ from io import open
 from six import string_types
 from toolz.itertoolz import partition_all
 from tqdm import tqdm
+from time import sleep
 
 
 def _entity_paginator(namespace, workspace, etype, page_size=500,
