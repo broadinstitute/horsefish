@@ -33,14 +33,15 @@ def _entity_paginator(namespace, workspace, etype, page_size=500,
     entities = response_body['results']
     all_entities.extend(entities)
     # Now iterate over remaining pages to retrieve all the results
+    page = 2
     while page <= total_pages:
-        page += 1
         r = fapi.get_entities_query(namespace, workspace, etype, page=page,
                                     page_size=page_size, sort_direction=sort_direction,
                                     filter_terms=filter_terms)
         fapi._check_response_code(r, 200)
         entities = r.json()['results']
         all_entities.extend(entities)
+        page += 1
 
     return all_entities
 
