@@ -9,7 +9,6 @@ from io import open
 from six import string_types
 from toolz.itertoolz import partition_all
 from tqdm import tqdm
-from time import sleep
 
 
 def _entity_paginator(namespace, workspace, etype, page_size=500,
@@ -165,56 +164,40 @@ def delete_files_call(bucket_name, list_of_blobs_to_delete):
     bucket.delete_blobs(list_of_blobs_to_delete, on_error=on_error)
 
 
-def delete_files(bucket_name, files_to_delete, verbose, retry=0):
-    # retry delete if it fails with an internal server error
-    if retry > 3:
-        print("WARNING: internal errors not resolved by retries. Intermediate files not deleted.")
-        print("Exiting.")
-        exit(1)
+def delete_files(bucket_name, files_to_delete, verbose):
+    '''Delete files in a GCP bucket. Input is a list of full file paths to delete.'''
+    n_files_to_delete = len(files_to_delete)
+    if verbose:
+        print(f"Preparing to delete {n_files_to_delete} files from bucket {bucket_name}")
 
-    sleep_time = 1 # seconds to wait between retries
+    # extract blob_name (full path minus bucket name)
+    blob_names = [full_path.replace("gs://" + bucket_name + "/", "") for full_path in files_to_delete]
 
-    # try to delete files
-    try:
-        '''Delete files in a GCP bucket. Input is a list of full file paths to delete.'''
-        n_files_to_delete = len(files_to_delete)
-        if verbose:
-            print(f"Preparing to delete {n_files_to_delete} files from bucket {bucket_name}")
+    storage_client = storage.Client()
 
-        # extract blob_name (full path minus bucket name)
-        blob_names = [full_path.replace("gs://" + bucket_name + "/", "") for full_path in files_to_delete]
+    bucket = storage_client.bucket(bucket_name)
+    blobs = [bucket.blob(blob_name) for blob_name in blob_names]
 
-        storage_client = storage.Client()
-
-        bucket = storage_client.bucket(bucket_name)
-        blobs = [bucket.blob(blob_name) for blob_name in blob_names]
-
-        CHUNK_SIZE = 100
+    CHUNK_SIZE = 100
 
 
-        if n_files_to_delete > CHUNK_SIZE:
-            chunked_blobs = list(partition_all(CHUNK_SIZE, blobs))
-            n_chunks = len(chunked_blobs)
-
-            if verbose:
-                print(f"Prepared {n_chunks} chunks, processing deletions in parallel.")
-
-            with ThreadPoolExecutor(max_workers=50) as e:
-                list(tqdm(e.map(delete_files_call, [bucket_name]*n_chunks, chunked_blobs), total=n_chunks))
-
-        else:
-            if verbose:
-                print(f"Deleting {n_files_to_delete} files from bucket {bucket_name}")
-            delete_files_call(bucket_name, blobs)
+    if n_files_to_delete > CHUNK_SIZE:
+        chunked_blobs = list(partition_all(CHUNK_SIZE, blobs))
+        n_chunks = len(chunked_blobs)
 
         if verbose:
-            print(f"Successfully deleted {len(blobs)} files from bucket.")
-    except Exception:
-        # try again
-        incremented_retry = retry + 1
-        print("Encountered an internal error. Retrying...")
-        sleep(sleep_time)
-        return delete_files(bucket_name, files_to_delete, incremented_retry)
+            print(f"Prepared {n_chunks} chunks, processing deletions in parallel.")
+
+        with ThreadPoolExecutor(max_workers=50) as e:
+            list(tqdm(e.map(delete_files_call, [bucket_name]*n_chunks, chunked_blobs), total=n_chunks))
+
+    else:
+        if verbose:
+            print(f"Deleting {n_files_to_delete} files from bucket {bucket_name}")
+        delete_files_call(bucket_name, blobs)
+
+    if verbose:
+        print(f"Successfully deleted {len(blobs)} files from bucket.")
 
 
 def get_parent_directory(filepath):
@@ -434,27 +417,27 @@ if __name__ == "__main__":
 
 
     parser.add_argument('-V', '--verbose', action='count', default=0,
-                        help='Emit progressively more detailed feedback during execution, '
-                             'e.g. to confirm when actions have completed or to show URL '
-                             'and parameters of REST calls.  Multiple -V may be given.')
+        help='Emit progressively more detailed feedback during execution, '
+             'e.g. to confirm when actions have completed or to show URL '
+             'and parameters of REST calls.  Multiple -V may be given.')
 
     parser.add_argument("-y", "--yes", action='store_true',
-                        help="Assume yes for any prompts")
-
+                help="Assume yes for any prompts")
+    
 
     parser.add_argument('-w', '--workspace',
-                        required=True, type=str,
-                        help='Workspace name (required if no default workspace configured)')
+        required=True, type=str,
+        help='Workspace name (required if no default workspace configured)')
 
-    parser.add_argument('-p', '--project',
-                        required=True, type=str)
+    parser.add_argument('-p', '--project', 
+        required=True, type=str)
 
     parser.add_argument('--dry-run', action='store_true',
-                        help='Show deletions that would be performed')
+                      help='Show deletions that would be performed')
     parser.add_argument('--delete-from-list', type=str, default=None,
-                        help='path to tsv containing newline-delimited files to delete')
+                      help='path to tsv containing newline-delimited files to delete')
     parser.add_argument('--save-dir', type=str, default='mop_data',
-                        help='Directory to save manifests')
+                      help='Directory to save manifests')
     parser.add_argument('--weeks-old', type=int, default=3,
                         help='number of weeks old (from creation time) a file must be before it will be deleted. '
                              'Default is 3 weeks, set to 0 to delete everything.')
