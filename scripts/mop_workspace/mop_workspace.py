@@ -33,15 +33,14 @@ def _entity_paginator(namespace, workspace, etype, page_size=500,
     entities = response_body['results']
     all_entities.extend(entities)
     # Now iterate over remaining pages to retrieve all the results
-    page = 2
     while page <= total_pages:
+        page += 1
         r = fapi.get_entities_query(namespace, workspace, etype, page=page,
                                     page_size=page_size, sort_direction=sort_direction,
                                     filter_terms=filter_terms)
         fapi._check_response_code(r, 200)
         entities = r.json()['results']
         all_entities.extend(entities)
-        page += 1
 
     return all_entities
 
@@ -164,40 +163,57 @@ def delete_files_call(bucket_name, list_of_blobs_to_delete):
     bucket.delete_blobs(list_of_blobs_to_delete, on_error=on_error)
 
 
-def delete_files(bucket_name, files_to_delete, verbose):
-    '''Delete files in a GCP bucket. Input is a list of full file paths to delete.'''
-    n_files_to_delete = len(files_to_delete)
-    if verbose:
-        print(f"Preparing to delete {n_files_to_delete} files from bucket {bucket_name}")
+def delete_files(bucket_name, files_to_delete, verbose, retry=0):
+    # retry delete if it fails with an internal server error
+    if retry > 3:
+        print("WARNING: internal errors not resolved by retries. Intermediate files not deleted.")
+        print("Exiting.")
+        exit(1)
 
-    # extract blob_name (full path minus bucket name)
-    blob_names = [full_path.replace("gs://" + bucket_name + "/", "") for full_path in files_to_delete]
+    sleep_time = 1 # seconds to wait between retries
 
-    storage_client = storage.Client()
+    # try to delete files
+    try:
+        '''Delete files in a GCP bucket. Input is a list of full file paths to delete.'''
+        n_files_to_delete = len(files_to_delete)
+        if verbose:
+            print(f"Preparing to delete {n_files_to_delete} files from bucket {bucket_name}")
 
-    bucket = storage_client.bucket(bucket_name)
-    blobs = [bucket.blob(blob_name) for blob_name in blob_names]
+        # extract blob_name (full path minus bucket name)
+        blob_names = [full_path.replace("gs://" + bucket_name + "/", "") for full_path in files_to_delete]
 
-    CHUNK_SIZE = 100
+        storage_client = storage.Client()
+
+        bucket = storage_client.bucket(bucket_name)
+        blobs = [bucket.blob(blob_name) for blob_name in blob_names]
+
+        CHUNK_SIZE = 100
 
 
-    if n_files_to_delete > CHUNK_SIZE:
-        chunked_blobs = list(partition_all(CHUNK_SIZE, blobs))
-        n_chunks = len(chunked_blobs)
+        if n_files_to_delete > CHUNK_SIZE:
+            chunked_blobs = list(partition_all(CHUNK_SIZE, blobs))
+            n_chunks = len(chunked_blobs)
+
+            if verbose:
+                print(f"Prepared {n_chunks} chunks, processing deletions in parallel.")
+
+            with ThreadPoolExecutor(max_workers=50) as e:
+                list(tqdm(e.map(delete_files_call, [bucket_name]*n_chunks, chunked_blobs), total=n_chunks))
+
+        else:
+            if verbose:
+                print(f"Deleting {n_files_to_delete} files from bucket {bucket_name}")
+            delete_files_call(bucket_name, blobs)
 
         if verbose:
-            print(f"Prepared {n_chunks} chunks, processing deletions in parallel.")
+            print(f"Successfully deleted {len(blobs)} files from bucket.")
+    except Exception:
+        # try again
+        incremented_retry = retry + 1
+        print("Encountered an internal error. Retrying...")
+        sleep(sleep_time)
+        return delete_files(bucket_name, files_to_delete, incremented_retry)
 
-        with ThreadPoolExecutor(max_workers=50) as e:
-            list(tqdm(e.map(delete_files_call, [bucket_name]*n_chunks, chunked_blobs), total=n_chunks))
-
-    else:
-        if verbose:
-            print(f"Deleting {n_files_to_delete} files from bucket {bucket_name}")
-        delete_files_call(bucket_name, blobs)
-
-    if verbose:
-        print(f"Successfully deleted {len(blobs)} files from bucket.")
 
 
 def get_parent_directory(filepath):
