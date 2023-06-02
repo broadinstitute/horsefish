@@ -56,7 +56,7 @@ task copy_to_destination {
         then
             echo "User has provided a backup directory. Starting creation of backup copy."
             # TODO: handle if there is a trailing / or not based on the user input
-            backup_object="~{backup_object_dir}"+"~{original_object_name}"
+            backup_object="~{backup_object_dir}""~{original_object_name}"
             echo $backup_object
             # make a copy of the original file in the backup location
             gsutil -u anvil-datastorage cp -L create_md5_log.csv -D "~{original_object}" $backup_object
