@@ -31,7 +31,7 @@ task copy_to_destination {
 
     input {
         String  original_object
-        String? backup_object
+        String? backup_object_dir
 
         Int     disk_size
         Int?    memory
@@ -44,10 +44,6 @@ task copy_to_destination {
 
     command {
         set -e
-        # stream from source and copy contents in memory to _tmp version of src object
-        # gsutil -u anvil-datastorage cat "~{original_object}" | gsutil -u anvil-datastorage cp -c -L create_md5_log.csv - "~{backup_object}"
-        # move tmp object back to src object
-        # gsutil -u anvil-datastorage mv -c -L create_md5_log.csv "~{backup_object}" "~{original_object}"
 
         echo ~{original_object}
         echo ~{original_object_name}
@@ -56,14 +52,17 @@ task copy_to_destination {
         echo ~{tmp_object}
 
         # if user selects backup location - create back up copy and confirm successful copy comparing file sizes
-        if [["${backup_object}"]]
+        if [["${backup_object_dir}"]]
         then
+            # TODO: handle if there is a trailing / or not based on the user input
+            backup_object="~{backup_object_dir}"+"~{original_object_name}"
+            echo $backup_object
             # make a copy of the original file in the backup location
-            gsutil -u anvil-datastorage cp -L create_md5_log.csv -D "~{original_object}" "~{backup_object}"
+            gsutil -u anvil-datastorage cp -L create_md5_log.csv -D "~{original_object}" $backup_object
         
             # confirm that original and backup object file sizes are same
             original_object_size=$(gsutil du "~{original_object}" | tr " " "\t" | cut -f1)
-            backup_object_size=$(gsutil du "~{backup_object}" | tr " " "\t" | cut -f1)
+            backup_object_size=$(gsutil du $backup_object | tr " " "\t" | cut -f1)
 
             # if file sizes don't match, exit script with error message
             if [[ $original_object_size == $backup_object_size ]]
