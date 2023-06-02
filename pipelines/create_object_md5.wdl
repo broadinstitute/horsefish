@@ -52,7 +52,7 @@ task copy_to_destination {
         echo ~{tmp_object}
 
         # if user selects backup location - create back up copy and confirm successful copy comparing file sizes
-        if [ -z "${backup_object_dir}" ]
+        if [ ! -z "${backup_object_dir}" ]
         then
             echo "User has provided a backup directory. Starting creation of backup copy."
             # TODO: handle if there is a trailing / or not based on the user input
