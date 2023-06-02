@@ -52,8 +52,9 @@ task copy_to_destination {
         echo ~{tmp_object}
 
         # if user selects backup location - create back up copy and confirm successful copy comparing file sizes
-        if [["${backup_object_dir}"]]
+        if [[ -v "${backup_object_dir}"]]
         then
+            echo "User has provided a backup directory. Starting creation of backup copy."
             # TODO: handle if there is a trailing / or not based on the user input
             backup_object="~{backup_object_dir}"+"~{original_object_name}"
             echo $backup_object
@@ -75,6 +76,7 @@ task copy_to_destination {
         
         # if user doesn't select backup location
         else
+            echo "No user backup directory provided. Starting creation of tmp copy."
             # make a TMP copy of the original file
             gsutil -u anvil-datastorage cp -L create_md5_log.csv -D "~{original_object}" "~{tmp_object}"
 
