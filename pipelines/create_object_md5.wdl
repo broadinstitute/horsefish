@@ -2,15 +2,13 @@ version 1.0
 
 workflow create_object_md5 {
     input {
-        String  original_object_path
-        String  backup_object_path
+        String  original_object
         Int     file_size_gb
     }
 
     call copy_to_destination {
         input:
-            original_object_path = original_object_path,
-            backup_object_path = backup_object_path,
+            original_object = original_object,
             disk_size = file_size_gb
     }
 
