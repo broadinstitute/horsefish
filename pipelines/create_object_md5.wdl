@@ -45,18 +45,13 @@ task copy_to_destination {
     command {
         set -e
 
-        echo ~{original_object}
-        echo ~{original_object_name}
-        echo ~{original_object_path}
-        echo ~{tmp_object_name}
-        echo ~{tmp_object}
-
         # if user selects backup location - create back up copy and confirm successful copy comparing file sizes
         if [ ! -z "${backup_object_dir}" ]
         then
-            echo "User has provided a backup directory. Starting creation of backup copy."
+            echo "User has provided a backup directory."
             # TODO: handle if there is a trailing / or not based on the user input
             backup_object="~{backup_object_dir}""~{original_object_name}"
+            echo "Starting creation of backup copy to:"
             echo $backup_object
             # make a copy of the original file in the backup location
             gsutil -u anvil-datastorage cp -L create_md5_log.csv -D "~{original_object}" $backup_object
@@ -68,15 +63,17 @@ task copy_to_destination {
             # if file sizes don't match, exit script with error message
             if [[ $original_object_size == $backup_object_size ]]
             then
-                echo "Backup copy of original object complete."
+                echo "Backup copy of original object complete - original and backup copy have the same file size."
             else
-                echo "Backup copy of original object failed."
+                echo "Backup copy of original object failed - original and backup copy do not have the same file size."
+                echo "This is likely a transient failure. Please submit workflow again."
                 exit 1
             fi
         
         # if user doesn't select backup location
         else
-            echo "No user backup directory provided. Starting creation of tmp copy."
+            echo "No user backup directory provided."
+            echo "Starting creation of tmp copy."
             # make a TMP copy of the original file
             gsutil -u anvil-datastorage cp -L create_md5_log.csv -D "~{original_object}" "~{tmp_object}"
 
@@ -87,14 +84,16 @@ task copy_to_destination {
             # if file sizes don't match, exit script with error message
             if [[ $original_object_size == $tmp_object_size ]]
             then
-                echo "Tmp copy of original object complete."
+                echo "Tmp copy of original object complete - original and tmp copy have the same file size."
             else
-                echo "Tmp copy of original object failed."
+                echo "Tmp copy of original object failed - original and tmp copy do not have the same file size."
+                echo "This is likely a transient failure. Please submit workflow again."
                 exit 1
             fi 
         fi
         
         # if tmp copy succeeds, replace original with tmp - should have md5
+        echo "Starting replace of the original object with tmp object to generate md5."
         gsutil -u anvil-datastorage cp -L create_md5_log.csv -D "~{tmp_object}" "~{original_object}"
 
     }
