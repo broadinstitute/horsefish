@@ -29,6 +29,7 @@ task run_shell_script {
   command {
 
     echo "Showing continuous integration."
+    echo "hello"
     chmod +x ~{shell_script}
     bash ~{shell_script} 2>&1 | tee log.txt
   }
