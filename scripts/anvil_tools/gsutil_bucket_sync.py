@@ -31,7 +31,6 @@ def main(input_file):
     for source_directory, destination_directory in paths_df.itertuples(
                 index=False, name="Paths"):
         subprocess.call(
-            # ["rsync", "-rv", source_directory, destination_directory])
             ["gsutil", "-m", "rsync", "-r",
                 source_directory, destination_directory]
         )
