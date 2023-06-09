@@ -21,13 +21,8 @@ def parse_args():
     return parser.parse_args()
 
 
-def get_paths_df(input_file):
-    """Creates dataframe of source and destination path pairs."""
-    return pd.read_csv(input_file, sep="\t")
-
-
 def main(input_file):
-    paths_df = get_paths_df(input_file)
+    paths_df = pd.read_csv(input_file, sep="\t")
     for source_directory, destination_directory in paths_df.itertuples(
                 index=False, name="Paths"):
         subprocess.call(
