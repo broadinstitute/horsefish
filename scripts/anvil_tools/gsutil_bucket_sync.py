@@ -16,7 +16,8 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('input_file',
                         help="Path to tsv file containing list of \
-                        source/destination folders to sync between")
+                        source (column 1) and destination (column 2)\
+                        gsURIs to sync between")
     return parser.parse_args()
 
 
