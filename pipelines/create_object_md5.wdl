@@ -61,6 +61,8 @@ task copy_to_destination {
             original_object_size=$(gsutil du "~{original_object}" | tr " " "\t" | cut -f1)
             backup_object_size=$(gsutil du $backup_object | tr " " "\t" | cut -f1)
 
+            echo -e "original object size: $original_object_size"
+            echo -e "backup object size: $backup_object_size"
             # if file sizes don't match, exit script with error message
             if [[ $original_object_size == $backup_object_size ]]
             then
