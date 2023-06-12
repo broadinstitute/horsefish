@@ -77,7 +77,7 @@ task copy_to_destination {
         echo "Starting creation of tmp copy to:"
         echo "~{tmp_object}"
         # make a TMP copy of the original file
-        gsutil ~{if defined(requester_pays_project) then "-u " + requester_pays_project else ""} cp -L create_md5_log.csv -D "~{original_object}" $backup_object
+        gsutil ~{if defined(requester_pays_project) then "-u " + requester_pays_project else ""} cp -L create_md5_log.csv -D "~{original_object}" "~{tmp_object}"
 
         # confirm that original and tmp object file sizes are same
         original_object_size=$(gsutil du "~{original_object}" | tr " " "\t" | cut -f1)
@@ -95,7 +95,7 @@ task copy_to_destination {
         
         # if tmp copy succeeds, replace original with tmp - should have md5
         echo "Starting replace of the original object with tmp object to generate md5."
-        gsutil ~{if defined(requester_pays_project) then "-u " + requester_pays_project else ""} cp -L create_md5_log.csv -D "~{original_object}" $backup_object
+        gsutil ~{if defined(requester_pays_project) then "-u " + requester_pays_project else ""} cp -L create_md5_log.csv -D "~{tmp_object}" "~{original_object}"
     }
 
     runtime {
