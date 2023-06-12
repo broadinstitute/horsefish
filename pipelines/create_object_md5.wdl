@@ -26,26 +26,27 @@ workflow create_object_md5 {
 task copy_to_destination {
     meta {
         description: "Copy src object, create tmp object to generate md5, rename tmp object to same name as src object."
-        volatile: true # do not call cache even if otherwise set at workflow level
+        volatile: true # do not call cache even if set at workflow level
     }
 
     input {
         String  original_object
         String? backup_object_dir
+        String  requester_pays_project
 
         Int     disk_size
         Int?    memory
     }
 
     String original_object_name = basename(original_object) # filename.txt
-    String original_object_path = sub(original_object, original_object_name, "") # gs:///
+    String original_object_path = sub(original_object, original_object_name, "") # gs://bucket_name/object_path/
     String tmp_object_name = original_object_name + ".tmp" # filename.txt.tmp
     String tmp_object = original_object_path + tmp_object_name
 
     command {
         set -e
 
-        # if user selects backup location - create back up copy and confirm successful copy comparing file sizes
+        # user selects backup location - create back up copy and confirm successful copy comparing file sizes
         if [ ! -z "${backup_object_dir}" ]
         then
             echo "User has provided a backup directory."
@@ -54,7 +55,7 @@ task copy_to_destination {
             echo "Starting creation of backup copy to:"
             echo $backup_object
             # make a copy of the original file in the backup location
-            gsutil -u anvil-datastorage cp -L create_md5_log.csv -D "~{original_object}" $backup_object
+            gsutil -u "~{requester_pays_project}" cp -L create_md5_log.csv -D "~{original_object}" $backup_object
         
             # confirm that original and backup object file sizes are same
             original_object_size=$(gsutil du "~{original_object}" | tr " " "\t" | cut -f1)
@@ -70,12 +71,13 @@ task copy_to_destination {
                 exit 1
             fi
         fi
-
+        
+        # user does not select backup location - no backup copy is created
         # create a tmp copy of the original object 
         echo "Starting creation of tmp copy to:"
         echo "~{tmp_object}"
         # make a TMP copy of the original file
-        gsutil -u anvil-datastorage cp -L create_md5_log.csv -D "~{original_object}" "~{tmp_object}"
+        gsutil -u "~{requester_pays_project}" cp -L create_md5_log.csv -D "~{original_object}" "~{tmp_object}"
 
         # confirm that original and tmp object file sizes are same
         original_object_size=$(gsutil du "~{original_object}" | tr " " "\t" | cut -f1)
@@ -93,7 +95,7 @@ task copy_to_destination {
         
         # if tmp copy succeeds, replace original with tmp - should have md5
         echo "Starting replace of the original object with tmp object to generate md5."
-        gsutil -u anvil-datastorage cp -L create_md5_log.csv -D "~{tmp_object}" "~{original_object}"
+        gsutil -u "~{requester_pays_project}" cp -L create_md5_log.csv -D "~{tmp_object}" "~{original_object}"
     }
 
     runtime {
