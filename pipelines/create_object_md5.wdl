@@ -52,17 +52,16 @@ task copy_to_destination {
             echo "User has provided a backup directory."
             # TODO: handle if there is a trailing / or not based on the user input
             backup_object="~{backup_object_dir}""~{original_object_name}"
-            echo "Starting creation of backup copy to:"
-            echo $backup_object
+            echo "Starting creation of backup copy to: $backup_object"
             # make a copy of the original file in the backup location
             gsutil ~{if defined(requester_pays_project) then "-u " + requester_pays_project else ""} cp -L create_md5_log.csv -D "~{original_object}" $backup_object
         
             # confirm that original and backup object file sizes are same
             original_object_size=$(gsutil du "~{original_object}" | tr " " "\t" | cut -f1)
             backup_object_size=$(gsutil du $backup_object | tr " " "\t" | cut -f1)
+            echo -e "original object size: $original_object_size bytes"
+            echo -e "backup object size: $backup_object_size bytes"
 
-            echo -e "original object size: $original_object_size"
-            echo -e "backup object size: $backup_object_size"
             # if file sizes don't match, exit script with error message
             if [[ $original_object_size == $backup_object_size ]]
             then
@@ -76,15 +75,16 @@ task copy_to_destination {
         
         # user does not select backup location - no backup copy is created
         # create a tmp copy of the original object 
-        echo "Starting creation of tmp copy to:"
-        echo "~{tmp_object}"
+        echo "Starting creation of tmp copy to: ~{tmp_object}"
         # make a TMP copy of the original file
         gsutil ~{if defined(requester_pays_project) then "-u " + requester_pays_project else ""} cp -L create_md5_log.csv -D "~{original_object}" "~{tmp_object}"
 
         # confirm that original and tmp object file sizes are same
         original_object_size=$(gsutil du "~{original_object}" | tr " " "\t" | cut -f1)
         tmp_object_size=$(gsutil du "~{tmp_object}" | tr " " "\t" | cut -f1)
-
+        echo -e "original object size: $original_object_size bytes"
+        echo -e "backup object size: $tmp_object_size bytes"
+    
         # if file sizes don't match, exit script with error message
         if [[ $original_object_size == $tmp_object_size ]]
         then
