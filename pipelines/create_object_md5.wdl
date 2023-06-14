@@ -45,7 +45,7 @@ task copy_to_destination {
     command {
         set -e
 
-        echo "Adding if statement that always evaluates to true for the making tmp file block."
+        echo "Put random gsutil command followed by a variable for the copy."
 
         # user selects backup location - create back up copy and confirm successful copy comparing file sizes
         if [ ! -z "${backup_object_dir}" ]
@@ -80,7 +80,11 @@ task copy_to_destination {
             # create a tmp copy of the original object
             tmp_object="~{original_object_path}~{tmp_object_name}" 
             echo "Starting creation of tmp copy to: $tmp_object"
-            gsutil ~{if defined(requester_pays_project) then "-u " + requester_pays_project else ""} cp -L create_md5_log.csv -D ~{original_object} $tmp_object
+
+            gsutil cp gs://schaluva-bucket/1tb_test_source_details.csv ~{original_object}
+
+            tmp_cmd=$(gsutil ~{if defined(requester_pays_project) then "-u " + requester_pays_project else ""} cp -L create_md5_log.csv -D "~{original_object}" $tmp_object)
+            echo "temp command: $tmp_cmd"
             
             # confirm that original and tmp object file sizes are same
             original_object_size=$(gsutil du "~{original_object}" | tr " " "\t" | cut -f1)
