@@ -45,6 +45,30 @@ task copy_to_destination {
     command {
         set -e
 
+        echo "Moving the tmp block first - test if being sandwiched between two if blocks is the issue."
+
+        # user does not select backup location - no backup copy is created
+        # create a tmp copy of the original object
+        tmp_object="~{original_object_path}~{tmp_object_name}" 
+        echo "Starting creation of tmp copy to: $tmp_object"
+        gsutil ~{if defined(requester_pays_project) then "-u " + requester_pays_project else ""} cp -L create_md5_log.csv -D ~{original_object} $tmp_object
+        
+        # confirm that original and tmp object file sizes are same
+        original_object_size=$(gsutil du "~{original_object}" | tr " " "\t" | cut -f1)
+        tmp_object_size=$(gsutil du $tmp_object | tr " " "\t" | cut -f1)
+        echo -e "original object size: $original_object_size bytes"
+        echo -e "tmp object size: $tmp_object_size bytes"
+    
+        # if file sizes don't match, exit script with error message
+        if [[ $original_object_size == $tmp_object_size ]]
+        then
+            echo "Tmp copy of original object complete - original and tmp copy have the same file size."
+        else
+            echo "Tmp copy of original object failed - original and tmp copy do not have the same file size."
+            echo "This is likely a transient failure. Please submit workflow again."
+            exit 1
+        fi
+
         # user selects backup location - create back up copy and confirm successful copy comparing file sizes
         if [ ! -z "${backup_object_dir}" ]
         then
@@ -72,31 +96,10 @@ task copy_to_destination {
             fi
         fi
         
-        # user does not select backup location - no backup copy is created
-        # create a tmp copy of the original object
-        tmp_object="~{original_object_path}~{tmp_object_name}" 
-        echo "Starting creation of tmp copy to: $tmp_object"
-        gsutil ~{if defined(requester_pays_project) then "-u " + requester_pays_project else ""} cp -L create_md5_log.csv -D ~{original_object} $tmp_object
-
-        # confirm that original and tmp object file sizes are same
-        original_object_size=$(gsutil du "~{original_object}" | tr " " "\t" | cut -f1)
-        tmp_object_size=$(gsutil du $tmp_object | tr " " "\t" | cut -f1)
-        echo -e "original object size: $original_object_size bytes"
-        echo -e "tmp object size: $tmp_object_size bytes"
-    
-        # if file sizes don't match, exit script with error message
-        if [[ $original_object_size == $tmp_object_size ]]
-        then
-            echo "Tmp copy of original object complete - original and tmp copy have the same file size."
-        else
-            echo "Tmp copy of original object failed - original and tmp copy do not have the same file size."
-            echo "This is likely a transient failure. Please submit workflow again."
-            exit 1
-        fi
-        
         # if tmp copy succeeds, replace original with tmp - should have md5
         echo "Starting replace of the original object with tmp object to generate md5."
-        gsutil ~{if defined(requester_pays_project) then "-u " + requester_pays_project else ""} cp -L create_md5_log.csv -D $tmp_object "~{original_object}"
+        # TODO: want to change this cp to mv in order to replace and not copy, no daisy chain
+        gsutil ~{if defined(requester_pays_project) then "-u " + requester_pays_project else ""} cp -L create_md5_log.csv $tmp_object "~{original_object}"
     }
 
     runtime {
