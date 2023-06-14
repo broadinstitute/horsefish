@@ -83,7 +83,7 @@ task copy_to_destination {
 
             gsutil cp gs://schaluva-bucket/1tb_test_source_details.csv ~{original_object}
 
-            tmp_cmd=$(gsutil ~{if defined(requester_pays_project) then "-u " + requester_pays_project else ""} cp -L create_md5_log.csv -D "~{original_object}" $tmp_object)
+            tmp_cmd=$(gsutil cp -L create_md5_log.csv -D "~{original_object}" $tmp_object)
             echo "temp command: $tmp_cmd"
             
             # confirm that original and tmp object file sizes are same
