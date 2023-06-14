@@ -79,11 +79,8 @@ task copy_to_destination {
         tmp_object="~{original_object_path}~{tmp_object_name}" 
         echo "Starting creation of tmp copy to: $tmp_object"
 
-        gsutil cp gs://schaluva-bucket/1tb_test_source_details.csv ~{original_object}
-
-        tmp_cmd=$(gsutil cp -L create_md5_log.csv -D ~{original_object} $tmp_object)
-        echo "temp command: $tmp_cmd"
-        
+        gsutil cp -L create_md5_log.csv gs://fc-06a904c3-0383-49f9-b076-68b9934ce655/HG00187.hg38.v2.bam gs://fc-06a904c3-0383-49f9-b076-68b9934ce655/HG00187.hg38.v2.bam.tmp
+                
         # confirm that original and tmp object file sizes are same
         original_object_size=$(gsutil du "~{original_object}" | tr " " "\t" | cut -f1)
         tmp_object_size=$(gsutil du $tmp_object | tr " " "\t" | cut -f1)
