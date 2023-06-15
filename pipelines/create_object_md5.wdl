@@ -132,8 +132,6 @@ task copy_to_destination {
     String original_object_path = sub(original_object, original_object_name, "") # gs://bucket_name/object_path/
     String tmp_object_name = original_object_name + ".tmp" # filename.txt.tmp
 
-    single_sample_vcfs = [ x for x in [ "~{sep='", "' imputed_single_sample_vcfs}" ]  if x != "" ]
-
     command <<<
     python CODE<<
 
