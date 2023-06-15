@@ -42,7 +42,7 @@ task copy_to_destination {
     String original_object_path = sub(original_object, original_object_name, "") # gs://bucket_name/object_path/
     String tmp_object_name = original_object_name + ".tmp" # filename.txt.tmp
 
-    command {
+    command <<<
         set -e
 
         # user selects backup location - create back up copy and confirm successful copy comparing file sizes
@@ -99,7 +99,7 @@ task copy_to_destination {
         echo "Starting replace of the original object with tmp object to generate md5."
         # TODO: want to change this cp to mv in order to replace and not copy, no daisy chain
         gsutil ~{if defined(requester_pays_project) then "-u " + requester_pays_project else ""} cp -L create_md5_log.csv $tmp_object "~{original_object}"
-    }
+    >>>
 
     runtime {
         docker: "gcr.io/google.com/cloudsdktool/cloud-sdk:305.0.0"
