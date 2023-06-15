@@ -46,7 +46,7 @@ task copy_to_destination {
         set -e
 
         # user selects backup location - create back up copy and confirm successful copy comparing file sizes
-        if [ ! -z "${backup_object_dir}" ]
+        if [ ! -z "~{backup_object_dir}" ]
         then
             # make a copy of the original file in the backup location
             # TODO: handle if there is a trailing / or not based on the user input
