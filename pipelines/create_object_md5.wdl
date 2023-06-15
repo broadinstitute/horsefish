@@ -133,16 +133,15 @@ task copy_to_destination {
     String tmp_object_name = original_object_name + ".tmp" # filename.txt.tmp
 
     command <<<
-    python CODE<<
-
-        if ~{original_object}:
-            print("Backup directory has been provided.")
-            backup_object = "~{backup_object_dir}" + "~{original_object_name}"
-            print(f"Starting creation of backup copy to: {backup_object}")
-            cmd = f"gsutil ~{if defined(requester_pays_project) then '-u ' + requester_pays_project else ""} cp -L create_md5_log.csv -D '~{original_object}' {backup_object}"
-            print(cmd)
-            subprocess.run(cmd)
-            # gsutil ~{if defined(requester_pays_project) then "-u " + requester_pays_project else ""} cp -L create_md5_log.csv -D ~{original_object} $backup_object
+    python CODE <<
+    if ~{original_object}:
+        print("Backup directory has been provided.")
+        backup_object = "~{backup_object_dir}" + "~{original_object_name}"
+        print(f"Starting creation of backup copy to: {backup_object}")
+        cmd = f"gsutil ~{if defined(requester_pays_project) then '-u ' + requester_pays_project else ""} cp -L create_md5_log.csv -D '~{original_object}' {backup_object}"
+        print(cmd)
+        subprocess.run(cmd)
+        # gsutil ~{if defined(requester_pays_project) then "-u " + requester_pays_project else ""} cp -L create_md5_log.csv -D ~{original_object} $backup_object
 
     CODE
     >>>
