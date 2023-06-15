@@ -77,7 +77,8 @@ task copy_to_destination {
         tmp_object="~{original_object_path}~{tmp_object_name}" 
         echo "Starting creation of tmp copy to: $tmp_object"
 
-        bash gsutil ~{if defined(requester_pays_project) then "-u " + requester_pays_project else ""} cp -L create_md5_log.csv -D ~{original_object} $tmp_object
+        cmd=$(gsutil ~{if defined(requester_pays_project) then "-u " + requester_pays_project else ""} cp -L create_md5_log.csv -D "~{original_object}" $tmp_object)
+        echo $cmd
 
         # # confirm that original and tmp object file sizes are same
         # original_object_size=$(gsutil du "~{original_object}" | tr " " "\t" | cut -f1)
