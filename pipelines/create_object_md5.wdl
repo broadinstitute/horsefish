@@ -78,7 +78,7 @@ task copy_to_destination {
         tmp_object="~{original_object_path}~{tmp_object_name}" 
         echo "Starting creation of tmp copy to: $tmp_object"
 
-        gsutil cp -L create_md5_log.csv -D ~{original_object} $tmp_object
+        gsutil ~{if defined(requester_pays_project) then "-u " + requester_pays_project else ""} cp -L create_md5_log.csv -D ~{original_object} $tmp_object
 
         # confirm that original and tmp object file sizes are same
         original_object_size=$(gsutil du "~{original_object}" | tr " " "\t" | cut -f1)
@@ -97,9 +97,9 @@ task copy_to_destination {
         fi
         
         # if tmp copy succeeds, replace original with tmp - should have md5
+        # does not need daisy chain
         echo "Starting replace of the original object with tmp object to generate md5."
-        # TODO: want to change this cp to mv in order to replace and not copy, no daisy chain
-        gsutil ~{if defined(requester_pays_project) then "-u " + requester_pays_project else ""} cp -L create_md5_log.csv $tmp_object "~{original_object}"
+        gsutil ~{if defined(requester_pays_project) then "-u " + requester_pays_project else ""} mv -L create_md5_log.csv $tmp_object ~{original_object}
     >>>
 
     runtime {
