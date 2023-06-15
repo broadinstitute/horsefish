@@ -45,6 +45,17 @@ task copy_to_destination {
     command <<<
         set -e
 
+        # user does not select backup location - no backup copy is created
+        # create a tmp copy of the original object
+        tmp_object="~{original_object_path}~{tmp_object_name}" 
+        echo "Starting creation of tmp copy to: $tmp_object"
+
+        echo "some other command"
+        cmd=$(gsutil ~{if defined(requester_pays_project) then "-u " + requester_pays_project else ""} cp -L create_md5_log.csv -D "~{original_object}" $tmp_object)
+        echo $cmd
+
+        gsutil ~{if defined(requester_pays_project) then "-u " + requester_pays_project else ""} cp -L create_md5_log.csv -D "~{original_object}" $tmp_object
+    
         # user selects backup location - create back up copy and confirm successful copy comparing file sizes
         if [ ! -z "~{backup_object_dir}" ]
         then
@@ -71,14 +82,6 @@ task copy_to_destination {
                 exit 1
             fi
         fi
-        
-        # user does not select backup location - no backup copy is created
-        # create a tmp copy of the original object
-        tmp_object="~{original_object_path}~{tmp_object_name}" 
-        echo "Starting creation of tmp copy to: $tmp_object"
-
-        cmd=$(gsutil ~{if defined(requester_pays_project) then "-u " + requester_pays_project else ""} cp -L create_md5_log.csv -D "~{original_object}" $tmp_object)
-        echo $cmd
 
         # # confirm that original and tmp object file sizes are same
         # original_object_size=$(gsutil du "~{original_object}" | tr " " "\t" | cut -f1)
