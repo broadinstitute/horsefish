@@ -46,6 +46,7 @@ task copy_to_destination {
         set -e
 
         # user selects backup location - create back up copy and confirm successful copy comparing file sizes
+        # change to tilda
         if [ ! -z "~{backup_object_dir}" ]
         then
             # make a copy of the original file in the backup location
