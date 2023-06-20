@@ -3,13 +3,11 @@ version 1.0
 workflow create_object_md5 {
     input {
         String  original_object
-        Int     file_size_gb
     }
 
     call get_object_hash {
         input:
-            original_object = original_object,
-            disk_size = file_size_gb
+            original_object = original_object
     }
 
     output {
@@ -28,7 +26,8 @@ task get_object_hash {
         String? backup_object_dir
         String? requester_pays_project
 
-        Int     disk_size
+        String  docker = "gcr.io/dsp-solutions-eng-playground/cloud-sdk:435.0.1-md5"
+        Int?    disk_size
         Int?    memory
     }
 
@@ -39,8 +38,8 @@ task get_object_hash {
     >>>
 
     runtime {
-        docker: "gcr.io/dsp-solutions-eng-playground/cloud-sdk:435.0.1-md5"
-        disks: "local-disk " + (disk_size + 2) + " SSD"
+        docker: docker
+        disks: "local-disk " + select_first([disk_size, 2]) + " SSD"
         memory: select_first([memory, 2]) + " GB"
     }
 
