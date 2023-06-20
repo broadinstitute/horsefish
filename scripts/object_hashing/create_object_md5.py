@@ -58,7 +58,7 @@ def create_backup_object(backup_directory, original_bucket_name, original_blob_n
     # TODO: check for slash at end
     print("Backup directory has been provided.")
     backup_bucket_name = backup_directory.split("/")[:-1][2] # fc-
-    backup_blob_name = "/".join(backup_directory.split("/")[3:]) + "".join(original_blob_name.split("/")[:1])
+    backup_blob_name = "/".join(backup_directory.split("/")[3:]) + "".join(original_blob_name.split("/")[-1:])
 
     print(f"Starting creation of backup copy to: gs://{backup_bucket_name}/{backup_blob_name}")
 
@@ -113,6 +113,7 @@ def copy_object(src_bucket_name, src_object_name, dest_bucket_name, dest_object_
         print(f"\n Progress so far: {bytes_rewritten}/{bytes_to_rewrite} bytes.\n")
         if not rewrite_token:
             break
+
 
 if __name__ == '__main__':
     main()
