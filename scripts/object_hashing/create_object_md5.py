@@ -12,6 +12,7 @@ def main():
 
     args = parser.parse_args()
     
+    print("Is this working? Please.")
     original_bucket_name = args.original_object.split("/")[:-1][2] # fc-***
     original_blob_name = "/".join(args.original_object.split("/")[3:]) # dir/filename.txt
 
@@ -45,7 +46,6 @@ def create_tmp_object(original_bucket_name, original_blob_name, project_id=None)
     cmd = f"gsutil cp -D gs://{original_bucket_name}/{original_blob_name} gs://{original_bucket_name}/{tmp_blob_name}"
     subprocess.run(cmd, shell=True)
 
-    copy_object(original_bucket_name, original_blob_name, original_bucket_name, tmp_blob_name, project_id)
     compare_file_sizes(original_bucket_name, original_blob_name, original_bucket_name, tmp_blob_name, project_id)
 
     # replace original with tmp 
