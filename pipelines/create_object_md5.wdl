@@ -32,11 +32,11 @@ task get_object_hash {
         Int?    memory
     }
 
-    command {
+    command <<<
 
         python3 /scripts/create_object_md5.py -o ~{original_object} ~{"-d=" + backup_object_dir} ~{"-r=" + requester_pays_project}
 
-    }
+    >>>
 
     runtime {
         docker: "gcr.io/dsp-solutions-eng-playground/cloud-sdk:435.0.1-md5"
