@@ -1,6 +1,7 @@
 from google.cloud import storage
 import argparse
 import logging
+import os
 import subprocess
 
 logging.basicConfig(format="%(levelname)s: %(asctime)s : %(message)s", level=logging.INFO)
@@ -20,24 +21,31 @@ def main():
 
     # if the user provides a backup directory
     if args.backup_dir:
-        create_backup_object(args.backup_dir, original_bucket_name, original_blob_name, args.requester_pays_project)
+        backup_blob_name = create_backup_object(args.backup_dir, original_bucket_name, original_blob_name, args.requester_pays_project)
     
     # always create tmp object
-    create_tmp_object(original_bucket_name, original_blob_name, args.requester_pays_project)
+    tmp_blob_name = create_tmp_object(original_bucket_name, original_blob_name, args.requester_pays_project)
+    # replace original object with tmp object (now with md5)
+    create_final_object(original_bucket_name, original_blob_name, tmp_blob_name, args.requester_pays_project)
+    # retrieve md5 of final object
+    final_object_md5 = get_object_md5(original_bucket_name, original_blob_name, args.requester_pays_project)
+    # write md5 to file
+    write_md5_to_file(final_object_md5)
 
 
-def create_md5_object(original_bucket_name, original_blob_name, tmp_blob_name, project_id=None):
-    """Replace original version with tmp object which now has md5."""
-    
-    logging.info("Starting replace of the original object with tmp object to generate md5.")
-    copy_object(original_bucket_name, tmp_blob_name, original_bucket_name, original_blob_name, project_id)
+def create_backup_object(backup_directory, original_bucket_name, original_blob_name, project_id=None):
+    """Make copy of object in provided location."""
 
-    # get the md5 and write to file
-    final_obj_bytes, final_obj_md5 = get_file_size(original_bucket_name, original_blob_name, project_id)
-    logging.info(f"Final object md5: {final_obj_md5}")
+    logging.info("Backup directory has been provided.")
+    backup_bucket_name = backup_directory.split("/")[:-1][2] # fc-
+    backup_blob_name = os.path.join("/".join(backup_directory.split("/")[3:]), "".join(original_blob_name.split("/")[-1:]))
 
-    with open("object_md5.txt", "w") as md5_file:
-        md5_file.write(final_obj_md5)
+    logging.info(f"Starting creation of backup copy to: gs://{backup_bucket_name}/{backup_blob_name}")
+
+    copy_object(original_bucket_name, original_blob_name, backup_bucket_name, backup_blob_name, project_id)
+    compare_file_sizes(original_bucket_name, original_blob_name, backup_bucket_name, backup_blob_name, project_id)
+
+    return backup_blob_name
 
 
 def create_tmp_object(original_bucket_name, original_blob_name, project_id=None):
@@ -50,22 +58,53 @@ def create_tmp_object(original_bucket_name, original_blob_name, project_id=None)
 
     compare_file_sizes(original_bucket_name, original_blob_name, original_bucket_name, tmp_blob_name, project_id)
 
-    # replace original with tmp 
-    create_md5_object(original_bucket_name, original_blob_name, tmp_blob_name, project_id)
+    return tmp_blob_name
 
 
-def create_backup_object(backup_directory, original_bucket_name, original_blob_name, project_id=None):
-    """Make copy of object in provided location."""
+def create_final_object(original_bucket_name, original_blob_name, tmp_blob_name, project_id=None):
+    """Replace original version with tmp object which now has md5."""
+    
+    # replace the original object without md5 with the tmp object with md5 - keep original file name
+    # gsutil mv gs://original_bucket/original_object.tmp gs://original_bucket/original_object
+    logging.info("Starting replace of the original object with tmp object to generate md5.")
+    copy_object(original_bucket_name, tmp_blob_name, original_bucket_name, original_blob_name, project_id)
 
-    # TODO: check for slash at end
-    logging.info("Backup directory has been provided.")
-    backup_bucket_name = backup_directory.split("/")[:-1][2] # fc-
-    backup_blob_name = "/".join(backup_directory.split("/")[3:]) + "".join(original_blob_name.split("/")[-1:])
+    # check that the copy of tmp to original object name succeeded
+    compare_file_sizes(original_bucket_name, original_blob_name, original_bucket_name, tmp_blob_name, project_id)
+    # delete tmp object - there is no "mv" for client libraries
+    delete_object(original_bucket_name, tmp_blob_name, project_id)
 
-    logging.info(f"Starting creation of backup copy to: gs://{backup_bucket_name}/{backup_blob_name}")
 
-    copy_object(original_bucket_name, original_blob_name, backup_bucket_name, backup_blob_name, project_id)
-    compare_file_sizes(original_bucket_name, original_blob_name, backup_bucket_name, backup_blob_name, project_id)
+def copy_object(src_bucket_name, src_object_name, dest_bucket_name, dest_object_name, project_id=None):
+    """Copies object from one bucket to another with a new name."""
+
+    storage_client = storage.Client()
+
+    source_bucket = storage_client.bucket(src_bucket_name, user_project=project_id)
+    source_object = source_bucket.blob(src_object_name)
+    destination_bucket = storage_client.bucket(dest_bucket_name, user_project=project_id)
+    destination_object = destination_bucket.blob(dest_object_name)
+
+    # rewrite instead of copy - https://cloud.google.com/storage/docs/json_api/v1/objects/copy
+    # TLDR; use rewrite vs copy: copy uses rewrite but only calls rewrite once.
+    # if using copy, larger objects can require multiple rewrite calls leading to "Payload too large errors."
+    # using rewrite in the following manner supports multiple rewrites
+    rewrite_token = False
+    while True:
+        rewrite_token, bytes_rewritten, bytes_to_rewrite = destination_object.rewrite(source_object, token=rewrite_token)
+        logging.info(f"\n Progress so far: {bytes_rewritten}/{bytes_to_rewrite} bytes.\n")
+        if not rewrite_token:
+            break
+
+
+def delete_object(bucket_name, blob_name, project_id=None):
+    """Deletes object from bucket."""
+
+    logging.info(f"Deleting tmp copy gs://{bucket_name}/{blob_name} from bucket.")
+    storage_client = storage.Client()
+
+    bucket = storage_client.bucket(bucket_name, user_project=project_id)
+    bucket.delete_blob(blob_name)
 
 
 def compare_file_sizes(object_1_bucket, object_1_blob, object_2_bucket, object_2_blob, project_id=None):
@@ -95,26 +134,21 @@ def get_file_size(bucket_name, object_name, project_id=None):
     return size_in_bytes, md5
 
 
-def copy_object(src_bucket_name, src_object_name, dest_bucket_name, dest_object_name, project_id=None):
-    """Copies object from one bucket to another with a new name."""
+def get_object_md5(original_bucket_name, original_blob_name, project_id=None):
+    """Get md5 of the final object.""" 
+    
+    # get the md5
+    final_obj_bytes, final_obj_md5 = get_file_size(original_bucket_name, original_blob_name, project_id)
 
-    storage_client = storage.Client()
+    return final_obj_md5
 
-    source_bucket = storage_client.bucket(src_bucket_name, user_project=project_id)
-    source_object = source_bucket.blob(src_object_name)
-    destination_bucket = storage_client.bucket(dest_bucket_name, user_project=project_id)
-    destination_object = destination_bucket.blob(dest_object_name)
 
-    # rewrite instead of copy - https://cloud.google.com/storage/docs/json_api/v1/objects/copy
-    # TLDR; use rewrite vs copy: copy uses rewrite but only calls rewrite once.
-    # if using copy, larger objects can require multiple rewrite calls leading to "Payload too large errors."
-    # using rewrite in the following manner supports multiple rewrites
-    rewrite_token = False
-    while True:
-        rewrite_token, bytes_rewritten, bytes_to_rewrite = destination_object.rewrite(source_object, token=rewrite_token)
-        logging.info(f"\n Progress so far: {bytes_rewritten}/{bytes_to_rewrite} bytes.\n")
-        if not rewrite_token:
-            break
+def write_md5_to_file(md5):
+    """Write md5 of object to file."""
+
+    logging.info(f"Writing final object md5 to file: {md5}")
+    with open("object_md5.txt", "w") as md5_file:
+        md5_file.write(md5)
 
 
 if __name__ == '__main__':
