@@ -78,11 +78,9 @@ def create_final_object(original_bucket_name, original_blob_name, tmp_blob_name,
 def copy_object(src_bucket_name, src_object_name, dest_bucket_name, dest_object_name, project_id=None):
     """Copies object from one bucket to another with a new name."""
 
-    storage_client = storage.Client()
-
-    source_bucket = storage_client.bucket(src_bucket_name, user_project=project_id)
+    source_bucket = create_storage_client(src_bucket_name, project_id)
     source_object = source_bucket.blob(src_object_name)
-    destination_bucket = storage_client.bucket(dest_bucket_name, user_project=project_id)
+    destination_bucket = create_storage_client(dest_bucket_name, project_id)
     destination_object = destination_bucket.blob(dest_object_name)
 
     # rewrite instead of copy - https://cloud.google.com/storage/docs/json_api/v1/objects/copy
@@ -101,46 +99,43 @@ def delete_object(bucket_name, blob_name, project_id=None):
     """Deletes object from bucket."""
 
     logging.info(f"Deleting tmp copy gs://{bucket_name}/{blob_name} from bucket.")
-    storage_client = storage.Client()
-
-    bucket = storage_client.bucket(bucket_name, user_project=project_id)
+    bucket = create_storage_client(bucket_name, project_id)
     bucket.delete_blob(blob_name)
 
 
 def compare_file_sizes(object_1_bucket, object_1_blob, object_2_bucket, object_2_blob, project_id=None):
     """Check if 2 objects are the same size in bytes."""
 
-    obj_1_bytes, obj_1_md5 = get_file_size(object_1_bucket, object_1_blob, project_id)
-    obj_2_bytes, obj_2_md5 = get_file_size(object_2_bucket, object_2_blob, project_id)
+    obj_1_bytes = get_file_size(object_1_bucket, object_1_blob, project_id)
+    obj_2_bytes = get_file_size(object_2_bucket, object_2_blob, project_id)
 
-    logging.info(f"src  object size: {obj_1_bytes} bytes with md5 {obj_1_md5}")
-    logging.info(f"dest object size: {obj_2_bytes} bytes with md5 {obj_2_md5}")
+    logging.info(f"src  object size: {obj_1_bytes} bytes.")
+    logging.info(f"dest object size: {obj_2_bytes} bytes.")
 
     if obj_1_bytes != obj_2_bytes:
-        raise ValueError(f"Copy of object failed - {object_1_blob} and {object_2_blob} do not have the same file size. \
+        raise ValueError(f"Failed - {object_1_blob} and {object_2_blob} do not have the same file size. \
             This is likely a transient failure. Please submit workflow again.")
     
-    logging.info(f"Copy of object complete - {object_1_blob} and {object_2_blob} have the same file size. \n")
+    logging.info(f"Succeeded - {object_1_blob} and {object_2_blob} have the same file size. \n")
 
 
 def get_file_size(bucket_name, object_name, project_id=None):
     """Get size of an object."""
 
-    storage_client = storage.Client(project_id) # create client
-    bucket = storage_client.get_bucket(bucket_name) # get bucket
+    bucket = create_storage_client(bucket_name, project_id)
     size_in_bytes = bucket.get_blob(object_name).size
-    md5 = bucket.get_blob(object_name).md5_hash
 
-    return size_in_bytes, md5
+    return size_in_bytes
 
 
 def get_object_md5(original_bucket_name, original_blob_name, project_id=None):
     """Get md5 of the final object.""" 
     
     # get the md5
-    final_obj_bytes, final_obj_md5 = get_file_size(original_bucket_name, original_blob_name, project_id)
+    bucket = create_storage_client(original_bucket_name, project_id)
+    md5 = bucket.get_blob(original_blob_name).md5_hash
 
-    return final_obj_md5
+    return md5
 
 
 def write_md5_to_file(md5):
@@ -149,6 +144,15 @@ def write_md5_to_file(md5):
     logging.info(f"Writing final object md5 to file: {md5}")
     with open("object_md5.txt", "w") as md5_file:
         md5_file.write(md5)
+
+
+def create_storage_client(bucket_name, project_id=None):
+    """Setup Google Cloud Storage bucket client."""
+
+    storage_client = storage.Client(project_id)
+    bucket = storage_client.bucket(bucket_name, user_project=project_id)
+
+    return bucket
 
 
 if __name__ == '__main__':
