@@ -94,11 +94,9 @@ def call_ingest_dataset(dataset_id, request):
     # success_code is 200 and "job_status" =is"succeeded"
     print(f"{ingest_job_id} --> succeeded")
     
-    # write load tag to output file from final succeeded job result response
-    job_result_code, job_result_response = get_job_result(ingest_job_id)
-    result_load_tag = job_result_response["load_tag"]
-    with open("load_tag.txt", "w") as loadfile:
-        loadfile.write(result_load_tag)
+    # write job_id to file
+    with open("job_id.txt", "w") as loadfile:
+        loadfile.write(ingest_job_id)
 
     print("File ingest to TDR dataset completed successfully.")
 
