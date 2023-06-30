@@ -188,5 +188,3 @@ if __name__ == "__main__":
          args.ws_project,
          args.ws_name,
          args.include_aborted)
-
-# python3 retry_wfl_submission_failures.py -s dfad4484-ea8d-4bea-af3b-879bbb7b0d52 -d 092d50cf-8e18-40c3-b1be-66e3f788c1ad -t PrsInputsTable -k chip_well_barcode -p emerge_prod -w PRS_test -a
