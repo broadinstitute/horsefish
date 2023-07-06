@@ -38,6 +38,7 @@ task retry_prs_failures {
         String  dataset_id
         String  table_name
         String  primary_key
+        Boolean include_aborted = false
 
         String  workspace_namespace
         String  workspace_name
@@ -50,7 +51,7 @@ task retry_prs_failures {
                                                                  -k ~{primary_key} \
                                                                  -p ~{workspace_namespace} \
                                                                  -w ~{workspace_name} \
-                                                                 -a # include aborted workspaces
+                                                                 ~{if include_aborted then "-a" else ""} # include aborted workflows
     }
 
     runtime {
