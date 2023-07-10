@@ -17,16 +17,6 @@ else
     echo "Usage: $0 [on | off] TERRA_PROJECT_ID PATH_TO_TERRA_BUCKET_PATH"
     exit 0
   fi
-  # grab bucket(s)
-  if (( $# == 2 )); then
-    BUCKETS=$(cat buckets.txt)
-  elif (( $# == 3 )); then
-    # Checking if a file was passed in
-    if [[ $3 == *"."* ]]; then
-      BUCKETS=$(cat $3)
-    else
-      BUCKETS=$3
-    fi
   # If there is more that 3 arguments, check if the bucket list has qutoes around it
   elif (( $# > 3 )); then
     echo 'The Terra bucket paths can be formatted as "gs://fc-XXXXX gs://fc-XXXXX" or "fc-XXXXX fc-XXXXX"'
