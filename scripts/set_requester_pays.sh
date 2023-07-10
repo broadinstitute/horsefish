@@ -41,15 +41,19 @@ USER_EMAIL=$(gcloud config get-value account)
 MEMBER="user:${USER_EMAIL}"
 SLEEP_SEC=15
 
+if [[ $TOGGLE_TYPE == off ]]; then
+  PROJECT_TO_BILL="-u ${PROJECT_ID}"
+  else
+    PROJECT_TO_BILL=""
+fi
 # this is the firecloud.org id - should be used for all Terra projects
 ORG_ID="386193000800"
-ROLE="organizations/${ORG_ID}/roles/RequesterPaysToggler"
 
 # enable requesterpays permissions
 echo "Enabling permissions for ${USER_EMAIL} to switch ${TOGGLE_TYPE} Requester Pays"
-gcloud beta projects add-iam-policy-binding $PROJECT_ID --member=$MEMBER --role=$ROLE | grep -A 1 -B 1 "${MEMBER}"
-# # if needed for troubleshooting, this command retrieves the existing policy
-# gcloud beta projects get-iam-policy $PROJECT_ID | grep -A 1 -B 1 "${MEMBER}"
+# grant permission to the Google project
+gcloud beta projects add-iam-policy-binding $PROJECT_ID --member=$MEMBER --role="roles/serviceusage.serviceUsageAdmin" | grep -A 1 -B 1 "${MEMBER}"
+gcloud beta projects add-iam-policy-binding $PROJECT_ID --member=$MEMBER --role="roles/storage.admin" | grep -A 1 -B 1 "${MEMBER}"
 
 echo ""
 echo "Gatorcounting for $SLEEP_SEC seconds while iam change goes into effect"
@@ -68,7 +72,7 @@ for BUCKET in $BUCKETS; do
     else
       BUCKET_PATH="gs://$BUCKET"
   fi
-  while ! gsutil requesterpays set ${TOGGLE_TYPE} ${BUCKET_PATH}
+  while ! gsutil ${PROJECT_TO_BILL} requesterpays set ${TOGGLE_TYPE} ${BUCKET_PATH}
     do
       if (( $COUNTER > 5 )); then
         echo "Maximum number of attempts exceeded - please check the error message and try again"
@@ -78,9 +82,16 @@ for BUCKET in $BUCKETS; do
       echo "retrying in $SLEEP_SEC seconds - attempt ${COUNTER}/6"
       sleep $SLEEP_SEC
     done
+    # add a confirmation that the request was successful
+    if [[ $TOGGLE_TYPE == on ]]; then
+      echo "Requester pays enabled."
+      else
+        echo "Requester pays disabled."
+    fi
 done
 
 # revoke requesterpays permissions
 echo ""
 echo "Revoking permissions for ${USER_EMAIL} to edit Requester Pays"
-gcloud beta projects remove-iam-policy-binding $PROJECT_ID --member=$MEMBER --role=$ROLE | grep -A 1 -B 1 "${MEMBER}"
+gcloud beta projects remove-iam-policy-binding $PROJECT_ID --member=$MEMBER --role="roles/serviceusage.serviceUsageAdmin" | grep -A 1 -B 1 "${MEMBER}"
+gcloud beta projects remove-iam-policy-binding $PROJECT_ID --member=$MEMBER --role="roles/storage.admin" | grep -A 1 -B 1 "${MEMBER}"
