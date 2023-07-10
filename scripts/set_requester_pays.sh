@@ -42,8 +42,8 @@ ORG_ID="386193000800"
 # enable requesterpays permissions
 echo "Enabling permissions for ${USER_EMAIL} to switch ${TOGGLE_TYPE} Requester Pays"
 # grant permission to the Google project
-gcloud beta projects add-iam-policy-binding $PROJECT_ID --member=$MEMBER --role="roles/serviceusage.serviceUsageAdmin" | grep -A 1 -B 1 "${MEMBER}"
-gcloud beta projects add-iam-policy-binding $PROJECT_ID --member=$MEMBER --role="roles/storage.admin" | grep -A 1 -B 1 "${MEMBER}"
+gcloud beta projects add-iam-policy-binding $PROJECT_ID --member=$MEMBER --role="roles/serviceusage.serviceUsageAdmin" --condition='expression=request.time <timestamp("'$(date -v+2H -u +%Y-%m-%dT%H:%M:%SZ)'"),title=expire_firecloud_access' | grep -A 1 -B 1 "${MEMBER}"
+gcloud beta projects add-iam-policy-binding $PROJECT_ID --member=$MEMBER --role="roles/storage.admin" --condition='expression=request.time <timestamp("'$(date -v+2H -u +%Y-%m-%dT%H:%M:%SZ)'"),title=expire_firecloud_access' | grep -A 1 -B 1 "${MEMBER}"
 
 echo ""
 echo "Gatorcounting for $SLEEP_SEC seconds while iam change goes into effect"
