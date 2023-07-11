@@ -39,8 +39,8 @@ fi
 # enable requesterpays permissions
 echo "Enabling permissions for ${USER_EMAIL} to switch ${TOGGLE_TYPE} Requester Pays"
 # see https://cloud.google.com/storage/docs/using-requester-pays#prereqs for permission requirements
-gcloud beta projects add-iam-policy-binding $PROJECT_ID --member=$MEMBER --role="roles/serviceusage.serviceUsageAdmin" | grep -A 1 -B 1 "${MEMBER}"
-gcloud beta projects add-iam-policy-binding $PROJECT_ID --member=$MEMBER --role="roles/storage.admin" | grep -A 1 -B 1 "${MEMBER}"
+gcloud projects add-iam-policy-binding $PROJECT_ID --member=$MEMBER --role="roles/serviceusage.serviceUsageAdmin" | grep -A 1 -B 1 "${MEMBER}"
+gcloud projects add-iam-policy-binding $PROJECT_ID --member=$MEMBER --role="roles/storage.admin" | grep -A 1 -B 1 "${MEMBER}"
 # # if needed for troubleshooting, this command retrieves the existing policy
 # gcloud beta projects get-iam-policy $PROJECT_ID | grep -A 1 -B 1 "${MEMBER}"
 
@@ -83,5 +83,5 @@ while ! gsutil ${PROJECT_TO_BILL} requesterpays set ${TOGGLE_TYPE} ${BUCKET_PATH
 # revoke requesterpays permissions
 echo ""
 echo "Revoking permissions for ${USER_EMAIL} to edit Requester Pays"
-gcloud beta projects remove-iam-policy-binding $PROJECT_ID --member=$MEMBER --role="roles/serviceusage.serviceUsageAdmin" | grep -A 1 -B 1 "${MEMBER}"
-gcloud beta projects remove-iam-policy-binding $PROJECT_ID --member=$MEMBER --role="roles/storage.admin" | grep -A 1 -B 1 "${MEMBER}"
+gcloud projects remove-iam-policy-binding $PROJECT_ID --member=$MEMBER --role="roles/serviceusage.serviceUsageAdmin" | grep -A 1 -B 1 "${MEMBER}"
+gcloud projects remove-iam-policy-binding $PROJECT_ID --member=$MEMBER --role="roles/storage.admin" | grep -A 1 -B 1 "${MEMBER}"
