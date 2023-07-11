@@ -1,35 +1,23 @@
 #!/bin/bash
 
 if (( $# < 2 )); then
-  echo "Usage: $0 [on | off] TERRA_PROJECT_ID PATH_TO_TERRA_BUCKET_PATH"
-  echo "Unless you specify a source file or a string of buckets, the script will read buckets from a file 'buckets.txt'."
-  echo "The source file must include newline-delimited Terra bucket paths"
-  echo 'The string of Terra bucket paths can be formatted as "gs://fc-XXXXX gs://fc-XXXXX" or "fc-XXXXX fc-XXXXX"'
+  echo "Usage: $0 [on | off] TERRA_PROJECT_ID TERRA_BUCKET_PATH"
+  echo 'The Terra bucket path can be formatted as "gs://fc-XXXXX" or "fc-XXXXX"'
   echo "i.e you can run `./set_requester_pays.sh on project_id fc-12345`"
   echo "NOTE: this script requires you to be authed as your firecloud.org admin account."
   exit 0
 else
   # make sure 'on' or 'off' was specified
   if [[ "$1" =~ ^(on|off)$ ]]; then
-    echo "Setting Requester Pays *$1* for specified bucket(s)"
+    echo "Setting Requester Pays *$1* for specified bucket"
   else
     echo "Please specify whether you'd like RP on or off:"
-    echo "Usage: $0 [on | off] TERRA_PROJECT_ID PATH_TO_TERRA_BUCKET_PATH"
+    echo "Usage: $0 [on | off] TERRA_PROJECT_ID TERRA_BUCKET_PATH"
     exit 0
   fi
-  # grab bucket(s)
-  if (( $# == 2 )); then
-    BUCKETS=$(cat buckets.txt)
-  elif (( $# == 3 )); then
-    # Checking if a file was passed in
-    if [[ $3 == *"."* ]]; then
-      BUCKETS=$(cat $3)
-    else
-      BUCKETS=$3
-    fi
-  # If there is more that 3 arguments, check if the bucket list has qutoes around it
+  # check that there are only 3 arguments passed
   elif (( $# > 3 )); then
-    echo 'The Terra bucket paths can be formatted as "gs://fc-XXXXX gs://fc-XXXXX" or "fc-XXXXX fc-XXXXX"'
+    echo 'Usage: $0 [on | off] TERRA_PROJECT_ID PATH_TO_TERRA_BUCKET_PATH'
     echo "NOTE: this script requires you to be authed as your firecloud.org admin account."
     exit 0
   fi
@@ -37,6 +25,7 @@ fi
 
 TOGGLE_TYPE=$1
 PROJECT_ID=$2
+BUCKET=$3
 USER_EMAIL=$(gcloud config get-value account)
 MEMBER="user:${USER_EMAIL}"
 SLEEP_SEC=15
@@ -66,29 +55,30 @@ sleep $SLEEP_SEC
 
 COUNTER=0
 
-for BUCKET in $BUCKETS; do
-  if [[ $BUCKET == "gs://"* ]]; then
-      BUCKET_PATH=$BUCKET
-    else
-      BUCKET_PATH="gs://$BUCKET"
-  fi
-  while ! gsutil ${PROJECT_TO_BILL} requesterpays set ${TOGGLE_TYPE} ${BUCKET_PATH}
-    do
-      if (( $COUNTER > 5 )); then
-        echo "Maximum number of attempts exceeded - please check the error message and try again"
-        exit 0
-      fi
-      let COUNTER=COUNTER+1
-      echo "retrying in $SLEEP_SEC seconds - attempt ${COUNTER}/6"
-      sleep $SLEEP_SEC
-    done
-    # add a confirmation that the request was successful
-    if [[ $TOGGLE_TYPE == on ]]; then
-      echo "Requester pays enabled."
-      else
-        echo "Requester pays disabled."
+
+if [[ $BUCKET == "gs://"* ]]; then
+    BUCKET_PATH=$BUCKET
+  else
+    BUCKET_PATH="gs://$BUCKET"
+fi
+while ! gsutil ${PROJECT_TO_BILL} requesterpays set ${TOGGLE_TYPE} ${BUCKET_PATH}
+  do
+    if (( $COUNTER > 5 )); then
+      echo "Maximum number of attempts exceeded - please check the error message and try again"
+      exit 0
     fi
-done
+    let COUNTER=COUNTER+1
+    echo "retrying in $SLEEP_SEC seconds - attempt ${COUNTER}/6"
+    sleep $SLEEP_SEC
+  done
+  # add a confirmation that the request was successful
+  if [[ $TOGGLE_TYPE == on ]]; then
+    echo ""
+    echo "Requester pays enabled."
+    else
+      echo ""
+      echo "Requester pays disabled."
+  fi
 
 # revoke requesterpays permissions
 echo ""
