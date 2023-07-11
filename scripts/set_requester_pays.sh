@@ -30,24 +30,23 @@ MEMBER="user:${USER_EMAIL}"
 SLEEP_SEC=15
 
 # when disabling requester pays, a project to bill must be included in the request
+# use 'broad-dsde-prod' as project to bill since all firecloud accounts should already have access to it
 if [[ $TOGGLE_TYPE == off ]]; then
-  PROJECT_TO_BILL="-u ${PROJECT_ID}"
+  PROJECT_TO_BILL="-u broad-dsde-prod"
   else
     PROJECT_TO_BILL=""
 fi
 
 # enable requesterpays permissions
 echo "Enabling permissions for ${USER_EMAIL} to switch ${TOGGLE_TYPE} Requester Pays"
-# see https://cloud.google.com/storage/docs/using-requester-pays#prereqs for permission requirements
-gcloud projects add-iam-policy-binding $PROJECT_ID --member=$MEMBER --role="roles/serviceusage.serviceUsageAdmin" | grep -A 1 -B 1 "${MEMBER}"
-gcloud projects add-iam-policy-binding $PROJECT_ID --member=$MEMBER --role="roles/storage.admin" | grep -A 1 -B 1 "${MEMBER}"
+gcloud projects add-iam-policy-binding $PROJECT_ID --member=$MEMBER --role="organizations/386193000800/roles/RequesterPaysToggler" | grep -A 1 -B 1 "${MEMBER}"
 # # if needed for troubleshooting, this command retrieves the existing policy
 # gcloud beta projects get-iam-policy $PROJECT_ID | grep -A 1 -B 1 "${MEMBER}"
 
 echo ""
 echo "Gatorcounting for $SLEEP_SEC seconds while iam change goes into effect"
 echo ""
-echo "NOTE: if you get an error message saying AccessDeniedExeption: 403, don't worry, just wait for the next retry."
+echo "NOTE: if you get an error message saying AccessDeniedException: 403, don't worry, just wait for the next retry."
 echo ""
 echo "waiting $SLEEP_SEC seconds before first attempt"
 echo ""
@@ -71,19 +70,18 @@ while ! gsutil ${PROJECT_TO_BILL} requesterpays set ${TOGGLE_TYPE} ${BUCKET_PATH
     echo "retrying in $SLEEP_SEC seconds - attempt ${COUNTER}/6"
     sleep $SLEEP_SEC
   done
-  # add a confirmation that the request was successful
-  if [[ $TOGGLE_TYPE == on ]]; then
-    echo ""
-    echo "Requester pays enabled."
-    else
-      echo ""
-      echo "Requester pays disabled."
-  fi
+  # add a confirmation that the request was successful and revoke permission(s)
+if [[ $TOGGLE_TYPE == on ]]; then
+  echo ""
+  echo "Requester pays enabled."
+else
+  echo ""
+  echo "Requester pays disabled."
+fi
 
 # revoke requesterpays permissions
 echo ""
 echo "Revoking permissions for ${USER_EMAIL} to edit Requester Pays"
-gcloud projects remove-iam-policy-binding $PROJECT_ID --member=$MEMBER --role="roles/serviceusage.serviceUsageAdmin" | grep -A 1 -B 1 "${MEMBER}"
-gcloud projects remove-iam-policy-binding $PROJECT_ID --member=$MEMBER --role="roles/storage.admin" | grep -A 1 -B 1 "${MEMBER}"
+gcloud projects remove-iam-policy-binding $PROJECT_ID --member=$MEMBER --role="organizations/386193000800/roles/RequesterPaysToggler" | grep -A 1 -B 1 "${MEMBER}"
 echo ""
 echo "Done."
