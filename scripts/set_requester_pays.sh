@@ -1,9 +1,14 @@
 #!/bin/bash
 
-if (( $# < 2 )); then
+# check that there are only 3 arguments passed
+if (( $# < 3 )); then
   echo "Usage: $0 [on | off] TERRA_PROJECT_ID TERRA_BUCKET_PATH"
   echo 'The Terra bucket path can be formatted as "gs://fc-XXXXX" or "fc-XXXXX"'
-  echo "i.e you can run `./set_requester_pays.sh on project_id fc-12345`"
+  echo "i.e you can run './set_requester_pays.sh on project_id fc-12345'"
+  echo "NOTE: this script requires you to be authed as your firecloud.org admin account."
+  exit 0
+elif (( $# > 3 )); then
+  echo "Usage: $0 [on | off] TERRA_PROJECT_ID PATH_TO_TERRA_BUCKET_PATH"
   echo "NOTE: this script requires you to be authed as your firecloud.org admin account."
   exit 0
 else
@@ -15,12 +20,6 @@ else
     echo "Usage: $0 [on | off] TERRA_PROJECT_ID TERRA_BUCKET_PATH"
     exit 0
   fi
-  # check that there are only 3 arguments passed
-  elif (( $# > 3 )); then
-    echo 'Usage: $0 [on | off] TERRA_PROJECT_ID PATH_TO_TERRA_BUCKET_PATH'
-    echo "NOTE: this script requires you to be authed as your firecloud.org admin account."
-    exit 0
-  fi
 fi
 
 TOGGLE_TYPE=$1
@@ -30,6 +29,7 @@ USER_EMAIL=$(gcloud config get-value account)
 MEMBER="user:${USER_EMAIL}"
 SLEEP_SEC=15
 
+# when disabling requester pays, a project to bill must be included in the request
 if [[ $TOGGLE_TYPE == off ]]; then
   PROJECT_TO_BILL="-u ${PROJECT_ID}"
   else
@@ -85,3 +85,5 @@ echo ""
 echo "Revoking permissions for ${USER_EMAIL} to edit Requester Pays"
 gcloud projects remove-iam-policy-binding $PROJECT_ID --member=$MEMBER --role="roles/serviceusage.serviceUsageAdmin" | grep -A 1 -B 1 "${MEMBER}"
 gcloud projects remove-iam-policy-binding $PROJECT_ID --member=$MEMBER --role="roles/storage.admin" | grep -A 1 -B 1 "${MEMBER}"
+echo ""
+echo "Done."
