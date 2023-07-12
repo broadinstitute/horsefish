@@ -70,7 +70,7 @@ while ! gsutil ${PROJECT_TO_BILL} requesterpays set ${TOGGLE_TYPE} ${BUCKET_PATH
     echo "retrying in $SLEEP_SEC seconds - attempt ${COUNTER}/6"
     sleep $SLEEP_SEC
   done
-  # add a confirmation that the request was successful and revoke permission(s)
+# add a confirmation that the request was successful and revoke permission(s)
 if [[ $TOGGLE_TYPE == on ]]; then
   echo ""
   echo "Requester pays enabled."
