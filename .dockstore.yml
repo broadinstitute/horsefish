@@ -20,6 +20,6 @@ workflows:
 
  - name: run_shell_script_github_http
    subclass: WDL
-   primaryDescriptorPath: /pipelines/run_shell_script_github_http.wdl
+   primaryDescriptorPath: /pipelines/run_shell_script.wdl
    testParameterFiles:
     - empty.json
