@@ -17,3 +17,9 @@ workflows:
    primaryDescriptorPath: /pipelines/emerge/deliver_prs_to_anvil.wdl
    testParameterFiles:
     - empty.json
+
+ - name: run_shell_script
+   subclass: WDL
+   primaryDescriptorPath: /pipelines/run_shell_script.wdl
+   testParameterFiles:
+    - empty.json
