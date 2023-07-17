@@ -33,7 +33,7 @@ task get_object_hash {
 
     command <<<
 
-        python3 /scripts/create_object_md5.py -o ~{original_object} ~{"-d=" + backup_object_dir} ~{"-r=" + requester_pays_project}
+        python3 /scripts/create_object_md5.py -o ~{original_object} ~{"-d " + backup_object_dir} ~{"-r " + requester_pays_project}
 
     >>>
 

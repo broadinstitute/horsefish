@@ -53,7 +53,12 @@ def create_tmp_object(original_bucket_name, original_blob_name, project_id=None)
 
     tmp_blob_name = f"{original_blob_name}.tmp"
     logging.info(f"Starting creation of tmp copy to: gs://{original_bucket_name}/{tmp_blob_name}")
-    cmd = f"gsutil cp -D gs://{original_bucket_name}/{original_blob_name} gs://{original_bucket_name}/{tmp_blob_name}"
+
+    if project_id:
+        cmd = f"gsutil -u {project_id} cp -D gs://{original_bucket_name}/{original_blob_name} gs://{original_bucket_name}/{tmp_blob_name}"
+    else:
+        cmd = f"gsutil cp -D gs://{original_bucket_name}/{original_blob_name} gs://{original_bucket_name}/{tmp_blob_name}"
+    
     subprocess.run(cmd, shell=True)
 
     compare_file_sizes(original_bucket_name, original_blob_name, original_bucket_name, tmp_blob_name, project_id)
