@@ -25,7 +25,7 @@ task samtools_split {
 
     command <<<
 
-        # name output files with RG ID
+        # name output files with RG ID - blah blah
         samtools split ~{bam} -f "%!".bam -v
         gsutil cp *.bam gs://~{output_dir}/~{sample_name}/
     >>>
