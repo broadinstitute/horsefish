@@ -3,12 +3,14 @@ version 1.0
 workflow SamtoolsSplit {
     input {
         Array[File]  bams
+        String       output_dir
     }
 
     scatter (bam in bams) {
         call samtools_split {
         input:
-            bam = bam
+            bam = bam,
+            output_dir = output_dir
         }
     }
 }
