@@ -19,15 +19,15 @@ task samtools_split {
         String  output_dir
     }
 
-    basename = basename(bam, ".bam")
-    Int mem = ceil(size(bam, "MiB")) + 100
-    Int disk_space = ceil(size(bam, "GiB")) + 50
+    String  sample_name = basename(bam, ".bam")
+    Int     mem = ceil(size(bam, "MiB")) + 100
+    Int     disk_space = ceil(size(bam, "GiB")) + 50
 
     command <<<
 
         # name output files with RG ID
         samtools split ~{bam} -f "%!".bam -v
-        gsutil cp *.bam gs://~{output_dir}/~{basename}/
+        gsutil cp *.bam gs://~{output_dir}/~{sample_name}/
     >>>
 
     runtime {
