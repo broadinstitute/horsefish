@@ -37,4 +37,8 @@ task samtools_split {
         disks: "local-disk " + disk_space + " SSD"
         memory: mem + " MB"
     }
+
+    output {
+    Array[File] readgroup_bams = glob("*.bam")
+    }
 }
