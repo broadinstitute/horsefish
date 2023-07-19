@@ -20,10 +20,9 @@ task samtools_split {
 
     Int     mem = ceil(size(bam, "MiB")) + 100
     Int     disk_space = ceil(size(bam, "GiB")) + 50
+    String  bamName = basename(bam, ".bam")
 
     command {
-
-        bamName=$(basename ~{bam})
 
         cut -f 1 ~{output_map} | tail -n +2 > readgroups.list
         
@@ -35,7 +34,7 @@ task samtools_split {
         wait
 
         bam_names=$(cut -f 2 ~{output_map} | tail -n +2 | tr "\n" " ")
-        samtools merge $bamName.final.merged.bam $bam_names
+        samtools merge ~{bamName}_final_merged.bam $bam_names
 
     }
 
@@ -46,6 +45,6 @@ task samtools_split {
     }
 
     output {
-    Array[File] readgroup_bams = glob("*.bam")
+        File    merged_bam = "~{bamName}_final_merged.bam"
     }
 }
