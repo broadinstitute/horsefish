@@ -4,11 +4,19 @@ workflow SamtoolsSplit {
     input {
         File bam
         File output_map
+        Int extra_mem
+        Int extra_space
     }
     call samtools_split {
     input:
         bam = bam,
-        output_map = output_map
+        output_map = output_map,
+        extra_mem = extra_mem,
+        extra_space = extra_space
+    }
+
+    output {
+        File output_bam = samtools_split.merged_bam
     }
 }
 
@@ -16,10 +24,12 @@ task samtools_split {
     input {
         File    bam
         File    output_map
+        Int     extra_mem
+        Int     extra_space
     }
 
-    Int     mem = ceil(size(bam, "MiB")) + 100
-    Int     disk_space = ceil(size(bam, "GiB")) + 50
+    Int     mem = ceil(size(bam, "MiB")) + 150 + extra_mem
+    Int     disk_space = ceil(size(bam, "GiB")) + 100 + extra_space
     String  bamName = basename(bam, ".bam")
 
     command {
