@@ -25,7 +25,7 @@ task samtools_split {
 
         bamName=$(basename ~{bam})
 
-        cut  -f 1 ~{output_map} | tail -n +2 > readgroups.list
+        cut -f 1 ~{output_map} | tail -n +2 > readgroups.list
         
         while read readgroup; do
             echo $readgroup
@@ -34,7 +34,7 @@ task samtools_split {
 
         wait
 
-        bam_names=$(cut  -f 1 ~{output_map} | tail -n +2 | tr "\n" " ")
+        bam_names=$(cut -f 2 ~{output_map} | tail -n +2 | tr "\n" " ")
         samtools merge $bamName.final.merged.bam $bam_names
 
     }
