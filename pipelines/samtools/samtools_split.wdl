@@ -39,7 +39,6 @@ task samtools_split {
 
     }
 
-
     runtime {
         docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.4.3-1564508330"
         disks: "local-disk " + disk_space + " SSD"
