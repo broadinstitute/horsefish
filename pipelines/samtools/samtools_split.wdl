@@ -35,7 +35,7 @@ task samtools_split {
         wait
 
         bam_names=$(cut  -f 1 ~{output_map} | tail -n +2 | tr "\n" " ")
-        samtools merge $bam_names -o $bamName.final.merged.bam
+        samtools merge $bamName.final.merged.bam $bam_names
 
     }
 
