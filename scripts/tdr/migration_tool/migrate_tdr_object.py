@@ -253,6 +253,187 @@ def recreate_snapshot(config, new_dataset_id):
     else:
         config["migration_results"].append(["Snapshot Creation", "Snapshot Creation", "Skipped", ""])
                 
+# Function to process ingests for specific table
+def ingest_table_data(config, new_dataset_id, fileref_col_dict, table, start_row, end_row):
+    # Extract parameters from config
+    src_tdr_object_uuid = config["source"]["tdr_object_uuid"]
+    src_tdr_object_type = config["source"]["tdr_object_type"]
+    src_tdr_object_env = config["source"]["tdr_object_env"]
+    tdr_host = config["source"]["tdr_host"]
+    tar_tdr_billing_profile = config["target"]["tdr_billing_profile"]
+    tables_to_ingest = config["target"]["tables_to_ingest"]
+    datarepo_row_ids_to_ingest = config["target"]["datarepo_row_ids_to_ingest"]
+
+    # Setup/refresh TDR clients
+    api_client = refresh_tdr_api_client(tdr_host)
+    datasets_api = data_repo_client.DatasetsApi(api_client=api_client)
+    snapshots_api = data_repo_client.SnapshotsApi(api_client=api_client)
+    
+    # Retrieve table data from the original dataset
+    logging.info(f"Fetching rows {str(start_row)}-{str(end_row)} from table '{table}' in the original {src_tdr_object_type} ({src_tdr_object_uuid}).")
+    table_recs_str = f"Table: {table} -- Rows: {str(start_row)}-{str(end_row)}"
+    max_page_size = 1000
+    total_records_fetched = start_row - 1
+    final_records = []
+    while True:
+        offset = total_records_fetched
+        page_size = min(max_page_size, end_row - total_records_fetched)
+        attempt_counter = 0
+        while True:
+            try:
+                if src_tdr_object_type == "dataset":
+                    record_results = datasets_api.lookup_dataset_data_by_id(id=src_tdr_object_uuid, table=table, offset=offset, limit=page_size).to_dict() 
+                elif src_tdr_object_type == "snapshot":
+                    record_results = snapshots_api.lookup_snapshot_preview_by_id(id=src_tdr_object_uuid, table=table, offset=offset, limit=page_size).to_dict() 
+                else:
+                    raise Exception("Source TDR object type must be 'dataset' or 'snapshot'.")
+                break
+            except Exception as e:
+                if attempt_counter < 5:
+                    sleep(10)
+                    attempt_counter += 1
+                    continue
+                else:
+                    record_results = {}
+                    break
+        if record_results["result"]:
+            final_records.extend(record_results["result"])
+            total_records_fetched += len(record_results["result"])
+        else:
+            break
+        if total_records_fetched >= end_row:
+            break
+    if final_records:
+        df_temp = pd.DataFrame.from_dict(final_records)
+        if datarepo_row_ids_to_ingest:
+            df_orig = df_temp[df_temp["datarepo_row_id"].isin(datarepo_row_ids_to_ingest)].copy()
+        else:
+            df_orig = df_temp.copy()
+        del df_temp
+        df_orig.drop(columns=["datarepo_row_id"], inplace=True, errors="ignore")
+        records_orig = df_orig.to_dict(orient="records")
+        if len(records_orig) == 0:
+            msg_str = f"No records found in rows {str(start_row)}-{str(end_row)} of table {table} after filtering based on datarepo_row_ids_to_ingest parameter. Continuing to next table/record set."
+            logging.info(msg_str)
+            config["migration_results"].append(["Dataset Ingestion", table_recs_str, "Skipped", msg_str])
+            return
+        elif len(final_records) != len(records_orig):
+            logging.info(f"Filtering records to ingest based on the datarepo_row_ids_to_ingest parameter. {str(len(records_orig))} of {str(len(final_records))} records to be ingested.")
+    else:
+        msg_str = f"No records found for rows {str(start_row)}-{str(end_row)} of table {table} in original {src_tdr_object_type}. Continuing to next table/record set."
+        logging.info(msg_str)
+        config["migration_results"].append(["Dataset Ingestion", table_recs_str, "Skipped", msg_str])
+        return
+
+    # If table contains file references, pre-process records before ingest
+    if fileref_col_dict[table]:
+        try:
+            # Pre-process records to include file reference objects
+            logging.info("File reference columns present. Pre-processing records before submitting ingestion request.")
+            api_client = refresh_tdr_api_client(tdr_host)
+            datasets_api = data_repo_client.DatasetsApi(api_client=api_client)
+            snapshots_api = data_repo_client.SnapshotsApi(api_client=api_client)
+            records_processed = []
+            for record in records_orig:
+                int_record = record.copy()
+                for fileref_col in fileref_col_dict[table]:
+                    if isinstance(int_record[fileref_col], list):
+                        fileref_obj_list = []
+                        for val in int_record[fileref_col]:
+                            attempt_counter = 0
+                            while True:
+                                try:
+                                    if src_tdr_object_type == "dataset":
+                                        file_results = datasets_api.lookup_file_by_id(id=src_tdr_object_uuid, fileid=val)
+                                    elif src_tdr_object_type == "snapshot":
+                                        file_results = snapshots_api.lookup_snapshot_file_by_id(id=src_tdr_object_uuid, fileid=val[-36:]) 
+                                    else:
+                                        raise Exception("Source TDR object type must be 'dataset' or 'snapshot'.") 
+                                    fileref_obj = {
+                                        "sourcePath": file_results.file_detail.access_url,
+                                        "targetPath": file_results.path,
+                                        "description": file_results.description,
+                                        "mimeType": file_results.file_detail.mime_type
+                                    }
+                                    fileref_obj_list.append(fileref_obj)
+                                    break
+                                except Exception as e:
+                                    if attempt_counter < 5:
+                                        sleep(5)
+                                        attempt_counter += 1
+                                        continue
+                                    else:
+                                        break
+                        int_record[fileref_col] = fileref_obj_list
+                    elif int_record[fileref_col]:
+                        fileref_obj = {}
+                        attempt_counter = 0
+                        while True:
+                            try:
+                                if src_tdr_object_type == "dataset":
+                                    file_results = datasets_api.lookup_file_by_id(id=src_tdr_object_uuid, fileid=int_record[fileref_col])
+                                elif src_tdr_object_type == "snapshot":
+                                    file_results = snapshots_api.lookup_snapshot_file_by_id(id=src_tdr_object_uuid, fileid=int_record[fileref_col][-36:]) 
+                                else:
+                                    raise Exception("Source TDR object type must be 'dataset' or 'snapshot'.") 
+                                fileref_obj = {
+                                    "sourcePath": file_results.file_detail.access_url,
+                                    "targetPath": file_results.path,
+                                    "description": file_results.description,
+                                    "mimeType": file_results.file_detail.mime_type
+                                }
+                                int_record[fileref_col] = fileref_obj
+                                break
+                            except Exception as e:
+                                if attempt_counter < 5:
+                                    sleep(5)
+                                    attempt_counter += 1
+                                    continue
+                                else:
+                                    break
+                        int_record[fileref_col] = fileref_obj
+                records_processed.append(int_record)
+        except Exception as e:
+            err_str = f"Failure in pre-processing: {str(e)}"
+            config["migration_results"].append(["Dataset Ingestion", table_recs_str, "Failure", err_str])
+            return
+    else:
+        records_processed = records_orig
+    
+    # Build, submit, and monitor ingest request
+    logging.info(f"Submitting ingestion request to new dataset ({new_dataset_id}).")
+    ingest_request = {
+        "table": table,
+        "profile_id": tar_tdr_billing_profile,
+        "ignore_unknown_values": True,
+        "resolve_existing_files": True,
+        "updateStrategy": "append",
+        "format": "array",
+        "load_tag": "Ingest for {}".format(new_dataset_id),
+        "records": records_processed
+    }
+    attempt_counter = 1
+    while True:
+        try:
+            api_client = refresh_tdr_api_client(tdr_host)
+            datasets_api = data_repo_client.DatasetsApi(api_client=api_client)
+            ingest_request_result, job_id = wait_for_tdr_job(datasets_api.ingest_dataset(id=new_dataset_id, ingest=ingest_request), tdr_host)
+            logging.info("Ingest succeeded: {}".format(str(ingest_request_result)[0:1000]))
+            config["migration_results"].append(["Dataset Ingestion", table_recs_str, "Success", str(ingest_request_result)[0:1000]])
+            break
+        except Exception as e:
+            logging.error("Error on ingest: {}".format(str(e)[0:2500]))
+            if attempt_counter < 3:
+                logging.info("Retrying ingest (attempt #{})...".format(str(attempt_counter)))
+                sleep(10)
+                attempt_counter += 1
+                continue
+            else:
+                logging.error("Maximum number of retries exceeded. Logging error.")
+                err_str = f"Error on ingest: {str(e)[0:2500]}"
+                config["migration_results"].append(["Dataset Ingestion", table_recs_str, "Failure", err_str])  
+                break
+        
 # Function to populate new TDR dataset
 def populate_new_dataset(config, new_dataset_id, fileref_col_dict):
     # Extract parameters from config
@@ -304,226 +485,63 @@ def populate_new_dataset(config, new_dataset_id, fileref_col_dict):
     for table in ordered_table_list:
         
         # Determine whether table should be processed, and skip if not
+        logging.info(f"Processing dataset ingestion for table '{table}'.")
         if tables_to_ingest and table not in tables_to_ingest:
             msg_str = f"Table '{table}' not listed in the target.tables_to_ingest parameter. Skipping."
             logging.info(msg_str)
-            config["migration_results"].append(["Dataset Ingestion", table, "Skipped", msg_str])
+            config["migration_results"].append(["Dataset Ingestion", f"Table: {table}", "Skipped", msg_str])
             continue
         
-        # Retrieve table data from the original dataset
+        # Fetch total record count for table
         api_client = refresh_tdr_api_client(tdr_host)
         datasets_api = data_repo_client.DatasetsApi(api_client=api_client)
         snapshots_api = data_repo_client.SnapshotsApi(api_client=api_client)
-        logging.info(f"Fetching records for table '{table}' in the original {src_tdr_object_type} ({src_tdr_object_uuid}).")
-        max_page_size = 1000
-        total_records_fetched = 0
-        final_records = []
         while True:
-            row_start = total_records_fetched
-            attempt_counter = 0
-            while True:
-                try:
-                    if src_tdr_object_type == "dataset":
-                        record_results = datasets_api.lookup_dataset_data_by_id(id=src_tdr_object_uuid, table=table, offset=row_start, limit=max_page_size).to_dict() 
-                    elif src_tdr_object_type == "snapshot":
-                        record_results = snapshots_api.lookup_snapshot_preview_by_id(id=src_tdr_object_uuid, table=table, offset=row_start, limit=max_page_size).to_dict() 
-                    else:
-                        raise Exception("Source TDR object type must be 'dataset' or 'snapshot'.")
-                    break
-                except Exception as e:
-                    print(e)
-                    if attempt_counter < 5:
-                        sleep(10)
-                        attempt_counter += 1
-                        continue
-                    else:
-                        record_results = {}
-                        break
-            if record_results["result"]:
-                final_records.extend(record_results["result"])
-                total_records_fetched += len(record_results["result"])
-            else:
+            try:
+                if src_tdr_object_type == "dataset":
+                    record_results = datasets_api.lookup_dataset_data_by_id(id=src_tdr_object_uuid, table=table).to_dict() 
+                elif src_tdr_object_type == "snapshot":
+                    record_results = snapshots_api.lookup_snapshot_preview_by_id(id=src_tdr_object_uuid, table=table).to_dict() 
+                else:
+                    raise Exception("Source TDR object type must be 'dataset' or 'snapshot'.")
+                total_record_count = record_results["total_row_count"]
                 break
-        if final_records:
-            df_temp = pd.DataFrame.from_dict(final_records)
-            if datarepo_row_ids_to_ingest:
-                df_orig = df_temp[df_temp["datarepo_row_id"].isin(datarepo_row_ids_to_ingest)].copy()
-            else:
-                df_orig = df_temp.copy()
-            del df_temp
-            df_orig.drop(columns=["datarepo_row_id"], inplace=True, errors="ignore")
-            records_orig = df_orig.to_dict(orient="records")
-            if len(records_orig) == 0:
-                msg_str = f"No records found for table after filtering based on datarepo_row_ids_to_ingest parameter. Continuing to next table."
-                logging.info(msg_str)
-                config["migration_results"].append(["Dataset Ingestion", table, "Skipped", msg_str])
-                continue
-            elif len(final_records) != len(records_orig):
-                logging.info(f"Filtering records to ingest based on the datarepo_row_ids_to_ingest parameter. {str(len(records_orig))} of {str(len(final_records))} records to be ingested.")
-        else:
-            msg_str = f"No records found for table in original {src_tdr_object_type}. Continuing to next table."
+            except Exception as e:
+                if attempt_counter < 5:
+                    sleep(10)
+                    attempt_counter += 1
+                    continue
+                else:
+                    total_record_count = -1
+                    break
+        if total_record_count == -1:
+            err_str = f"Error retrieving record count for table '{table}' in original {src_tdr_object_type}. Continuing to next table."
+            logging.error(err_str)
+            config["migration_results"].append(["Dataset Ingestion", f"Table: {table}", "Failure", err_str])
+            continue 
+        elif total_record_count == 0:
+            msg_str = f"No records found for table in original {src_tdr_object_type}. Continuing to next table/record set."
             logging.info(msg_str)
-            config["migration_results"].append(["Dataset Ingestion", table, "Skipped", msg_str])
+            config["migration_results"].append(["Dataset Ingestion", f"Table: {table}", "Skipped", msg_str])
             continue
         
-        # If table contains file references, chunk as appropriate, otherwise ingest as is
+        # Chunk table records as necessary, then loop through and process each chunk
+        chunk_size = 20
         if fileref_col_dict[table]:
-            try:
-                # Pre-process records to include file reference objects
-                logging.info("File reference columns present. Pre-processing records before submitting ingestion request.")
-                api_client = refresh_tdr_api_client(tdr_host)
-                datasets_api = data_repo_client.DatasetsApi(api_client=api_client)
-                snapshots_api = data_repo_client.SnapshotsApi(api_client=api_client)
-                records_processed = []
-                for record in records_orig:
-                    int_record = record.copy()
-                    for fileref_col in fileref_col_dict[table]:
-                        if isinstance(int_record[fileref_col], list):
-                            fileref_obj_list = []
-                            for val in int_record[fileref_col]:
-                                attempt_counter = 0
-                                while True:
-                                    try:
-                                        if src_tdr_object_type == "dataset":
-                                            file_results = datasets_api.lookup_file_by_id(id=src_tdr_object_uuid, fileid=val)
-                                        elif src_tdr_object_type == "snapshot":
-                                            file_results = snapshots_api.lookup_snapshot_file_by_id(id=src_tdr_object_uuid, fileid=val[-36:]) 
-                                        else:
-                                            raise Exception("Source TDR object type must be 'dataset' or 'snapshot'.") 
-                                        fileref_obj = {
-                                            "sourcePath": file_results.file_detail.access_url,
-                                            "targetPath": file_results.path,
-                                            "description": file_results.description,
-                                            "mimeType": file_results.file_detail.mime_type
-                                        }
-                                        fileref_obj_list.append(fileref_obj)
-                                        break
-                                    except Exception as e:
-                                        print(f"Error: {str(e)}")
-                                        if attempt_counter < 5:
-                                            sleep(5)
-                                            attempt_counter += 1
-                                            continue
-                                        else:
-                                            break
-                            int_record[fileref_col] = fileref_obj_list
-                        elif int_record[fileref_col]:
-                            fileref_obj = {}
-                            attempt_counter = 0
-                            while True:
-                                try:
-                                    if src_tdr_object_type == "dataset":
-                                        file_results = datasets_api.lookup_file_by_id(id=src_tdr_object_uuid, fileid=int_record[fileref_col])
-                                    elif src_tdr_object_type == "snapshot":
-                                        file_results = snapshots_api.lookup_snapshot_file_by_id(id=src_tdr_object_uuid, fileid=int_record[fileref_col][-36:]) 
-                                    else:
-                                        raise Exception("Source TDR object type must be 'dataset' or 'snapshot'.") 
-                                    fileref_obj = {
-                                        "sourcePath": file_results.file_detail.access_url,
-                                        "targetPath": file_results.path,
-                                        "description": file_results.description,
-                                        "mimeType": file_results.file_detail.mime_type
-                                    }
-                                    int_record[fileref_col] = fileref_obj
-                                    break
-                                except Exception as e:
-                                    print(f"Error: {str(e)}")
-                                    if attempt_counter < 5:
-                                        sleep(5)
-                                        attempt_counter += 1
-                                        continue
-                                    else:
-                                        break
-                            int_record[fileref_col] = fileref_obj
-                    records_processed.append(int_record)
-            except Exception as e:
-                err_str = f"Failure in pre-processing: {str(e)}"
-                config["migration_results"].append(["Dataset Ingestion", table, "Failure", err_str])
-                continue
-                
-            # Chunk records as necessary and then build, submit, and monitor ingest request(s)
             max_combined_rec_ref_size = 50000
-            max_recs_per_request = math.floor(max_combined_rec_ref_size / len(fileref_col_dict[table]))
-            records_cnt = len(records_processed)
-            start_rec = 0
-            end_rec = max_recs_per_request
-            while start_rec < records_cnt:
-                start_row_str = str(start_rec + 1)
-                if end_rec > records_cnt:
-                    end_row_str = str(records_cnt)
-                else:
-                    end_row_str = str(end_rec)
-                logging.info(f"Submitting ingestion request for rows {start_row_str}-{end_row_str} (ordered by datarepo_row_id) to new dataset ({new_dataset_id}).")
-                ingest_request = {
-                    "table": table,
-                    "profile_id": tar_tdr_billing_profile,
-                    "ignore_unknown_values": True,
-                    "resolve_existing_files": True,
-                    "updateStrategy": "append",
-                    "format": "array",
-                    "load_tag": "Ingest for {}".format(new_dataset_id),
-                    "records": records_processed[start_rec:end_rec]
-                }
-                attempt_counter = 1
-                while True:
-                    try:
-                        api_client = refresh_tdr_api_client(tdr_host)
-                        datasets_api = data_repo_client.DatasetsApi(api_client=api_client)
-                        ingest_request_result, job_id = wait_for_tdr_job(datasets_api.ingest_dataset(id=new_dataset_id, ingest=ingest_request), tdr_host)
-                        logging.info("Ingest succeeded: {}".format(str(ingest_request_result)[0:1000]))
-                        config["migration_results"].append(["Dataset Ingestion", table + f" (rows {start_row_str}-{end_row_str})", "Success", str(ingest_request_result)[0:1000]])
-                        break
-                    except Exception as e:
-                        logging.error("Error on ingest: {}".format(str(e)[0:2500]))
-                        if attempt_counter < 3:
-                            logging.info("Retrying ingest (attempt #{})...".format(str(attempt_counter)))
-                            sleep(10)
-                            attempt_counter += 1
-                            continue
-                        else:
-                            logging.error("Maximum number of retries exceeded. Logging error.")
-                            err_str = f"Error on ingest: {str(e)[0:2500]}"
-                            config["migration_results"].append(["Dataset Ingestion", table + f" (rows {start_row_str}-{end_row_str})", "Failure", err_str])
-                            break
-                start_rec += max_recs_per_request
-                if (end_rec + max_recs_per_request) > records_cnt:
-                    end_rec = records_cnt + 1
-                else:
-                    end_rec += max_recs_per_request 
+            ref_chunk_size = math.floor(max_combined_rec_ref_size / len(fileref_col_dict[table]))
+            chunk_size = min(chunk_size, ref_chunk_size)
+            logging.info(f"Table contains fileref columns. Will use a chunk size of {chunk_size} rows per ingestion request, to keep the number of file references per chunk below {max_combined_rec_ref_size}.")
         else:
-            # Build, submit, and monitor ingest request
-            logging.info(f"Submitting ingestion request to new dataset ({new_dataset_id}).")
-            ingest_request = {
-                "table": table,
-                "profile_id": tar_tdr_billing_profile,
-                "ignore_unknown_values": True,
-                "resolve_existing_files": True,
-                "updateStrategy": "append",
-                "format": "array",
-                "load_tag": "Ingest for {}".format(new_dataset_id),
-                "records": records_orig
-            }
-            attempt_counter = 1
-            while True:
-                try:
-                    api_client = refresh_tdr_api_client(tdr_host)
-                    datasets_api = data_repo_client.DatasetsApi(api_client=api_client)
-                    ingest_request_result, job_id = wait_for_tdr_job(datasets_api.ingest_dataset(id=new_dataset_id, ingest=ingest_request), tdr_host)
-                    logging.info("Ingest succeeded: {}".format(str(ingest_request_result)[0:1000]))
-                    config["migration_results"].append(["Dataset Ingestion", table, "Success", str(ingest_request_result)[0:1000]])
-                    break
-                except Exception as e:
-                    logging.error("Error on ingest: {}".format(str(e)[0:2500]))
-                    if attempt_counter < 3:
-                        logging.info("Retrying ingest (attempt #{})...".format(str(attempt_counter)))
-                        sleep(10)
-                        attempt_counter += 1
-                        continue
-                    else:
-                        logging.error("Maximum number of retries exceeded. Logging error.")
-                        err_str = f"Error on ingest: {str(e)[0:2500]}"
-                        config["migration_results"].append(["Dataset Ingestion", table + f" (rows {start_row_str}-{end_row_str})", "Failure", err_str])  
-                        break
+            logging.info(f"Table does not contain fileref columns. Will use a chunk size of {chunk_size} rows per ingestion request.")
+        start_row = 1
+        end_row = min((chunk_size), total_record_count)
+        while start_row <= total_record_count:
+            if end_row > total_record_count:
+                end_row = total_record_count
+            ingest_table_data(config, new_dataset_id, fileref_col_dict, table, start_row, end_row)    
+            start_row += chunk_size
+            end_row += chunk_size
 
 # Function to create a new TDR dataset from an existing TDR dataset
 def create_dataset_from_dataset(config):
