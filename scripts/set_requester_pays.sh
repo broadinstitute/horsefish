@@ -1,14 +1,10 @@
 #!/bin/bash
 
 # check that there are only 3 arguments passed
-if (( $# < 3 )); then
+if (( $# != 3 )); then
   echo "Usage: $0 [on | off] TERRA_PROJECT_ID TERRA_BUCKET_PATH"
   echo 'The Terra bucket path can be formatted as "gs://fc-XXXXX" or "fc-XXXXX"'
   echo "i.e you can run './set_requester_pays.sh on project_id fc-12345'"
-  echo "NOTE: this script requires you to be authed as your firecloud.org admin account."
-  exit 0
-elif (( $# > 3 )); then
-  echo "Usage: $0 [on | off] TERRA_PROJECT_ID PATH_TO_TERRA_BUCKET_PATH"
   echo "NOTE: this script requires you to be authed as your firecloud.org admin account."
   exit 0
 else
