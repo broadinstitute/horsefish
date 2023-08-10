@@ -526,7 +526,7 @@ def populate_new_dataset(config, new_dataset_id, fileref_col_dict):
             continue
         
         # Chunk table records as necessary, then loop through and process each chunk
-        chunk_size = 20
+        chunk_size = 1000000
         if fileref_col_dict[table]:
             max_combined_rec_ref_size = 50000
             ref_chunk_size = math.floor(max_combined_rec_ref_size / len(fileref_col_dict[table]))
