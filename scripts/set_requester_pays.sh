@@ -39,7 +39,12 @@ fi
 
 # enable requesterpays permissions
 echo "Enabling permissions for ${USER_EMAIL} to switch ${TOGGLE_TYPE} Requester Pays"
-gcloud projects add-iam-policy-binding $PROJECT_ID --member=$MEMBER --role="organizations/386193000800/roles/RequesterPaysToggler" | grep -A 1 -B 1 "${MEMBER}"
+if gcloud projects add-iam-policy-binding $PROJECT_ID --member=$MEMBER --role="organizations/386193000800/roles/RequesterPaysToggler" | grep -A 1 -B 1 "${MEMBER}"; then
+  echo "Access granted to ${PROJECT_ID}"
+  else
+    echo "Error - please try again. Make sure you are authed with your Firecloud account."
+    exit 0
+fi
 # # if needed for troubleshooting, this command retrieves the existing policy
 # gcloud beta projects get-iam-policy $PROJECT_ID | grep -A 1 -B 1 "${MEMBER}"
 
@@ -70,18 +75,14 @@ while ! gsutil ${PROJECT_TO_BILL} requesterpays set ${TOGGLE_TYPE} ${BUCKET_PATH
     echo "retrying in $SLEEP_SEC seconds - attempt ${COUNTER}/6"
     sleep $SLEEP_SEC
   done
-# add a confirmation that the request was successful and revoke permission(s)
-if [[ $TOGGLE_TYPE == on ]]; then
-  echo ""
-  echo "Requester pays enabled."
-else
-  echo ""
-  echo "Requester pays disabled."
-fi
+# add a confirmation that the request was successful
+echo "Requester pays $TOGGLE_TYPE"
+echo ""
 
 # revoke requesterpays permissions
-echo ""
 echo "Revoking permissions for ${USER_EMAIL} to edit Requester Pays"
-gcloud projects remove-iam-policy-binding $PROJECT_ID --member=$MEMBER --role="organizations/386193000800/roles/RequesterPaysToggler" | grep -A 1 -B 1 "${MEMBER}"
+if gcloud projects remove-iam-policy-binding $PROJECT_ID --member=$MEMBER --role="organizations/386193000800/roles/RequesterPaysToggler" | grep -A 1 -B 1 "${MEMBER}"; then
+  echo "Access removed for $PROJECT_ID"
+fi
 echo ""
 echo "Done."
