@@ -154,10 +154,10 @@ def get_ingest_data_json_filepaths(bucket_name, subdir):
 
     blobs = storage_client.list_blobs(bucket_name, prefix=prefix, delimiter=delimiter)
 
-    # capture paths to json files containing data to ingest at listed bucket path
+    # capture paths to json files containing data to ingest at listed bucket path if they are not empty
     paths = []
     for blob in blobs:
-        if blob.name.endswith(".json"):
+        if blob.name.endswith(".json") and blob.size > 0:
             paths.append(f"gs://{bucket_name}/{blob.name}")
 
     if not paths:
