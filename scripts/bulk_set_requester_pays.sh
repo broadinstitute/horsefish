@@ -3,7 +3,7 @@
 if (( $# != 1 )); then
   echo "Usage: $0 /path/to/inputfile.csv"
   echo "inputfile.csv should contain the following column headers in order: project, bucket, toggle_type"
-  echo 'The Terra bucket paths can be formatted as "gs://fc-XXXXX gs://fc-XXXXX" or "fc-XXXXX fc-XXXXX"'
+  echo 'The Terra bucket paths can be formatted as "gs://fc-XXXXX" or "fc-XXXXX"'
   echo "The toggle_type options are on|off for enabling and disabling requester pays"
   echo "NOTE: this script requires you to be authed as your firecloud.org admin account."
   exit 0
@@ -17,8 +17,6 @@ MEMBER="serviceAccount:${SERVICE_ACCOUNT}"
 SLEEP_SEC=15
 
 ROLE="organizations/386193000800/roles/RequesterPaysToggler"
-
-
 
 
 # 1. confirm csv isn't missing required values
