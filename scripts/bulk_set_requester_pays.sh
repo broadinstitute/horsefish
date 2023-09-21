@@ -6,7 +6,7 @@ if (( $# != 1 )); then
   echo 'The Terra bucket paths can be formatted as "gs://fc-XXXXX" or "fc-XXXXX"'
   echo "The toggle_type options are on|off for enabling and disabling requester pays"
   echo "NOTE: this script requires you to be authed as your firecloud.org admin account."
-  exit 0
+  exit 1
 fi
 
 
@@ -27,7 +27,7 @@ echo "Validating input file..."
 if [[ $(head -1 $CSVIN) != $'project,bucket,toggle_type\r' ]]; then
   echo "Missing or incorrect column headers"
   echo "inputfile.csv should contain the following column headers in order: project, bucket, toggle_type"
-  exit 0
+  exit 1
 fi
 
 # check for any missing values
@@ -47,7 +47,7 @@ done < $CSVIN
 if ( $missing ) ; then
   echo "ERROR: Missing values in input CSV file."
   echo "Input CSV file should contain the following columns and corresponding values: project, bucket, toggle_type"
-  exit 0
+  exit 1
 else
   echo "Valid input file."
 fi
