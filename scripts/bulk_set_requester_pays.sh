@@ -68,6 +68,7 @@ vault read --format=json secret/dsde/prod/common/requester-pays.json | jq .data 
 if ! gcloud auth activate-service-account ${SERVICE_ACCOUNT} --project="broad-dsde-prod" --key-file=rp-key.json; then
   echo "Error authenticating service account."
   exit 1
+fi
 rm rp-key.json
 
 # wait for IAM changes to propagate
