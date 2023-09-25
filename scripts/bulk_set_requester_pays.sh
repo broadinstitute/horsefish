@@ -58,6 +58,8 @@ echo "Enabling permissions for ${SERVICE_ACCOUNT} to set Requester Pays"
 while IFS="," read -r PROJECT_ID; do
   if gcloud projects add-iam-policy-binding $PROJECT_ID --member=$MEMBER --role=$ROLE --no-user-output-enabled; then
     echo "Access granted to $PROJECT_ID"
+  else
+    echo "Unable to grant access to $PROJECT_ID"
   fi
 done < <(cut -d "," -f1 $CSVIN | tail -n +2)
 
