@@ -38,6 +38,8 @@ def parse_ls_output(subprocess_output):
                     m = re.match("\s*Update time:\s*(.*)", line).group(1)
                     file_dict["Modified"] = m
     if file_dict:
+        if file_dict.get("md5") == None:
+            file_dict["md5"] = None
         records.append(file_dict)
     return records
 
