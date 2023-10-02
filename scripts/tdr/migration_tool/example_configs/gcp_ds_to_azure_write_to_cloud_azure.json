@@ -1,0 +1,31 @@
+{
+    "source": {
+        "tdr_object_uuid": "6c91433f-2b61-491c-baa4-a212a4f380a3",
+        "tdr_object_type": "dataset",
+        "tdr_object_env": "dev"
+    },
+    "target": {
+        "tdr_billing_profile": "72c87190-e50f-4fa5-80bd-44cd8780394f",
+        "tdr_dataset_uuid": "",
+        "tdr_dataset_name": "TDR_Migration_Tool_Test_4_20230925",
+        "tdr_dataset_cloud": "azure",
+        "tdr_dataset_properties": {},
+        "copy_policies": true
+    },
+    "ingest": {
+        "records_processing_method": "write_to_cloud", 
+        "write_to_cloud_platform": "azure",
+        "write_to_cloud_location": "https://lz304a1e79fd7359e5327eda.blob.core.windows.net/sc-a8aa628b-b7c2-4bf3-b232-e8098e080866",
+        "write_to_cloud_sas_token": "sv=2021-12-02&spr=https&st=2023-09-15T15%3A16%3A59Z&se=2023-09-15T23%3A31%3A59Z&sr=c&sp=racwdl&sig=UXQvvOMvAbRux5X0nkkhCJeEEX2zlWWN6855YQr2f0o%3D&rscd=110622485547028626216",
+        "max_records_per_ingest_request": 250000,
+        "max_filerefs_per_ingest_request": 50000,
+        "tables_to_ingest": ["file_inventory", "subject"],
+        "datarepo_row_ids_to_ingest": [],
+        "apply_anvil_transforms": false
+    },
+    "snapshot": {
+        "recreate_snapshot": false,
+        "new_snapshot_name": "",
+        "copy_snapshot_policies": false
+    }
+}
