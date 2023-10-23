@@ -8,8 +8,8 @@ workflow CreatePGSVisualizations {
         String          workspace_name
         String          workspace_project
 
-        String? grouping_column_name
-        String? output_filename
+        String?         grouping_column_name
+        String?         output_filename
     }
 
     call create_viz {
