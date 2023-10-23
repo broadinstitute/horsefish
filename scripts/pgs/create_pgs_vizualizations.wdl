@@ -1,6 +1,16 @@
 version 1.0
 
 workflow CreatePGSVisualizations {
+
+    parameter_meta {
+        sample_ids: {description: "selected rows of data from data table which will be used for plotting"}
+        input_table_name: {description: "name of the Terra data table - root entity type - from where input data is selected"}
+        workspace_name: {description: "name of Terra workspace where data lives"}
+        workspace_project: {description: "name of Terra project associated with Terra workspace"}
+        grouping_column_name: {description: "name of column to be used for grouping/coloring - ex. gambit_predicted_taxon (organism)"}
+        output_filename: {description: "name of output file containing visualizations"}
+    }
+
     input {
 
         Array[String]   sample_ids
