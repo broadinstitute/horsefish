@@ -7,7 +7,7 @@ workflow CreatePGSVisualizations {
         String  input_table_name
 
         String? grouping_column_name
-        String? run_id_filter
+        # String? run_id_filter
         String? output_filename
     }
 
@@ -17,7 +17,7 @@ workflow CreatePGSVisualizations {
             workspace_project       =   workspace_project,
             input_table_name        =   input_table_name,
             grouping_column_name    =   grouping_column_name,
-            run_id_filter           =   run_id_filter,
+            # run_id_filter           =   run_id_filter,
             output_filename         =   output_filename
     }
 
@@ -33,7 +33,7 @@ task create_viz {
         String  input_table_name
 
         String? grouping_column_name
-        String? run_id_filter
+        # String? run_id_filter
         String  output_filename = "QC_vizualizations.pdf"
 
         String  docker  =   "broadinstitute/horsefish:pgs_visualizations"        
@@ -43,7 +43,6 @@ task create_viz {
         python3 scripts/create_visualizations.py -t ~{input_table_name} \
                                                  -w ~{workspace_name} \
                                                  -p ~{workspace_project} \
-                                                 ~{"-r " + run_id_filter} \
                                                  ~{"-g" + grouping_column_name} \
                                                  ~{"-o" + output_filename}
     }
