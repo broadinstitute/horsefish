@@ -175,10 +175,11 @@ def create_failed_sample_chart(df, metric_column, organism_column, sample_id_col
     failed_cov_samples_ft = [sample for organism_subset in failed_cov_samples for sample in organism_subset]
     failed_samples_df = pd.DataFrame(failed_cov_samples_ft)
 
+    print(f"There are {failed_samples_df.shape[0]} failed samples for the metric: {metric_column}. \n")
     return failed_samples_df
 
 
-def get_entity_data(ws_project, ws_name, entity_table_name, run_id=None):
+def get_entity_data(ws_project, ws_name, sample_list, entity_table_name, sample_id_col, run_id=None):
     """Retrieve table data derived by user inputs into dataframe for plotting."""
     
     # get all data from table into df
@@ -186,23 +187,23 @@ def get_entity_data(ws_project, ws_name, entity_table_name, run_id=None):
     # TODO: may need pagination if table has many thousands of rows
     response = fapi.get_entities_tsv(ws_project, ws_name, entity_table_name, model="flexible")
     full_entity_df = pd.read_csv(StringIO(response.text), sep="\t") #index_col=f"entity:{table_name}_id"
+
+    # filter first for list of samples provided
+    fltrd_entity_df = full_entity_df[full_entity_df[sample_id_col].isin(sample_list)]
     
-    # filter df to specific subset by run_id, if one exists
+    # filter df further to specific subset by run_id, if one exists
     if run_id:
-        run_entity_df = full_entity_df.loc[full_entity_df["run_id"] == run_id]
+        run_entity_df = fltrd_entity_df.loc[fltrd_entity_df["run_id"] == run_id]
         print(f"{run_entity_df.shape[0]} rows gathered from {entity_table_name} that match user criteria.")
         return run_entity_df
     
-    print(f"{full_entity_df.shape[0]} rows gathered from {entity_table_name} that match user criteria.")
-    return full_entity_df
+    print(f"{fltrd_entity_df.shape[0]} rows gathered from {entity_table_name} that match user criteria.")
+    return fltrd_entity_df
 
 
 def plot_metric_qc_visualizations(data, sample_names, group_column, threshold_dict, metric_name, label):
     """Plot estimated coverage data."""
-        
-    # PLOT TABLE OF FAILED SAMPLES
-    failed_samples = create_failed_sample_chart(data, metric_name, group_column, sample_names, threshold_dict)
-    
+            
     # PLOT ALL SAMPLES ALL ORGANISMS
     all_organisms = create_scatter_plot(data, sample_names, metric_name, group_column)
     # set labels
@@ -213,14 +214,21 @@ def plot_metric_qc_visualizations(data, sample_names, group_column, threshold_di
     # set ticks
     all_organisms.tick_params(labelrotation=90)
 
-    # add a table at the bottom of the axes to show failed samples
-    fig, ax = plt.subplots()#figsize=(11, 8.5)
-    ax.axis('tight')
-    ax.axis('off')
-    failed_sample_table = ax.table(cellText=failed_samples.values,
-                                              rowLabels=failed_samples.index,
-                                              colLabels=failed_samples.columns)
-    
+
+    # PLOT TABLE OF FAILED SAMPLES
+    failed_samples = create_failed_sample_chart(data, metric_name, group_column, sample_names, threshold_dict)
+
+    # if there are any failed samples in df - create failed samples chart
+    if not failed_samples.empty:
+        # add a table at the bottom of the axes to show failed samples
+        fig, ax = plt.subplots()
+        ax.axis('tight')
+        ax.axis('off')
+        failed_sample_table = ax.table(cellText=failed_samples.values,
+                                                rowLabels=failed_samples.index,
+                                                colLabels=failed_samples.columns)
+
+
     # PLOT ALL SAMPLES PER ORGANISMS
     per_organism = create_scatter_plot_by_group(data, sample_names, metric_name, group_column)
     # set labels
@@ -243,10 +251,11 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="create visualizations")
 
-    parser.add_argument("-t", "--table_name", required=True, type=str, help="name of data table to use for viz")
+    parser.add_argument("-s", "--samples", required=True, type=str, nargs="+", help="list of entity sample_id values")
+    parser.add_argument("-t", "--table_name", required=True, type=str, help="name of data table to pull sample data for viz")
     parser.add_argument("-p", "--workspace_project", required=True, help="terra workspace project of viz data")
     parser.add_argument("-w", "--workspace_name", required=True, help="terra workspace name of viz data")
-        parser.add_argument("-r", "--run_id", required=False, default=None, help="run_id to filter data from table for viz")
+    parser.add_argument("-r", "--run_id", required=False, default=None, help="run_id to filter data from table for viz")
     parser.add_argument("-g", "--grouping_col", required=False, default="gambit_predicted_taxon", help="name of column used for hue/grouping - ie. organism")
     parser.add_argument("-o", "--outfilename", required=False, default="QC_visualizations.pdf", help="name of output pdf file containing visualizations")
     
@@ -256,7 +265,7 @@ if __name__ == "__main__":
     sample_id_col = f"entity:{args.table_name}_id" 
 
     # get dataframe with selected subset of data for plotting
-    table_df = get_entity_data(args.workspace_project, args.workspace_name, args.table_name, args.run_id)
+    table_df = get_entity_data(args.workspace_project, args.workspace_name, args.samples, args.table_name, sample_id_col, args.run_id)
     
     # create plots for pulsenet metrics    
     # list to hold all figures from all metric plots
@@ -283,6 +292,3 @@ if __name__ == "__main__":
 
     # combine the figures from all 3 metric plots and write to PDF file
     write_plots_to_file(args.outfilename, all_figures)
-
-
-python3 create_visualizations.py -t broad_demo -g gambit_predicted_taxon -w TheiaProk_PNI_Training_DEMO -p theiagen_pni
