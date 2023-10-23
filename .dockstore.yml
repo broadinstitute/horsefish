@@ -23,3 +23,9 @@ workflows:
    primaryDescriptorPath: /pipelines/run_shell_script.wdl
    testParameterFiles:
     - empty.json
+
+ - name: create_pgs_vizualizations
+   subclass: WDL
+   primaryDescriptorPath: /scripts/pgs/create_pgs_vizualizations.wdl
+   testParameterFiles:
+    - empty.json

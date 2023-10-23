@@ -244,9 +244,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="create visualizations")
 
     parser.add_argument("-t", "--table_name", required=True, type=str, help="name of data table to use for viz")
-    parser.add_argument("-r", "--run_id", required=False, default=None, help="run_id to filter data from table for viz")
     parser.add_argument("-p", "--workspace_project", required=True, help="terra workspace project of viz data")
     parser.add_argument("-w", "--workspace_name", required=True, help="terra workspace name of viz data")
+        parser.add_argument("-r", "--run_id", required=False, default=None, help="run_id to filter data from table for viz")
     parser.add_argument("-g", "--grouping_col", required=False, default="gambit_predicted_taxon", help="name of column used for hue/grouping - ie. organism")
     parser.add_argument("-o", "--outfilename", required=False, default="QC_visualizations.pdf", help="name of output pdf file containing visualizations")
     
@@ -285,3 +285,4 @@ if __name__ == "__main__":
     write_plots_to_file(args.outfilename, all_figures)
 
 
+python3 create_visualizations.py -t broad_demo -g gambit_predicted_taxon -w TheiaProk_PNI_Training_DEMO -p theiagen_pni
