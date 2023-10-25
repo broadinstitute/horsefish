@@ -7,6 +7,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
+
 # DEFINING PULSENET METRICS' THRESHOLDS
 # used to draw y axis lines for thresholds in per-organism plots
 est_avg_cov_thresholds = {"Listeria": 20,
@@ -49,6 +50,29 @@ def write_plots_to_file(filename, figs):
     
     print(f"All QC visualizations have been written to {filename}.")
     return filename
+
+
+# color: red; font-weight: bold = additional formatting for cells
+# list of colors https://datascientyst.com/full-list-named-colors-pandas-python-matplotlib/
+def colorize_q_scores(column):
+
+    return ['background-color: darkseagreen' if val >= 30
+            else 'background-color: mistyrose' if val < 30
+            else 'background-color: gainsboro' for val in column]
+       
+                    
+def colorize_coverage(column):
+    
+    return ['background-color: darkseagreen' if val >= 30 
+            else 'background-color: mistyrose' if val < 30
+            else 'background-color: gainsboro' for val in column]
+
+
+def colorize_contigs(column):
+    
+    return ['background-color: darkseagreen' if val >= 100 
+            else 'background-color: mistyrose' if val < 100
+            else 'background-color: gainsboro' for val in column]
 
 
 # function for plotting threshold lines for each subplot
@@ -234,7 +258,6 @@ def plot_metric_qc_visualizations(data, sample_names, group_column, threshold_di
     # set labels
     per_organism.fig.suptitle(f"{label} per Sample by Organism", size=14, fontweight="bold", y=1.0)
     per_organism.tick_params(labelrotation=90)
-    # est_cov_org.set_axis_labels("Sample ID")
     per_organism.set_ylabels(label)
     per_organism.set_xlabels("Sample ID")
     # automatically space between rows of subplots of FacetGrid
@@ -245,6 +268,22 @@ def plot_metric_qc_visualizations(data, sample_names, group_column, threshold_di
     plt.close("all")
 
     return figures
+
+
+def create_colorized_scores_table(table_df):
+    """Create chart containing score values and colored by success or fail."""
+
+    # subset_df = table_df[["r1_mean_q_raw", "r2_mean_q_raw", "est_coverage_clean", "contigs_fastg", "contigs_gfa"]]
+    # subset_df.style.highlight_null(null_color="slategrey").format(na_rep="No Value")
+    colors_df = (table_df[["r1_mean_q_raw", "r2_mean_q_raw", "est_coverage_clean", "contigs_fastg", "contigs_gfa"]].style
+                 .apply(colorize_q_scores, subset=['r1_mean_q_raw', 'r2_mean_q_raw'])
+                 .apply(colorize_coverage, subset=['est_coverage_clean'])
+                 .apply(colorize_contigs, subset=['contigs_fastg', 'contigs_gfa'])
+                 .to_excel('Colorized_Scores.xlsx', engine='openpyxl'))
+    
+    # write chart to file
+    print(f"Colorized chart written to Colorized_Scores.xlsx.")
+    return colors_df
 
 
 if __name__ == "__main__":
@@ -266,10 +305,12 @@ if __name__ == "__main__":
 
     # get dataframe with selected subset of data for plotting
     table_df = get_entity_data(args.workspace_project, args.workspace_name, args.samples, args.table_name, sample_id_col, args.run_id)
-    
-    # create plots for pulsenet metrics    
-    # list to hold all figures from all metric plots
-    all_figures = []
+
+    # CREATE COLORIZED CHART
+    color_df = create_colorized_scores_table(table_df)
+
+    # CREATE PULSENET METRIC BASED PLOTS    
+    all_figures = []    # list to hold all figures from all metric plots
     # define metric, plot labels, and pulsenet metric thresholds
     qc_metric_info = {"est_coverage_clean": {"label": "Estimated Coverage",
                                              "thresholds_dict": est_avg_cov_thresholds},
