@@ -33,7 +33,8 @@ workflow CreatePGSVisualizations {
     }
 
     output {
-        File viz_pdf    =   create_viz.vizualizations
+        File    viz_pdf     =   create_viz.vizualizations
+        File    color_chart =   create_viz.color_chart
     }
 }
 
@@ -65,5 +66,6 @@ task create_viz {
 
     output {
         File vizualizations = "~{output_filename}"
+        File color_chart    = "Colorized_Scores.xlsx"
     }
 }
