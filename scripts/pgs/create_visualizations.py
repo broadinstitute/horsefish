@@ -56,23 +56,23 @@ def write_plots_to_file(filename, figs):
 # list of colors https://datascientyst.com/full-list-named-colors-pandas-python-matplotlib/
 def colorize_q_scores(column):
 
-    return ['background-color: darkseagreen' if val >= 30
-            else 'background-color: mistyrose' if val < 30
-            else 'background-color: gainsboro' for val in column]
+    return ['background-color: green' if val >= 30
+            else 'background-color: pink' if val < 30
+            else 'background-color: silver' for val in column]
        
                     
 def colorize_coverage(column):
     
-    return ['background-color: darkseagreen' if val >= 30 
-            else 'background-color: mistyrose' if val < 30
-            else 'background-color: gainsboro' for val in column]
+    return ['background-color: green' if val >= 30 
+            else 'background-color: pink' if val < 30
+            else 'background-color: silver' for val in column]
 
 
 def colorize_contigs(column):
     
-    return ['background-color: darkseagreen' if val >= 100 
-            else 'background-color: mistyrose' if val < 100
-            else 'background-color: gainsboro' for val in column]
+    return ['background-color: green' if val >= 100 
+            else 'background-color: pink' if val < 100
+            else 'background-color: silver' for val in column]
 
 
 # function for plotting threshold lines for each subplot
