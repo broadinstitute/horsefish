@@ -45,10 +45,10 @@ task create_viz {
         String          workspace_project
         String          input_table_name
 
-        String          grouping_column_name = "gambit_predicted_taxon"
-        String          output_filename = "QC_vizualizations.pdf"
+        String          grouping_column_name    = "gambit_predicted_taxon"
+        String          output_filename         = "QC_vizualizations.pdf"
 
-        String  docker  =   "broadinstitute/horsefish:pgs_visualizations"        
+        String  docker                          =   "broadinstitute/horsefish:pgs_visualizations"        
     }
 
     command {
