@@ -424,18 +424,22 @@ if __name__ == "__main__":
     # CREATE COLORIZED CHART
     color_df = create_colorized_scores_table(updated_df)
 
-    # # CREATE PULSENET METRIC BASED PLOTS    
-    # all_figures = []    # list to hold all figures from all metric plots
-    # # generate plot figures for all metrics
-    # for metric_col_name, metric_details in qc_metric_info.items():
-    #     metric_plot_label = qc_metric_info[metric_col_name]["label"]
-    #     metric_thresholds = qc_metric_info[metric_col_name]["thresholds_dict"]
+    # CREATE PULSENET METRIC BASED PLOTS    
+    # isolate metrics that require plots
+    # TODO: parameterize the list of plot metrics
+    plot_qc_metric_info = {key: val for key, val in qc_metric_info.items() if key in ["assembly_length", "number_contigs", "est_coverage_clean"]}
 
-    #     print(f"Plotting {metric_plot_label} \n\t\t y-axis = {metric_col_name} \n\t\t x-axis = {sample_id_col} \n\t\t hue = {args.grouping_col} (column for grouping/coloring)")
-    #     metric_figs = plot_metric_qc_visualizations(table_df, sample_id_col, args.grouping_col, metric_thresholds, metric_col_name, metric_plot_label)
+    all_figures = []    # list to hold all figures from all metric plots
+    # generate plot figures for all metrics
+    for metric_col_name, metric_details in plot_qc_metric_info.items():
+        metric_plot_label = qc_metric_info[metric_col_name]["label"]
+        metric_thresholds = qc_metric_info[metric_col_name]["thresholds_dict"]
 
-    #     # combine all figures from metrics into single list
-    #     all_figures[len(all_figures):] = metric_figs
+        print(f"Plotting {metric_plot_label} \n\t\t y-axis = {metric_col_name} \n\t\t x-axis = {sample_id_col} \n\t\t hue = {args.grouping_col} (column for grouping/coloring)")
+        metric_figs = plot_metric_qc_visualizations(table_df, sample_id_col, args.grouping_col, metric_thresholds, metric_col_name, metric_plot_label)
 
-    # # combine the figures from all 3 metric plots and write to PDF file
-    # write_plots_to_file(args.outfilename, all_figures)
+        # combine all figures from metrics into single list
+        all_figures[len(all_figures):] = metric_figs
+
+    # combine the figures from all 3 metric plots and write to PDF file
+    write_plots_to_file(args.outfilename, all_figures)
