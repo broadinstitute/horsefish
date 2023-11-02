@@ -16,20 +16,23 @@ est_avg_cov_thresholds = {"Listeria": 20,
                           "Salmonella": 30,
                           "Vibrio": 40}
 
-# dataframe of organisms and pulsenet standard contig thresholds - used to draw y axis lines for thresholds
 contig_thresholds = {"Listeria": 100,
                      "Campylobacter": 200,
                      "Escherichia": 600,
                      "Salmonella": 400,
                      "Vibrio": 200}
 
-
-# dataframe of organisms and pulsenet standard contig thresholds - used to draw y axis lines for thresholds
 assembly_thresholds = {"Listeria": {"min": 2800000, "max": 3100000}, 
                        "Campylobacter": {"min": 1400000, "max": 2200000}, 
                        "Escherichia": {"min": 4200000, "max": 5900000}, 
                        "Salmonella": {"min": 4400000, "max": 5600000}, 
                        "Vibrio": {"min": 3800000, "max": 5300000}}
+
+mean_q_thresholds = {"Listeria": 30,
+                     "Campylobacter": 30,
+                     "Escherichia": 30,
+                     "Salmonella": 30,
+                     "Vibrio": 30}
 
 
 def write_plots_to_file(filename, figs):
@@ -62,74 +65,50 @@ def colorize_q_scores(column):
        
                     
 def colorize_metric_qc_chart(df, metric):
-    
+    """Color cells in columns for excel sheet based on pass/fail/null."""
+
+    metric_bool_col = f"{metric}_sample_pass"
     success = "background-color: green"
     fail = "background-color: pink"
+    nan = "background-color: silver"
 
-    color_df = pd.DataFrame(fail, index=df.index, columns=[metric])
-    color_df.loc[df[f"{metric}_sample_pass"], metric] = success
+    # set everything to NaN color silver
+    color_df = pd.DataFrame(nan, index=df.index, columns=[metric])
+
+    # based on boolean value, if they exist, set background color
+    if True in df[metric_bool_col].values:
+        color_df.loc[df[metric_bool_col]==True, metric] = success
+    
+    if False in df[metric_bool_col].values:
+        color_df.loc[df[metric_bool_col]==False, metric] = fail
 
     return color_df
 
 
-# def colorize_coverage(df):
-    
-#     success = "background-color: green"
-#     fail = "background-color: pink"
-    
-#     # mask = df["est_coverage_clean_sample_pass"]
-
-#     color_df = pd.DataFrame(fail, index=df.index, columns=["est_coverage_clean"])
-#     color_df.loc[df["est_coverage_clean_sample_pass"], "est_coverage_clean"] = success
-
-#     return color_df
-
-
-# def colorize_number_contigs(df):
-
-#     success = "background-color: green"
-#     fail = "background-color: pink"
-
-#     mask = df["number_contigs_sample_pass"]
-
-#     color_df = pd.DataFrame(fail, index=df.index, columns=df.columns)
-#     color_df.loc[mask, "number_contigs"] = success
-
-#     return color_df
-
-
-def colorize_contigs(column):
-    
-    return ['background-color: green' if val >= 100 
-            else 'background-color: pink' if val < 100
-            else 'background-color: silver' for val in column]
-
-
-# def colorize_assembly(df):
-
-#     success = "background-color: green"
-#     fail = "background-color: pink"
-
-#     mask = df["assembly_length_sample_pass"]
-
-#     color_df = pd.DataFrame(fail, index=df.index, columns=df.columns)
-#     color_df.loc[mask, "assembly_length"] = success
-
-#     return color_df
-
-
 def calculate_summary_stats(df):
+    """Calculate stats - number of pass, fail, and null samples per metric collected."""
 
     stats_dict = {}
-    for column in df.columns:
-        fail = df[column].value_counts().loc[False]
-        success = df[column].value_counts().loc[True]
+
+    for col in df.columns:
+        # get counts of True/False/NaN or set to 0
+        if True in df[col].values:
+            success = df[col].value_counts().loc[True]
+        else:
+            success = 0
+        
+        if False in df[col].values:
+            fail = df[col].value_counts().loc[False]
+        else:
+            fail = 0
+
+        nans = (len(df.index)) - success - fail
 
         # remove the _sample_pass to just get back metric name
-        new_column = column.split("sample")[0].strip("_")
+        new_column = col.split("sample")[0].strip("_")
         # add pass/fail counts to dictionary
-        stats_dict[new_column] = {"success": success, "fail": fail}
-    
+        stats_dict[new_column] = {"success": success, "fail": fail, "null": nans}
+        
     # convert dict to df
     stats_df = pd.DataFrame.from_dict(stats_dict)
 
@@ -228,40 +207,38 @@ def create_failed_sample_chart(df, metric_column, organism_column, sample_id_col
     """For a set of thresholds for a metric, get values that fail"""
     
     # subset to specific columns based on metric to visualize and drop NA
-    metric_df = df[[sample_id_column, metric_column, organism_column]].dropna()
-    # rename entity id column to failed samples
-    metric_df.rename(columns={sample_id_column: "failed_sample_id"}, inplace=True)
+    metric_df = df[[sample_id_column, metric_column, organism_column]]#.dropna()
     
     failed_cov_samples = []
 
     for organism, threshold in threshold_dict.items():
 
-        # get rows where organism and threshold value conditions are met
-        subset = metric_df[metric_df[organism_column].str.contains(organism)]
+        # subset to rows matching organism from thresholds dict, and rename entity id column
+        organism_subset = metric_df[metric_df[organism_column].str.contains(organism)].rename(columns={sample_id_column: "failed_sample_id"})
         
         # create subset df and convert df to dict
         # definition of fail/success samples changes depending on metric
         if metric_column == "est_coverage_clean":
-            subset = subset.loc[subset[metric_column] < threshold].to_dict("records")
-            
-        if metric_column == "number_contigs":
-            subset = subset.loc[subset[metric_column] > threshold].to_dict("records")
-            
+            fails = organism_subset.loc[organism_subset[metric_column] < threshold].to_dict("records")
+
         if metric_column == "assembly_length":
             threshold_min = threshold["min"]
             threshold_max = threshold["max"]
 
-            subset = subset.loc[~subset[metric_column].between(threshold_min, threshold_max)].to_dict("records")
+            fails = organism_subset.loc[~organism_subset[metric_column].between(threshold_min, threshold_max)].to_dict("records")
+    
+        if metric_column in ["number_contigs", "contigs_fastg", "contigs_gfa"]:
+            fails = organism_subset.loc[organism_subset[metric_column] > threshold].to_dict("records")
 
         if metric_column in ["r1_mean_q_raw", "r2_mean_q_raw"]:
-            subset = subset.loc[subset[metric_column] < 30].to_dict("records")
+            fails = organism_subset.loc[organism_subset[metric_column] < threshold].to_dict("records")
         
         # append dict to list
-        failed_cov_samples.append(subset) # create list of lists
+        failed_cov_samples.append(fails) # create list of lists
 
     # flatted list of lists
-    failed_cov_samples_ft = [sample for organism_subset in failed_cov_samples for sample in organism_subset]
-    failed_samples_df = pd.DataFrame(failed_cov_samples_ft)
+    failed_cov_samples_fltnd = [sample for organism_subset in failed_cov_samples for sample in organism_subset]
+    failed_samples_df = pd.DataFrame(failed_cov_samples_fltnd)
 
     print(f"There are {failed_samples_df.shape[0]} failed samples for the metric: {metric_column}. \n")
     return failed_samples_df
@@ -340,23 +317,26 @@ def plot_metric_qc_visualizations(data, sample_names, group_column, threshold_di
     return figures
 
 
-def create_colorized_scores_table(samples_df, sample_id_col, threshold_dict):
+def create_colorized_scores_table(samples_df):
     """Create chart containing score values and colored by success or fail."""
 
-    # TODO: contigs_gfa and contigs_fastg - what are the threshold values for these columns?
     # TODO: figure out how to hide the pass columns which are all highlighted red in the excel - styler doesnt support hide when using to_excel()
     colors_df = (samples_df.style
                            .apply(colorize_metric_qc_chart, subset=["est_coverage_clean", "est_coverage_clean_sample_pass"], metric="est_coverage_clean", axis=None)
                            .apply(colorize_metric_qc_chart, subset=["number_contigs", "number_contigs_sample_pass"], metric="number_contigs", axis=None)
-                           .apply(colorize_contigs, subset=["contigs_fastg", "contigs_gfa"])
+                           .apply(colorize_metric_qc_chart, subset=["contigs_fastg", "contigs_fastg_sample_pass"], metric="contigs_fastg", axis=None)
+                           .apply(colorize_metric_qc_chart, subset=["contigs_gfa", "contigs_gfa_sample_pass"], metric="contigs_gfa", axis=None)
                            .apply(colorize_metric_qc_chart, subset=["assembly_length", "assembly_length_sample_pass"], metric="assembly_length", axis=None)
-                           .apply(colorize_q_scores, subset=["r1_mean_q_raw", "r2_mean_q_raw"])
-                           .highlight_null(null_color="silver"))
+                           .apply(colorize_q_scores, subset=["r1_mean_q_raw", "r2_mean_q_raw"]))
     
     counts_df = calculate_summary_stats(samples_df[["est_coverage_clean_sample_pass",
                                                     "number_contigs_sample_pass",
-                                                    "assembly_length_sample_pass"]])
-    
+                                                    "assembly_length_sample_pass",
+                                                    "r1_mean_q_raw_sample_pass",
+                                                    "r2_mean_q_raw_sample_pass",
+                                                    "contigs_fastg_sample_pass",
+                                                    "contigs_gfa_sample_pass"]])
+
     with pd.ExcelWriter("Colorized_Scores.xlsx") as writer:  
         colors_df.to_excel(writer, sheet_name="all_metrics")
         counts_df.to_excel(writer, sheet_name="summary_stats")
@@ -372,21 +352,31 @@ def get_threshold_values_df(table_df, qc_metric_info, sample_id_col):
     for metric, metric_info in qc_metric_info.items():
         print(f"Starting with {metric}")
         metric_thresholds_dict = metric_info["thresholds_dict"] # dict of thresholds for single metric
-
-        # make a new column for each metric and populate with the actual threshold value based on organism
-        # new_col_name = f"{metric}_threshold"
-        # table_df[new_col_name]=(table_df['gambit_predicted_taxon'].str.extract('('+'|'.join(metric_thresholds_dict.keys())+')',expand=False)
-        #                                                                    .map(metric_thresholds_dict))
     
         # get list of the failed samples and create new column with pass/fail
         failed_samples_df = create_failed_sample_chart(table_df, metric, "gambit_predicted_taxon", sample_id_col, metric_thresholds_dict)
-        failed_sample_ids = failed_samples_df["failed_sample_id"].tolist()
 
-        # if sample_id in list of failed_sample_ids, set to False or else True
+        failed_sample_ids = []
+        # check if the dataframe is empty - any failed samples returned or not
+        if not failed_samples_df.empty:          
+            failed_sample_ids = failed_samples_df["failed_sample_id"].tolist()
+
+        # populate columns with True, False, or NaN if no values exist
+        all_sample_ids = table_df[sample_id_col].tolist()
+        nan_sample_ids = table_df.loc[table_df[metric].isnull(), sample_id_col].tolist()
+        succeeded_sample_ids = list(set(all_sample_ids) - set(nan_sample_ids) - set(failed_sample_ids))
+        # print(f"all_sample_ids: {all_sample_ids}")
+        # print(f"failed_sample_ids: {failed_sample_ids}")
+        # print(f"NAN samples: {nan_sample_ids}")
+        # print(f"succeeded_sample_ids: {succeeded_sample_ids}")
+
+        # if sample_id in list of failed_sample_ids, set to False
         table_df.loc[table_df[sample_id_col].isin(failed_sample_ids), f"{metric}_sample_pass"] = False
-        table_df.loc[~table_df[sample_id_col].isin(failed_sample_ids), f"{metric}_sample_pass"] = True
+        # if sample_id in list of succeeded_sample_ids, set to True
+        table_df.loc[table_df[sample_id_col].isin(succeeded_sample_ids), f"{metric}_sample_pass"] = True
+        # if sample_id in list of nan_sample_ids, set to None
+        # table_df.loc[table_df[sample_id_col].isin(nan_sample_ids), f"{metric}_sample_pass"] = None
 
-    # get True/False values for non organism specific thresholds
     return table_df
 
 
@@ -405,16 +395,21 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # define metric, plot labels, and pulsenet metric thresholds
-    qc_metric_info = {"est_coverage_clean": {"label": "Estimated Coverage",
-                                             "thresholds_dict": est_avg_cov_thresholds},
-                      "number_contigs": {"label": "Number Contigs",
-                                         "thresholds_dict": contig_thresholds},
-                      "assembly_length": {"label": "Assembly Length",
-                                          "thresholds_dict": assembly_thresholds},
-                      "r1_mean_q_raw": {"label": "R1 Q Score",
-                                        "thresholds_dict": {"all_organisms": 30}},
-                      "r2_mean_q_raw": {"label": "R2 Q Score",
-                                        "thresholds_dict": {"all_organisms": 30}}
+    qc_metric_info = {
+                        "est_coverage_clean": {"label": "Estimated Coverage",
+                                               "thresholds_dict": est_avg_cov_thresholds},
+                        "number_contigs": {"label": "Number Contigs",
+                                           "thresholds_dict": contig_thresholds},
+                        "assembly_length": {"label": "Assembly Length",
+                                            "thresholds_dict": assembly_thresholds},
+                        "r1_mean_q_raw": {"label": "R1 Q Score",
+                                          "thresholds_dict": mean_q_thresholds},
+                        "r2_mean_q_raw": {"label": "R2 Q Score",
+                                          "thresholds_dict": mean_q_thresholds},
+                        "contigs_fastg": {"label": "Contigs Fastg",
+                                          "thresholds_dict": contig_thresholds},
+                        "contigs_gfa": {"label": "Contigs Gfa",
+                                        "thresholds_dict": contig_thresholds}
                     }
     
     # name of column in terra data table that holds sample_id values - root entity id col
@@ -423,11 +418,11 @@ if __name__ == "__main__":
     # get dataframe with selected subset of data for plotting - filtered down to relevant columns
     table_df = get_entity_data(args.workspace_project, args.workspace_name, args.samples, args.table_name, sample_id_col, args.run_id)
 
-    # append columns to df that contain the numerical values of the thresholds based on organism type
+    # append columns to df - contain true/false values 
     updated_df = get_threshold_values_df(table_df, qc_metric_info, sample_id_col)
 
     # CREATE COLORIZED CHART
-    color_df = create_colorized_scores_table(updated_df, sample_id_col, qc_metric_info)
+    color_df = create_colorized_scores_table(updated_df)
 
     # # CREATE PULSENET METRIC BASED PLOTS    
     # all_figures = []    # list to hold all figures from all metric plots
