@@ -10,12 +10,12 @@ RUN apt-get update \
         tk-dev libgdbm-dev libc6-dev libbz2-dev libffi-dev zlib1g-dev liblzma-dev\
     && cd /usr/bin \
     && apt-get install -y wget \
-    && wget https://www.python.org/ftp/python/3.7.4/Python-3.7.4.tgz \
-    && tar xzf Python-3.7.4.tgz \
-    && cd Python-3.7.4 \
+    && wget https://www.python.org/ftp/python/3.9.13/Python-3.9.13.tgz \
+    && tar xzf Python-3.9.13.tgz \
+    && cd Python-3.9.13 \
     && ./configure --enable-optimizations \
     && make altinstall \
-    && update-alternatives --install /usr/bin/python3 python3 /usr/bin/Python-3.7.4/python 1 
+    && update-alternatives --install /usr/bin/python3 python3 /usr/bin/Python-3.9.13/python 1 
 
 # install pip3   
 RUN rm /usr/bin/lsb_release \ 
