@@ -251,24 +251,28 @@ def get_entity_data(ws_project, ws_name, sample_list, entity_table_name, sample_
     # checking a direct read of the table with fiss without the pagination code to first create the .tsv
     # TODO: may need pagination if table has many thousands of rows
     response = fapi.get_entities_tsv(ws_project, ws_name, entity_table_name, model="flexible")
-    response_df = pd.read_csv(StringIO(response.text), sep="\t") #index_col=f"entity:{table_name}_id"
+    response_df = pd.read_csv(StringIO(response.text), sep="\t")
 
     # filter to relevant columms
     full_entity_df = response_df[[sample_id_col, "gambit_predicted_taxon",
                                      "r1_mean_q_raw", "r2_mean_q_raw",
                                      "number_contigs", "contigs_fastg", "contigs_gfa",
                                      "assembly_length", "est_coverage_clean"]]
-    
+
     # filter to list of samples provided
     fltrd_entity_df = full_entity_df[full_entity_df[sample_id_col].isin(sample_list)]
-    
+    # drop rows where organism is empty  
+    fltrd_entity_df.dropna(subset=["gambit_predicted_taxon"], inplace=True)
+
     # filter df further to specific subset by run_id, if one exists
     if run_id:
         run_entity_df = fltrd_entity_df.loc[fltrd_entity_df["run_id"] == run_id]
         print(f"{run_entity_df.shape[0]} rows gathered from {entity_table_name} that match user criteria.")
         return run_entity_df
     
+    print(f"Samples with NULL gambit_predicted_taxon are dropped.")
     print(f"{fltrd_entity_df.shape[0]} rows gathered from {entity_table_name} that match user criteria.")
+    
     return fltrd_entity_df
 
 
@@ -346,7 +350,7 @@ def create_colorized_scores_table(samples_df):
 
 
 def get_threshold_values_df(table_df, qc_metric_info, sample_id_col):
-    """Create wider chart."""
+    """Create wider chart of metrics colored by pass or fail."""
 
     # get True/False values for pulsenet metric columns with per organism thresholds
     for metric, metric_info in qc_metric_info.items():
@@ -365,17 +369,11 @@ def get_threshold_values_df(table_df, qc_metric_info, sample_id_col):
         all_sample_ids = table_df[sample_id_col].tolist()
         nan_sample_ids = table_df.loc[table_df[metric].isnull(), sample_id_col].tolist()
         succeeded_sample_ids = list(set(all_sample_ids) - set(nan_sample_ids) - set(failed_sample_ids))
-        # print(f"all_sample_ids: {all_sample_ids}")
-        # print(f"failed_sample_ids: {failed_sample_ids}")
-        # print(f"NAN samples: {nan_sample_ids}")
-        # print(f"succeeded_sample_ids: {succeeded_sample_ids}")
 
         # if sample_id in list of failed_sample_ids, set to False
         table_df.loc[table_df[sample_id_col].isin(failed_sample_ids), f"{metric}_sample_pass"] = False
         # if sample_id in list of succeeded_sample_ids, set to True
         table_df.loc[table_df[sample_id_col].isin(succeeded_sample_ids), f"{metric}_sample_pass"] = True
-        # if sample_id in list of nan_sample_ids, set to None
-        # table_df.loc[table_df[sample_id_col].isin(nan_sample_ids), f"{metric}_sample_pass"] = None
 
     return table_df
 
