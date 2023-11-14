@@ -256,7 +256,7 @@ def get_entity_data(ws_project, ws_name, sample_list, entity_table_name, sample_
     # filter to relevant columms
     full_entity_df = response_df[[sample_id_col, "gambit_predicted_taxon",
                                      "r1_mean_q_raw", "r2_mean_q_raw",
-                                     "number_contigs", "contigs_fastg", "contigs_gfa",
+                                     "number_contigs", #"contigs_fastg", "contigs_gfa",
                                      "assembly_length", "est_coverage_clean"]]
 
     # filter to list of samples provided
@@ -328,8 +328,8 @@ def create_colorized_scores_table(samples_df):
     colors_df = (samples_df.style
                            .apply(colorize_metric_qc_chart, subset=["est_coverage_clean", "est_coverage_clean_sample_pass"], metric="est_coverage_clean", axis=None)
                            .apply(colorize_metric_qc_chart, subset=["number_contigs", "number_contigs_sample_pass"], metric="number_contigs", axis=None)
-                           .apply(colorize_metric_qc_chart, subset=["contigs_fastg", "contigs_fastg_sample_pass"], metric="contigs_fastg", axis=None)
-                           .apply(colorize_metric_qc_chart, subset=["contigs_gfa", "contigs_gfa_sample_pass"], metric="contigs_gfa", axis=None)
+                        #    .apply(colorize_metric_qc_chart, subset=["contigs_fastg", "contigs_fastg_sample_pass"], metric="contigs_fastg", axis=None)
+                        #    .apply(colorize_metric_qc_chart, subset=["contigs_gfa", "contigs_gfa_sample_pass"], metric="contigs_gfa", axis=None)
                            .apply(colorize_metric_qc_chart, subset=["assembly_length", "assembly_length_sample_pass"], metric="assembly_length", axis=None)
                            .apply(colorize_q_scores, subset=["r1_mean_q_raw", "r2_mean_q_raw"]))
     
@@ -337,9 +337,9 @@ def create_colorized_scores_table(samples_df):
                                                     "number_contigs_sample_pass",
                                                     "assembly_length_sample_pass",
                                                     "r1_mean_q_raw_sample_pass",
-                                                    "r2_mean_q_raw_sample_pass",
-                                                    "contigs_fastg_sample_pass",
-                                                    "contigs_gfa_sample_pass"]])
+                                                    "r2_mean_q_raw_sample_pass"]])
+                                                    # "contigs_fastg_sample_pass",
+                                                    # "contigs_gfa_sample_pass"]])
 
     with pd.ExcelWriter("Colorized_Scores.xlsx") as writer:  
         colors_df.to_excel(writer, sheet_name="all_metrics")
@@ -403,11 +403,11 @@ if __name__ == "__main__":
                         "r1_mean_q_raw": {"label": "R1 Q Score",
                                           "thresholds_dict": mean_q_thresholds},
                         "r2_mean_q_raw": {"label": "R2 Q Score",
-                                          "thresholds_dict": mean_q_thresholds},
-                        "contigs_fastg": {"label": "Contigs Fastg",
-                                          "thresholds_dict": contig_thresholds},
-                        "contigs_gfa": {"label": "Contigs Gfa",
-                                        "thresholds_dict": contig_thresholds}
+                                          "thresholds_dict": mean_q_thresholds} #,
+                        # "contigs_fastg": {"label": "Contigs Fastg",
+                        #                   "thresholds_dict": contig_thresholds},
+                        # "contigs_gfa": {"label": "Contigs Gfa",
+                        #                 "thresholds_dict": contig_thresholds}
                     }
     
     # name of column in terra data table that holds sample_id values - root entity id col
