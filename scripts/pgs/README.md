@@ -25,4 +25,4 @@
         1. QC_visualizations.pdf: Contains 3 sets of scatter-plots of all organisms. No failed samples tables or per oerganism plots with threshold lines will be included.
     
     WDL:
-        1. 1. [Enterics Visualization WDL - FULL](https://github.com/broadinstitute/viral-pipelines/blob/master/pipes/WDL/workflows/general_create_enterics_qc_viz.wdl)
+        1. 1. [Enterics Visualization WDL - GENERAL](https://github.com/broadinstitute/viral-pipelines/blob/master/pipes/WDL/workflows/general_create_enterics_qc_viz.wdl)
