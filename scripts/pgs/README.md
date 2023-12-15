@@ -1,7 +1,7 @@
 # Tools/Scripts
 
 ------------------------
-#### This directory contains scripts/tools to generate visualizations from viral pipelines data - specifically for PGS.
+#### This directory contains scripts/tools to generate visualizations from viral pipelines data - specifically for Enterics.
 ------------------------
 
 ### Scripts
@@ -13,6 +13,9 @@
     Outputs:
         1. QC_visualizations.pdf: Contains 3 sets of scatter-plots of all organisms, failed samples table, scatter-plot per organism with threshold lines and colored to indicate pass/fail samples where each set represents metrics defined in Pulsenet metrics.
         2. Colorized_Scores.xlsx: Contains grid of all samples, Pulsenet metrics, colored by PASS/FAIL values as well as a second tab containing summary statistics.
+    
+    WDL:
+        1. [Enterics Visualization WDL - FULL](https://github.com/broadinstitute/viral-pipelines/blob/master/pipes/WDL/workflows/create_enterics_qc_viz.wdl)
 
 #### **general_create_visualizations.py**
 ##### Description
@@ -20,4 +23,6 @@
 
     Outputs:
         1. QC_visualizations.pdf: Contains 3 sets of scatter-plots of all organisms. No failed samples tables or per oerganism plots with threshold lines will be included.
-        
+    
+    WDL:
+        1. 1. [Enterics Visualization WDL - FULL](https://github.com/broadinstitute/viral-pipelines/blob/master/pipes/WDL/workflows/general_create_enterics_qc_viz.wdl)
