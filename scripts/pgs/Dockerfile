@@ -25,6 +25,7 @@ RUN rm /usr/bin/lsb_release \
 
 
 COPY create_visualizations.py /scripts/create_visualizations.py
+COPY general_create_visualizations.py /scripts/general_create_visualizations.py
 
 COPY requirements.txt .
 RUN pip3 install -r requirements.txt
