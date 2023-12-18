@@ -334,6 +334,7 @@ def fetch_source_records_bigquery(config, new_dataset_id, array_col_dict, table,
     src_tdr_object_uuid = config["source"]["tdr_object_uuid"]
     src_tdr_object_type = config["source"]["tdr_object_type"]
     tdr_host = config["source"]["tdr_host"]
+    files_already_ingested = config["ingest"]["files_already_ingested"]
     datarepo_row_ids_to_ingest = config["ingest"]["datarepo_row_ids_to_ingest"]
     apply_anvil_transforms = config["ingest"]["apply_anvil_transforms"] 
     bq_project = config["source"]["bigquery_project"]
@@ -350,7 +351,11 @@ def fetch_source_records_bigquery(config, new_dataset_id, array_col_dict, table,
     table_recs_str = f"Table: {table} -- Rows: {str(start_row)}-{str(end_row)}"
     final_records = []
     if apply_anvil_transforms and "anvil_" not in table:
-        if table == "file_inventory" and files_already_ingested == False:
+        if table == "file_inventory":
+            if files_already_ingested == False:
+                file_ref_sql = "TO_JSON_STRING(STRUCT(source_name AS sourcePath, target_path AS targetPath, 'Ingest of '||source_name AS description, COALESCE(content_type, 'application/octet-stream') AS mimeType))"
+            else:
+                file_ref_sql = "file_ref"
             rec_fetch_query = f"""WITH drlh_deduped AS
                             (
                               SELECT DISTINCT file_id, target_path, source_name
@@ -361,7 +366,7 @@ def fetch_source_records_bigquery(config, new_dataset_id, array_col_dict, table,
                             FROM
                             (
                               SELECT datarepo_row_id, datarepo_row_id AS orig_datarepo_row_id, a.file_id, name, path, uri, content_type, full_extension, size_in_bytes, crc32c, md5_hash, ingest_provenance,
-                              file_ref AS orig_file_ref, TO_JSON_STRING(STRUCT(source_name AS sourcePath, target_path AS targetPath, 'Ingest of '||source_name AS description, COALESCE(content_type, 'application/octet-stream') AS mimeType)) AS file_ref,
+                              file_ref AS orig_file_ref, {file_ref_sql} AS file_ref,
                               ROW_NUMBER() OVER (ORDER BY datarepo_row_id) AS rownum
                               FROM `{bq_project}.{bq_dataset}.{table}` a
                                   LEFT JOIN drlh_deduped b
@@ -459,11 +464,18 @@ def fetch_source_records_tdr_api(config, new_dataset_id, table, start_row, end_r
         page_size = min(max_page_size, end_row - total_records_fetched)
         attempt_counter = 0
         while True:
+            payload = {
+              "offset": offset,
+              "limit": page_size,
+              "sort": "datarepo_row_id",
+              "direction": "asc",
+              "filter": ""
+            }
             try:
                 if src_tdr_object_type == "dataset":
-                    record_results = datasets_api.lookup_dataset_data_by_id(id=src_tdr_object_uuid, table=table, offset=offset, limit=page_size).to_dict() 
+                    record_results = datasets_api.query_dataset_data_by_id(id=src_tdr_object_uuid, table=table, query_data_request_model=payload).to_dict() 
                 elif src_tdr_object_type == "snapshot":
-                    record_results = snapshots_api.lookup_snapshot_preview_by_id(id=src_tdr_object_uuid, table=table, offset=offset, limit=page_size).to_dict() 
+                    record_results = snapshots_api.query_snapshot_data_by_id(id=src_tdr_object_uuid, table=table, query_data_request_model=payload).to_dict() 
                 else:
                     raise Exception("Source TDR object type must be 'dataset' or 'snapshot'.")
                 break
@@ -777,11 +789,18 @@ def populate_new_dataset(config, new_dataset_id, fileref_col_dict, array_col_dic
         datasets_api = data_repo_client.DatasetsApi(api_client=api_client)
         snapshots_api = data_repo_client.SnapshotsApi(api_client=api_client)
         while True:
+            payload = {
+              "offset": 0,
+              "limit": 10,
+              "sort": "datarepo_row_id",
+              "direction": "asc",
+              "filter": ""
+            }
             try:
                 if src_tdr_object_type == "dataset":
-                    record_results = datasets_api.lookup_dataset_data_by_id(id=src_tdr_object_uuid, table=table).to_dict() 
+                    record_results = datasets_api.query_dataset_data_by_id(id=src_tdr_object_uuid, table=table, query_data_request_model=payload).to_dict()
                 elif src_tdr_object_type == "snapshot":
-                    record_results = snapshots_api.lookup_snapshot_preview_by_id(id=src_tdr_object_uuid, table=table).to_dict() 
+                    record_results = snapshots_api.query_snapshot_data_by_id(id=src_tdr_object_uuid, table=table, query_data_request_model=payload).to_dict() 
                 else:
                     raise Exception("Source TDR object type must be 'dataset' or 'snapshot'.")
                 total_record_count = record_results["total_row_count"]
@@ -826,8 +845,15 @@ def populate_new_dataset(config, new_dataset_id, fileref_col_dict, array_col_dic
         datasets_api = data_repo_client.DatasetsApi(api_client=api_client)
         snapshots_api = data_repo_client.SnapshotsApi(api_client=api_client)
         while True:
+            payload = {
+              "offset": 0,
+              "limit": 10,
+              "sort": "datarepo_row_id",
+              "direction": "asc",
+              "filter": ""
+            }
             try:
-                record_results = datasets_api.lookup_dataset_data_by_id(id=new_dataset_id, table=table).to_dict() 
+                record_results = datasets_api.query_dataset_data_by_id(id=new_dataset_id, table=table, query_data_request_model=payload).to_dict()
                 new_record_count = record_results["total_row_count"]
                 break
             except Exception as e:
@@ -864,8 +890,15 @@ def populate_new_dataset(config, new_dataset_id, fileref_col_dict, array_col_dic
                     row_start = records_fetched
                     attempt_counter = 0
                     while True:
+                        payload = {
+                          "offset": row_start,
+                          "limit": max_page_size,
+                          "sort": "datarepo_row_id",
+                          "direction": "asc",
+                          "filter": ""
+                        }
                         try:
-                            dataset_results = datasets_api.lookup_dataset_data_by_id(id=new_dataset_id, table=table, offset=row_start, limit=max_page_size).to_dict()
+                            dataset_results = datasets_api.query_dataset_data_by_id(id=new_dataset_id, table=table, query_data_request_model=payload).to_dict() 
                             for record in dataset_results["result"]:
                                 key = table + ":" + record["orig_datarepo_row_id"]
                                 val = table + ":" + record["datarepo_row_id"]
@@ -910,8 +943,15 @@ def populate_new_dataset(config, new_dataset_id, fileref_col_dict, array_col_dic
                 row_start = records_fetched
                 attempt_counter = 0
                 while True:
+                    payload = {
+                      "offset": row_start,
+                      "limit": max_page_size,
+                      "sort": "datarepo_row_id",
+                      "direction": "asc",
+                      "filter": ""
+                    }
                     try:
-                        dataset_results = datasets_api.lookup_dataset_data_by_id(id=new_dataset_id, table=table, offset=row_start, limit=max_page_size).to_dict()
+                        dataset_results = datasets_api.query_dataset_data_by_id(id=new_dataset_id, table=table, query_data_request_model=payload).to_dict() 
                         for record in dataset_results["result"]:
                             key = table + ":" + record["orig_datarepo_row_id"]
                             val = table + ":" + record["datarepo_row_id"]
