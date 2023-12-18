@@ -31,6 +31,7 @@ CONFIGURATION
         "write_to_cloud_sas_token": "",
         "max_records_per_ingest_request": 250000,
         "max_filerefs_per_ingest_request": 50000,
+        "files_already_ingested": False,
         "tables_to_ingest": ["file_inventory", "subject", "anvil_donor"],
         "datarepo_row_ids_to_ingest": [],
         "apply_anvil_transforms": True
@@ -349,7 +350,7 @@ def fetch_source_records_bigquery(config, new_dataset_id, array_col_dict, table,
     table_recs_str = f"Table: {table} -- Rows: {str(start_row)}-{str(end_row)}"
     final_records = []
     if apply_anvil_transforms and "anvil_" not in table:
-        if table == "file_inventory":
+        if table == "file_inventory" and files_already_ingested == False:
             rec_fetch_query = f"""WITH drlh_deduped AS
                             (
                               SELECT DISTINCT file_id, target_path, source_name
@@ -392,7 +393,7 @@ def fetch_source_records_bigquery(config, new_dataset_id, array_col_dict, table,
             df = df.astype(object).where(pd.notnull(df),None)
             for column in array_col_dict[table]:
                 df[column] = df[column].apply(lambda x: list(x))
-            if apply_anvil_transforms and table == "file_inventory": 
+            if apply_anvil_transforms and table == "file_inventory" and files_already_ingested == False: 
                 df["file_ref"] = df.apply(lambda x: json.loads(x["file_ref"].replace("\'", "\"")), axis=1)
             final_records = df.to_dict(orient="records")
             break

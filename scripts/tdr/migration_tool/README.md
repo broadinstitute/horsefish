@@ -43,6 +43,7 @@
             "write_to_cloud_sas_token": "",
             "max_records_per_ingest_request": 250000,
             "max_filerefs_per_ingest_request": 50000,
+            "files_already_ingested": True,
             "tables_to_ingest": [],
             "datarepo_row_ids_to_ingest": [],
             "apply_anvil_transforms": true
@@ -70,6 +71,7 @@
     * ingest.write_to_cloud_sas_token - For cases where the records processing method is "write_to_cloud" and the cloud platform is "azure", the SAS token that should be used to write the preprocessed record to the cloud (to avoid cross-cloud authentication complexities).
     * ingest.max_records_per_ingest_request -- The max number of records that should be included in each ingestDataset request made to the new TDR dataset. This is used to essentially reduce the number of records the user will need to fetch and hold in memory when building each request to TDR. Leaving this property null will result in a default value of 1,000,000 being used.
     * ingest.max_filerefs_per_ingest_request -- The max number of file references that should be included in each ingestDataset request made to the new TDR dataset. Including too many file references in a single request can lead to timeout issues in TDR, so this parameter allows the user to set a threshold that works for them. Leaving this property null will result in a default value of 50,000 being used.
+    * ingest.files_already_ingested -- Indicates whether the files expected to be referenced in the ingest have already been ingested or not. If True, the migration tool will not build new file reference objects for the files, but instead use the TDR file ID for the files in the ingest request. This allows for a much quicker ingest of data (without needing to re-ingest or reconcile requested files against ingested files), so long as the file IDs are expected to match between the source and target dataset.
     * ingest.tables_to_ingest - In cases where the migration fails part of the way through, this property can be used for patching by allowing the user to specify which tables should be included in the dataset ingestion step. 
     * ingest.datarepo_row_ids_to_ingest - Similar to the target.tables_to_ingest property, this property is intended to be used for surgical patching of datasets where the migration has failed part of the way through. This property allows the user to specify specific datarepo_row_ids that should be included in the dataset ingestion step, and provides an additional layer of granularity over the target.tables_to_ingest property. 
     * ingest.apply_anvil_transforms - For AnVIL datasets being migrated, this flag allows for additional AnVIL-specific transformations to be applied to ensure things like datarepo_row_id references don't break in the new dataset.
