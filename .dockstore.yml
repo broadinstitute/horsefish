@@ -23,3 +23,9 @@ workflows:
    primaryDescriptorPath: /pipelines/run_shell_script.wdl
    testParameterFiles:
     - empty.json
+
+ - name: reheader_cram
+   subclass: WDL
+   primaryDescriptorPath: /scripts/reheader/reheader_cram.wdl
+   testParameterFiles:
+    - empty.json
