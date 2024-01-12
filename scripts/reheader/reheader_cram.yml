@@ -1,0 +1,5 @@
+version: 1.2
+workflows:
+  name: reheader_cram
+  subclass: WDL
+  primaryDescriptorPath: https://github.com/jpramosbarroso/reheaderCRAM/blob/main/reheader_cram.wdl
