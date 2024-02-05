@@ -2,10 +2,10 @@ version 1.0
 
 workflow StartDragenWorkflow {
   input {
-      File ref_trigger
-      File ref_dragen_config
-      File ref_batch_config
-      File ref_input
+      String ref_trigger
+      String ref_dragen_config
+      String ref_batch_config
+      String ref_input
       String trigger_path
       String dragen_config_path
       String batch_config_path
@@ -33,10 +33,10 @@ workflow StartDragenWorkflow {
 
 task StartDragen {
   input {
-      File ref_trigger
-      File ref_dragen_config
-      File ref_batch_config
-      File ref_input
+      String ref_trigger
+      String ref_dragen_config
+      String ref_batch_config
+      String ref_input
       String trigger
       String dragen_config
       String batch_config
