@@ -28,6 +28,7 @@ workflow StartDragenWorkflow {
         sample_ids = sample_ids
   }
   output {
+      
   }
 }
 
