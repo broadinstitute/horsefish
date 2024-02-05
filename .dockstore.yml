@@ -29,3 +29,9 @@ workflows:
    primaryDescriptorPath: /scripts/reheader/reheader_cram.wdl
    testParameterFiles:
     - empty.json
+
+ - name: start_dragen
+   subclass: WDL
+   primaryDescriptorPath: /pipelines/start_dragen/start.wdl
+   testParameterFiles:
+    - empty.json
