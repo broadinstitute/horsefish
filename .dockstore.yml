@@ -29,3 +29,9 @@ workflows:
    primaryDescriptorPath: /scripts/reheader/reheader_cram.wdl
    testParameterFiles:
     - empty.json
+
+ - name: create_fofn
+   subclass: WDL
+   primaryDescriptorPath: /pipelines/stanley_center/CreateFoFn.wdl
+   testParameterFiles:
+    - empty.json
