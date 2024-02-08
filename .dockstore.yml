@@ -34,4 +34,4 @@ workflows:
    subclass: WDL
    primaryDescriptorPath: /pipelines/stanley_center/CreateFoFn.wdl
    testParameterFiles:
-    - empty.json
+    - /pipelines/stanley_center/empty.json
