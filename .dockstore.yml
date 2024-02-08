@@ -4,31 +4,31 @@ workflows:
    subclass: WDL
    primaryDescriptorPath: /pipelines/migrate_bucket_regions/migrate_bucket_data_via_local.wdl
    testParameterFiles:
-    - empty.json
+    - /pipelines/migrate_bucket_regions/empty.json
 
  - name: create_object_md5
    subclass: WDL
    primaryDescriptorPath: /pipelines/create_object_md5.wdl
    testParameterFiles:
-    - empty.json
+    - /pipelines/empty.json
 
  - name: deliver_prs_to_anvil
    subclass: WDL
    primaryDescriptorPath: /pipelines/emerge/deliver_prs_to_anvil.wdl
    testParameterFiles:
-    - empty.json
+    - /pipelines/emerge/empty.json
 
  - name: run_shell_script
    subclass: WDL
    primaryDescriptorPath: /pipelines/run_shell_script.wdl
    testParameterFiles:
-    - empty.json
+    - /pipelines/empty.json
 
  - name: reheader_cram
    subclass: WDL
    primaryDescriptorPath: /scripts/reheader/reheader_cram.wdl
    testParameterFiles:
-    - empty.json
+    - /scripts/reheader/empty.json
 
  - name: create_fofn
    subclass: WDL
