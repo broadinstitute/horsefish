@@ -46,7 +46,7 @@ task StartDragen {
       gsutil cp ~{ref_dragen_config} "gs://~{PROJECT_ID}-config/"
       gsutil cp ~{ref_batch_config} "gs://~{PROJECT_ID}-trigger/~{DATA_TYPE}/~{VERSION}/"
       gsutil cp ~{ref_input} "gs://~{PROJECT_ID}-trigger/~{DATA_TYPE}/input_list/"
-      gsutil cp ~{ref_trigger} "gs://~{PROJECT_ID}-trigger/~{DATA_TYPE}/${VERSION}/"
+      gsutil cp ~{ref_trigger} "gs://~{PROJECT_ID}-trigger/~{DATA_TYPE}/~{VERSION}/"
   >>>
   runtime {
     docker: "gcr.io/google.com/cloudsdktool/cloud-sdk:305.0.0"
