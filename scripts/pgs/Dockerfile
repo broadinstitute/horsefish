@@ -23,10 +23,7 @@ RUN rm /usr/bin/lsb_release \
     && apt-get install python3-pip idle3 -y \ 
     && python3 -m pip install --no-cache-dir --upgrade pip
 
-
-COPY create_visualizations.py /scripts/create_visualizations.py
-COPY general_create_visualizations.py /scripts/general_create_visualizations.py
-
+COPY create_enterics_visualizations_html.py /scripts/create_enterics_visualizations_html.py
 COPY requirements.txt .
 RUN pip3 install -r requirements.txt
 
