@@ -23,6 +23,7 @@ task CreateFoFN {
         Array[File] cram_paths
         Array[String] sample_ids
         Array[String] rp_ids
+        
     }
     command {
         echo "collaborator_sample_id cram_path rp_id" >> sample_processing_manifest.txt
