@@ -2,7 +2,7 @@ version 1.0
 
 workflow Make_FoFn {
     input {
-        Array[File] cram_paths
+        Array[String] cram_paths
         Array[String] sample_ids
         Array[String] rp_ids
     }
