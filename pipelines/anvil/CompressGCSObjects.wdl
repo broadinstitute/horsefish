@@ -14,15 +14,12 @@ workflow CompressGCSObjects {
             gcp_project         =   gcp_project,
             bq_dataset          =   bq_dataset,
             bq_dataset_table    =   bq_dataset_table,
-            tar_object          =   tar_object,
-            docker              =   docker
-    }
+            tar_object          =   tar_object    }
 
     call CompressObjects {
         input:
             tar_object              =   tar_object,
-            uncompressed_objects    =   QueryUncompressedObjects.compressed_objects,
-            docker                  =   docker
+            uncompressed_objects    =   QueryUncompressedObjects.compressed_objects
     }
 
 }
