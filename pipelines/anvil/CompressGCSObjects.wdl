@@ -14,12 +14,18 @@ workflow CompressGCSObjects {
             gcp_project         =   gcp_project,
             bq_dataset          =   bq_dataset,
             bq_dataset_table    =   bq_dataset_table,
-            tar_object          =   tar_object    }
+            tar_object          =   tar_object
+    }
 
     call CompressObjects {
         input:
             tar_object              =   tar_object,
-            uncompressed_objects    =   QueryUncompressedObjects.compressed_objects
+            uncompressed_objects    =   QueryUncompressedObjects.uncompressed_objects
+    }
+
+    output {
+        File    uncompressed_objects    =   QueryUncompressedObjects.uncompressed_objects_tsv
+        File    copy_logs               =   CompressObjects.copy_log
     }
 
 }
@@ -46,7 +52,8 @@ task QueryUncompressedObjects {
     }
 
     output {
-        Array[String] compressed_objects = read_lines("uncompressed_objects_to_compress.tsv")
+        File            uncompressed_objects_tsv    =   "uncompressed_objects_to_compress.tsv"
+        Array[String]   uncompressed_objects          = read_lines("uncompressed_objects_to_compress.tsv")
     }
 }
 
@@ -67,10 +74,14 @@ task CompressObjects {
         tar cvfz $outfile_name /cromwell_root
 
         # copy the compressed object to its final destination
-        gsutil cp $outfile_name ~{tar_object}
+        gsutil cp -c -L copy_from_local_log.csv $outfile_name ~{tar_object}
     >>>
 
     runtime {
         docker: docker
+    }
+
+    output {
+        File    copy_log    = "copy_from_local_log.csv"
     }
 }
