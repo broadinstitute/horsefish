@@ -4,10 +4,16 @@ workflows:
    subclass: WDL
    primaryDescriptorPath: /pipelines/migrate_bucket_regions/migrate_bucket_data_via_local.wdl
    testParameterFiles:
-    - empty.json
+    - /pipelines/migrate_bucket_regions/empty.json
 
  - name: deliver_prs_to_anvil
    subclass: WDL
    primaryDescriptorPath: /pipelines/emerge/deliver_prs_to_anvil.wdl
    testParameterFiles:
-    - empty.json
+    - /pipelines/emerge/empty.json
+
+ - name: compress_gcs_objects
+   subclass: WDL
+   primaryDescriptorPath: /pipelines/anvil/CompressGCSObjects.wdl
+   testParameterFiles:
+    - /pipelines/anvil/empty.json
