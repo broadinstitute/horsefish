@@ -61,12 +61,9 @@ task CompressObjects {
         String      docker = "broadinstitute/horsefish:compress_objects_v1"
     }
 
-    command {
-        set -x
-        set -e
+    command <<<
 
         # get just final file name for compressed object
-        # outfile_name=$(echo $tar_object | tr '/' '\t' | awk '{print $1}')
         outfile_name=$(echo $tar_object | tr '/' '\t' | awk '{print $NF}')
 
         # compress objects
@@ -74,7 +71,7 @@ task CompressObjects {
 
         # copy the compressed object to its final destination
         gsutil cp $outfile_name ~{tar_object}
-    }
+    >>>
 
     runtime {
         docker: docker
