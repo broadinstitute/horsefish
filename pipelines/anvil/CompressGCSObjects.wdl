@@ -66,7 +66,8 @@ task CompressObjects {
         set -e
 
         # get just final file name for compressed object
-        outfile_name=$(echo $tar_object | tr "/" "\t"| awk '{print $NF}')
+        # outfile_name=$(echo $tar_object | tr '/' '\t' | awk '{print $1}')
+        outfile_name=$(echo $tar_object | tr '/' '\t' | awk '{print $NF}')
 
         # compress objects
         tar cvfz $outfile_name /cromwell_root
