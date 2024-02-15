@@ -71,6 +71,7 @@ task CompressObjects {
         outfile_name=$(echo $tar_object | tr '/' '\t' | awk '{print $NF}')
 
         # compress objects
+        ls /cromwell_root
         tar cvfz $outfile_name /cromwell_root
 
         # copy the compressed object to its final destination
