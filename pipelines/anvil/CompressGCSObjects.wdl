@@ -81,6 +81,7 @@ task CompressObjects {
 
     runtime {
         docker: docker
+        disks: "local-disk 250 SSD"
     }
 
     output {
