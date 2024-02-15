@@ -41,7 +41,7 @@ task QueryUncompressedObjects {
     }
 
     command {
-        python3 compress_gcs_objects.py -g ~{gcp_project} \
+        python3 /scripts/compress_gcs_objects.py -g ~{gcp_project} \
                                         -d ~{bq_dataset} \
                                         -t ~{bq_dataset_table} \
                                         -z ~{tar_object}
