@@ -74,7 +74,8 @@ task CompressObjects {
         tar cvfz $outfile_name /cromwell_root
 
         # copy the compressed object to its final destination
-        gsutil cp -c -L copy_from_local_log.csv $outfile_name ~{tar_object}
+        # gsutil cp -c -L copy_from_local_log.csv $outfile_name ~{tar_object}
+        gsutil cp -c -L copy_from_local_log.csv gs://fc-2b91e31f-1a58-4278-b043-7237df4cfcb7/compressed/ ~{tar_object}
     >>>
 
     runtime {
