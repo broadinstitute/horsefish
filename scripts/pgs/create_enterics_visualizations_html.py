@@ -11,33 +11,14 @@ import pytz # also date and timee
 
 # defining pulsenet metrics' thresholds
 default_thresholds = {
-    "est_coverage_clean": {
-        "Listeria": 20,
-        "Campylobacter": 20,
-        "Escherichia": 40,
-        "Salmonella": 30,
-        "Vibrio": 40
-    },
-    "number_contigs": {
-        "Listeria": 100,
-        "Campylobacter": 200,
-        "Escherichia": 600,
-        "Salmonella": 400,
-        "Vibrio": 200
-    },
+    "est_coverage_clean": {"Listeria": 20, "Campylobacter": 20, "Escherichia": 40, "Salmonella": 30, "Vibrio": 40},
+    "number_contigs": {"Listeria": 100, "Campylobacter": 200, "Escherichia": 600, "Salmonella": 400, "Vibrio": 200},
     "assembly_length": {
         "Listeria": {"min": 2800000, "max": 3100000},
         "Campylobacter": {"min": 1400000, "max": 2200000},
         "Escherichia": {"min": 4200000, "max": 5900000},
         "Salmonella": {"min": 4400000, "max": 5600000},
         "Vibrio": {"min": 3800000, "max": 5300000}
-    },
-    "mean_q": {
-        "Listeria": 30,
-        "Campylobacter": 30,
-        "Escherichia": 30,
-        "Salmonella": 30,
-        "Vibrio": 30
     }
 }
 
@@ -482,18 +463,16 @@ def get_entity_data(ws_project, ws_name, sample_list, entity_table_name):
     return plot_data
 
 # Modify default thresholds based on user input
-def update_thresholds(json_string, default_thresholds, threshold_type):
-    # Parse the JSON string
-    custom_thresholds_dict = json.loads(json_string)
-
-    # Check and update thresholds
-    for custom_threshold_organism, new_threshold in custom_thresholds_dict.items():
-        if custom_threshold_organism in default_thresholds[threshold_type].keys():
-            print(f"The default {threshold_type} threshold for the {custom_threshold_organism} genus has been overridden to {new_threshold} units.")
-        else:
-            print(f"A new threshold of {new_threshold} units has been added for the {custom_threshold_organism} genus.")
-
-        default_thresholds[threshold_type][custom_threshold_organism] = new_threshold
+def update_thresholds_from_file(thresholds_file, default_thresholds):
+    with open(thresholds_file, 'r') as file:
+        custom_thresholds = json.load(file)
+    for threshold_type, thresholds in custom_thresholds.items():
+        for organism, values in thresholds.items():
+            if organism in default_thresholds[threshold_type]:
+                print(f"Overriding {threshold_type} threshold for {organism}.")
+            else:
+                print(f"Adding new {threshold_type} threshold for {organism}.")
+            default_thresholds[threshold_type][organism] = values
 
 # Checking if organism has threshold data
 def is_organism_in_thresholds(organism, thresholds):
@@ -906,22 +885,13 @@ if __name__ == "__main__":
     parser.add_argument("-g", "--grouping_col", required=False, default="gambit_predicted_taxon", help="Name of column used for hue/grouping - ie. organism")
     parser.add_argument("-o", "--output_filename", required=False, default="QC_visualizations.html", help="Name of output HTML file containing visualizations")
 
-    parser.add_argument("-ect", "--custom_est_coverage_thresholds", type=str, help="Custom Estimated Coverage Thresholds as JSON string")
-    parser.add_argument("-cnt", "--custom_contig_thresholds", type=str, help="Custom Contig Thresholds as JSON string")
-    parser.add_argument("-at", "--custom_assembly_thresholds", type=str, help="Custom Assembly Thresholds as JSON string")
-    parser.add_argument("-mqt", "--custom_mean_q_thresholds", type=str, help="Custom Mean Q Thresholds as JSON string")
+    parser.add_argument("-t", "--thresholds_file", type=str, help="Path to a JSON file containing custom thresholds")
 
     args = parser.parse_args()
 
     # Override default thresholds
-    if args.custom_est_coverage_thresholds:
-        update_thresholds(args.custom_est_coverage_thresholds, default_thresholds, "est_coverage_clean")
-    if args.custom_contig_thresholds:
-        update_thresholds(args.custom_contig_thresholds, default_thresholds, "number_contigs")
-    if args.custom_assembly_thresholds:
-        update_thresholds(args.custom_assembly_thresholds, default_thresholds, "assembly_length")
-    if args.custom_mean_q_thresholds:
-        update_thresholds(args.custom_mean_q_thresholds, default_thresholds, "mean_q")
+    if args.thresholds_file:
+        update_thresholds_from_file(args.thresholds_file, default_thresholds)
 
     # # define metric, plot labels, and pulsenet metric thresholds
     qc_metric_info = {
