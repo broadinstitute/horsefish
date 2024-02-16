@@ -221,13 +221,13 @@ def create_organism_specific_table(data, sample_names, group_column, metric_name
     return table_figure
 
 # Create data table with all data
-def create_complete_table(data, entity_table_name):
+def create_complete_table(data, entity_table_name, group_column):
 
     sample_id_column = "entity:" + entity_table_name + "_id"
     data = data.sort_values(sample_id_column, ascending=True)
 
     # Add new row to visually denote end of data
-    end_of_data_row = {sample_id_column: ' ', 'gambit_predicted_taxon': '                   END', 'number_contigs': '                    OF', 'assembly_length': '                   DATA', 'est_coverage_clean': ' '}
+    end_of_data_row = {sample_id_column: ' ', group_column: '                   END', 'number_contigs': '                    OF', 'assembly_length': '                   DATA', 'est_coverage_clean': ' '}
     data = pd.concat([data, pd.DataFrame([end_of_data_row])], ignore_index=True)
     
     # Create the table figure
@@ -248,7 +248,7 @@ def create_complete_table(data, entity_table_name):
         cells=dict(
             values=[
                 data[sample_id_column],
-                data["gambit_predicted_taxon"],
+                data[group_column],
                 data["number_contigs"],
                 data["assembly_length"],
                 data["est_coverage_clean"]
@@ -256,11 +256,11 @@ def create_complete_table(data, entity_table_name):
             align='left',
             fill_color=[
                 # Set background color for entire row based on 'Status'
-                ['#e8ece8' if status == '                   END' else 'white' for status in data['gambit_predicted_taxon']],
-                ['#e8ece8' if status == '                   END' else 'white' for status in data['gambit_predicted_taxon']],
-                ['#e8ece8' if status == '                   END' else 'white' for status in data['gambit_predicted_taxon']],
-                ['#e8ece8' if status == '                   END' else 'white' for status in data['gambit_predicted_taxon']],
-                ['#e8ece8' if status == '                   END' else 'white' for status in data['gambit_predicted_taxon']]
+                ['#e8ece8' if status == '                   END' else 'white' for status in data[group_column]],
+                ['#e8ece8' if status == '                   END' else 'white' for status in data[group_column]],
+                ['#e8ece8' if status == '                   END' else 'white' for status in data[group_column]],
+                ['#e8ece8' if status == '                   END' else 'white' for status in data[group_column]],
+                ['#e8ece8' if status == '                   END' else 'white' for status in data[group_column]]
             ],
             line_color='black',
             font=dict(size=12)
@@ -443,21 +443,21 @@ def map_organism_to_genus(organism_name):
         return organism_name.split("_")[0]
     
 # Retrieve specified workspace data
-def get_entity_data(ws_project, ws_name, sample_list, entity_table_name):
+def get_entity_data(ws_project, ws_name, sample_list, entity_table_name, group_column):
     
     workspace_datatable = pd.read_csv(StringIO(fapi.get_entities_tsv(ws_project, ws_name, entity_table_name, model="flexible").text), sep="\t")
 
     # filter to relevant columms (sample_id, predicted species, and relevant metrics for plotting)
     sample_id_column = "entity:" + entity_table_name + "_id"
     filtered_datatable = workspace_datatable[[sample_id_column,
-                                "gambit_predicted_taxon",
+                                group_column,
                                 "number_contigs", "assembly_length", "est_coverage_clean"]]
 
     # filter to list of samples provided
     plot_data = filtered_datatable[filtered_datatable[sample_id_column].isin(sample_list)]
 
     # drop rows where organism is empty  
-    plot_data.dropna(subset=["gambit_predicted_taxon"], inplace=True)
+    plot_data.dropna(subset=[group_column], inplace=True)
     print(f"Samples with no gambit_predicted_taxon are dropped.")
     
     return plot_data
@@ -485,7 +485,7 @@ def is_organism_in_thresholds(organism, thresholds):
             return False
 
 # Piecing together all visualizations into HTML string
-def create_HTML(data, qc_metric_info, default_thresholds, entity_table_name):
+def create_HTML(data, qc_metric_info, default_thresholds, entity_table_name, grouping_column):
     # Initialize the HTML string with the header, style, and TOC container
     html_string = '''
     <!DOCTYPE html>
@@ -495,13 +495,11 @@ def create_HTML(data, qc_metric_info, default_thresholds, entity_table_name):
         <meta charset="UTF-8">
         <title>Sequencing QC Report</title>
         <style>
-
             body {
                 font-family: 'Arial', sans-serif;
                 display: flex;
                 flex-wrap: nowrap; /* Prevents flex items from wrapping */
             }
-
             #toc-title {
                 font-family: 'Droid Sans', sans-serif;
                 text-align: center;
@@ -525,7 +523,6 @@ def create_HTML(data, qc_metric_info, default_thresholds, entity_table_name):
                 width: 100%; /* Title width matches the TOC container width */
                 box-sizing: border-box; /* Include padding and border in the element's total width and height */
             }
-
             #toc-container {
                 width: 250px;
                 position: fixed;
@@ -537,7 +534,6 @@ def create_HTML(data, qc_metric_info, default_thresholds, entity_table_name):
                 transition: width 0.5s; /* Smooth transition for TOC width */
                 top: 0px;
             }
-
             ul#toc {
                 list-style-type: none; /* Removes bullet points from TOC items */
                 padding: 0;
@@ -568,7 +564,6 @@ def create_HTML(data, qc_metric_info, default_thresholds, entity_table_name):
             ul#toc li a:hover {
                 background-color: #E2E2E2; /* Adds a hover effect for links */
             }
-
             .collapsible {
                 cursor: pointer;
                 padding: 5px;
@@ -580,61 +575,54 @@ def create_HTML(data, qc_metric_info, default_thresholds, entity_table_name):
                 background-color: #f8f9fa;
                 color: #717afc;
             }
-
             .collapsible:after {
                 content: '\\25C2'; /* Down-pointing small triangle */
                 font-weight: bold;
                 float: right;
                 font-family: 'Arial', sans-serif;
             }
-
             .active:after {
                 content: '\\25BE'; /* Right-pointing small triangle */
                 font-family: 'Arial', sans-serif;
             }
-            
             .content {
                 display: block;
                 overflow: hidden;
                 background-color: #f8f9fa;
             }
-
             #content-container {
-                margin-left: 250px; /* Must match the width of the TOC container */
-                width: calc(100% - 250px); /* Ensures the content container takes the remaining width */
+                margin-left: 250px;
+                width: calc(100% - 250px);
                 overflow-y: auto;
-                padding: 5px 35px; /* Adds spacing around the content */
-                color: #404040; /* Darker text for better readability */
+                padding: 5px 35px;
+                color: #404040;
             }
-
             #content-container h2 {
-                font-family: 'Arial', sans-serif; /* Default Plotly font */
-                font-size: 22px; /* Typical Plotly title font size, adjust as needed */
-                font-weight: bold; /* Plotly titles are often bold */
-                color: #2a3f5f; /* Plotly-like color for headers */
-                margin-top: 30px; /* Spacing above the title */
-                margin-bottom: 0px; /* Spacing below the title */
+                font-family: 'Arial', sans-serif;
+                font-size: 22px;
+                font-weight: bold;
+                color: #2a3f5f;
+                margin-top: 30px;
+                margin-bottom: 0px;
                 text-align: center;
             }
             #content-container h3 {
-                font-family: 'Arial', sans-serif; /* Default Plotly font */
-                font-size: 18px; /* Typical Plotly title font size, adjust as needed */
-                font-weight: bold; /* Plotly titles are often bold */
-                color: #2a3f5f; /* Plotly-like color for headers */
-                margin-top: 30px; /* Spacing above the title */
-                margin-bottom: 10px; /* Spacing below the title */
+                font-family: 'Arial', sans-serif;
+                font-size: 18px;
+                font-weight: bold;
+                color: #2a3f5f;
+                margin-top: 30px;
+                margin-bottom: 10px;
                 text-align: center;
                 font-style: italic;
             }
             #content-container div:first-child {
-                margin-top: 0px; /* Reduces space between the title and the plot */
+                margin-top: 0px;
             }
-
             .section-title h3 {
                 text-align: center;
                 margin-bottom: 0px; /* Adjust as needed */
             }
-
             .plot-table-container {
                 display: flex;
                 flex-direction: row; 
@@ -644,34 +632,28 @@ def create_HTML(data, qc_metric_info, default_thresholds, entity_table_name):
                 gap: 0px;
                 padding: 0px 0px;
             }
-
             .plot-container {
                 flex: 0 0 70%;
                 padding: 0px;
             }
-            
             .table-container {
                 flex: 1; 
                 padding: 0px;
                 overflow-x: auto;
                 overflow-y: auto;
-                /* Styling for the scrollbar */
-                scrollbar-width: thin; /* For Firefox */
-                scrollbar-color: #717afc #f8f9fa; /* For Firefox */
+                scrollbar-width: thin;
+                scrollbar-color: #717afc #f8f9fa;
             }
-
             .gambit-container {
                 flex: 0 0 50%;
                 padding: 0px;
             }
-
             .threshold-info {
                 text-align: center;
-                color: #555; /* Change as needed */
+                color: #555;
                 font-size: 14px;
-                margin-bottom: 10px; /* Space below the threshold info */
+                margin-bottom: 10px;
             }
-
         </style>
     </head>
     <body>
@@ -700,7 +682,7 @@ def create_HTML(data, qc_metric_info, default_thresholds, entity_table_name):
             <ul id="toc">
     '''
 
-    organisms_in_data = set(data["gambit_predicted_taxon"])
+    organisms_in_data = set(data[grouping_column])
     organisms_in_data = sorted(organisms_in_data)
 
     # Add table of contents elements according to data
@@ -737,7 +719,7 @@ def create_HTML(data, qc_metric_info, default_thresholds, entity_table_name):
         # Section for total metric
         html_string += f'<div id="{metric}_total"><h2>{label} per sample</h2>'
         # Total metric plot code
-        fig = create_scatter_plot(data, "entity:broad_demo_id", "gambit_predicted_taxon", metric, label)
+        fig = create_scatter_plot(data, "entity:broad_demo_id", grouping_column, metric, label)
         html_string += fig.to_html(full_html=False, include_plotlyjs='cdn', config={'responsive': True})
         # End of total metric section
         html_string += '</div>'
@@ -752,7 +734,7 @@ def create_HTML(data, qc_metric_info, default_thresholds, entity_table_name):
         '''
 
         # Add the gambit breakdown plot
-        plot_fig = create_gambit_breakdown_plot(data, "gambit_predicted_taxon", metric, default_thresholds)
+        plot_fig = create_gambit_breakdown_plot(data, grouping_column, metric, default_thresholds)
         html_string += plot_fig.to_html(full_html=False, include_plotlyjs='cdn', config={'responsive': True})
 
         html_string += '''
@@ -762,7 +744,7 @@ def create_HTML(data, qc_metric_info, default_thresholds, entity_table_name):
         '''
 
         # Add the gambit breakdown table
-        table_fig = create_gambit_breakdown_table(data, "gambit_predicted_taxon", metric, default_thresholds)
+        table_fig = create_gambit_breakdown_table(data, grouping_column, metric, default_thresholds)
         html_string += table_fig.to_html(full_html=False, include_plotlyjs='cdn')
 
         html_string += '''
@@ -800,13 +782,13 @@ def create_HTML(data, qc_metric_info, default_thresholds, entity_table_name):
                 # Add the plot to its own container if a threshold exists
                 html_string += '<div class="plot-container">'
                 threshold = default_thresholds[metric][genus]
-                fig = create_organism_specific_plot(data, "entity:broad_demo_id", "gambit_predicted_taxon", metric, label, organism, threshold)
+                fig = create_organism_specific_plot(data, "entity:broad_demo_id", grouping_column, metric, label, organism, threshold)
                 html_string += fig.to_html(full_html=False, include_plotlyjs='cdn', config={'responsive': True})
                 html_string += '</div>' # End of plot container
                 
                 # Add the table to its own container if a threshold exists
                 html_string += '<div class="table-container">'
-                table_fig = create_organism_specific_table(data, "entity:broad_demo_id", "gambit_predicted_taxon", metric, organism, threshold)
+                table_fig = create_organism_specific_table(data, "entity:broad_demo_id", grouping_column, metric, organism, threshold)
                 html_string += table_fig.to_html(full_html=False, include_plotlyjs='cdn')
                 html_string += '</div>'  # End of table container
 
@@ -819,7 +801,7 @@ def create_HTML(data, qc_metric_info, default_thresholds, entity_table_name):
     # Content for datatable containing all samples
     html_string += f'<div id="all_samples_table"><h2>Sample Table</h2>'
     # #Create table
-    complete_table_fig = create_complete_table(data, entity_table_name)
+    complete_table_fig = create_complete_table(data, entity_table_name, grouping_column)
     html_string += complete_table_fig.to_html(full_html=False, include_plotlyjs='cdn')
     html_string += '</div>'  # End of table container
             
@@ -900,9 +882,9 @@ if __name__ == "__main__":
                         "assembly_length": "Assembly Length",
                     }
     
-    data = get_entity_data(args.billing_project, args.workspace_name, args.samples, args.datatable_name)
+    data = get_entity_data(args.billing_project, args.workspace_name, args.samples, args.datatable_name, args.grouping_col)
 
-    html_string = create_HTML(data, qc_metric_info, default_thresholds, args.datatable_name)
+    html_string = create_HTML(data, qc_metric_info, default_thresholds, args.datatable_name, args.grouping_col)
 
     # Write the combined HTML string to a file with UTF-8 encoding
     with open(args.output_filename, "w", encoding='utf-8') as file:
