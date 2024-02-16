@@ -86,8 +86,8 @@ task StartDragen {
     gsutil cp ~{ref_batch_config} "gs://~{project_id}-trigger/~{data_type}/~{dragen_version}/"
     gsutil cp ~{ref_input} "gs://~{project_id}-trigger/~{data_type}/input_list/"
     gsutil cp ~{ref_trigger} "gs://~{project_id}-trigger/~{data_type}/~{dragen_version}/"
-    gsutil cp ~{sample_manifest} "gs://~{project_id}-trigger/~{data_type}/~{dragen_version}/"
-
+    gsutil cp ~{sample_manifest} "gs://~{project_id}-trigger/~{data_type}/input_list/"
+    
   >>>
 
   runtime {
