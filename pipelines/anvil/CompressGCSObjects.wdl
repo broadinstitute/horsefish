@@ -71,10 +71,11 @@ task CompressObjects {
 
         # get just final file name for compressed object
         outfile_name=$(echo $tar_object | tr '/' '\t' | awk '{print $NF}')
+        echo $outfile_name
 
         # compress objects
         ls /cromwell_root
-        tar cvfz $outfile_name /cromwell_root/schaluva-bucket/
+        tar -cvfz $outfile_name /cromwell_root/schaluva-bucket/
 
         # copy the compressed object to its final destination
         # gsutil cp -c -L copy_from_local_log.csv $outfile_name ~{tar_object}
