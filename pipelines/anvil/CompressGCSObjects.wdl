@@ -67,19 +67,21 @@ task CompressObjects {
         String      docker = "broadinstitute/horsefish:compress_objects_v1"
     }
 
+    String  tar_gz_filename    =   basename(tar_object)
+
     command <<<
 
         # get just final file name for compressed object
-        outfile_name=$(echo $tar_object | tr '/' '\t' | awk '{print $NF}')
-        echo $outfile_name
+        # outfile_name=$(echo $tar_object | tr '/' '\t' | awk '{print $NF}')
+        echo ~{tar_gz_filename}
 
         # compress objects
         ls /cromwell_root
-        tar -cvfz $outfile_name /cromwell_root/schaluva-bucket/
+        tar -cvfz ~{tar_gz_filename} /cromwell_root/schaluva-bucket/
 
         # copy the compressed object to its final destination
         # gsutil cp -c -L copy_from_local_log.csv $outfile_name ~{tar_object}
-        gsutil cp -c -L copy_from_local_log.csv gs://fc-2b91e31f-1a58-4278-b043-7237df4cfcb7/compressed/ ~{tar_object}
+        gsutil cp -c -L copy_from_local_log.csv ~{tar_gz_filename} ~{tar_object}
     >>>
 
     runtime {
