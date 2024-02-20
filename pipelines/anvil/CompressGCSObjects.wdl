@@ -74,7 +74,7 @@ task CompressObjects {
 
         # compress objects
         ls /cromwell_root
-        tar cvfz $outfile_name /cromwell_root
+        tar cvfz $outfile_name /cromwell_root/schaluva-bucket/
 
         # copy the compressed object to its final destination
         # gsutil cp -c -L copy_from_local_log.csv $outfile_name ~{tar_object}
