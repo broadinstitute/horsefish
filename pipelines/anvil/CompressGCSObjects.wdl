@@ -80,7 +80,10 @@ task CompressObjects {
         tar -vczf ~{tar_gz_filename} -C /cromwell_root/${zip_dir}/ .
 
         # copy the compressed object to its final destination
-        gsutil cp -c -L copy_from_local_log.csv ~{tar_gz_filename} ~{tar_object}
+        # gsutil cp -c -L copy_from_local_log.csv ~{tar_gz_filename} ~{tar_object}
+
+        # manual test to own workspace bucket instead of src
+        gsutil cp -c -L copy_from_local_log.csv ~{tar_gz_filename} gs://fc-2b91e31f-1a58-4278-b043-7237df4cfcb7/compressed/
 
         # get the md5 of compressed object
         cat copy_from_local_log.csv | tail -1 | awk -F, '{print $5}' > tar_gz_file_md5sum
