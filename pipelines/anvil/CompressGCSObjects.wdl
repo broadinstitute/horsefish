@@ -79,6 +79,7 @@ task CompressObjects {
         # copy the compressed object to its final destination
         # gsutil cp -c -L copy_from_local_log.csv $outfile_name ~{tar_object}
         gsutil cp -c -L copy_from_local_log.csv ~{tar_gz_filename} ~{tar_object}
+        
     >>>
 
     runtime {
