@@ -5,7 +5,6 @@ workflow StartDragenWorkflow {
     String        ref_trigger
     String        ref_dragen_config
     String        ref_batch_config
-    String        ref_input
     String        project_id
     String        data_type
     String        dragen_version
@@ -25,7 +24,6 @@ workflow StartDragenWorkflow {
       ref_trigger       = ref_trigger,
       ref_dragen_config = ref_dragen_config,
       ref_batch_config  = ref_batch_config,
-      ref_input         = ref_input,
       project_id        = project_id,
       data_type         = data_type,
       dragen_version    = dragen_version,
@@ -72,7 +70,6 @@ task StartDragen {
       String  ref_trigger
       String  ref_dragen_config
       String  ref_batch_config
-      String  ref_input
       String  project_id
       String  data_type
       String  dragen_version
@@ -84,14 +81,12 @@ task StartDragen {
     # copy files to dragen project to trigger batch jobs - per sample
     gsutil cp ~{ref_dragen_config} "gs://~{project_id}-config/"
     gsutil cp ~{ref_batch_config} "gs://~{project_id}-trigger/~{data_type}/~{dragen_version}/"
-    gsutil cp ~{ref_input} "gs://~{project_id}-trigger/~{data_type}/input_list/"
     gsutil cp ~{ref_trigger} "gs://~{project_id}-trigger/~{data_type}/~{dragen_version}/"
     gsutil cp ~{sample_manifest} "gs://~{project_id}-trigger/~{data_type}/input_list/"
-    
+
   >>>
 
   runtime {
     docker: "gcr.io/google.com/cloudsdktool/cloud-sdk:305.0.0"
   }
-
 }
