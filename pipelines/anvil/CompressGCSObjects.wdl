@@ -71,18 +71,12 @@ task CompressObjects {
 
     command <<<
 
-        # compress objects
-        ls /cromwell_root
-
-        tar -vczf ~{tar_gz_filename} /cromwell_root/schaluva-bucket/
-
-        ls /cromwell_root
-        echo "schaluva-bucket"
-        ls /cromwell_root/schaluva-bucket/
+        # compress objects that are localized to /cromwell_root
+        cd schaluva-bucket
+        tar -vczf ~{tar_gz_filename} /.
 
         # copy the compressed object to its final destination
-        # gsutil cp -c -L copy_from_local_log.csv $outfile_name ~{tar_object}
-        gcloud storage cp ~{tar_gz_filename} ~{tar_object}
+        # gcloud storage cp ~{tar_gz_filename} ~{tar_object}
         gsutil cp -c -L copy_from_local_log.csv ~{tar_gz_filename} ~{tar_object}
 
     >>>
