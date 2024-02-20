@@ -84,7 +84,7 @@ task CompressObjects {
         gsutil cp -c -L copy_from_local_log.csv ~{tar_gz_filename} ~{tar_object}
 
         # get the md5 of compressed object
-        cat copy_from_local_log.csv | | tail -1 | awk -F, '{print $5}' > tar_gz_file_md5sum
+        cat copy_from_local_log.csv | tail -1 | awk -F, '{print $5}' > tar_gz_file_md5sum
 
     >>>
 
