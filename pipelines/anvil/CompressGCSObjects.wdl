@@ -70,15 +70,16 @@ task CompressObjects {
     String  tar_gz_filename =   basename(tar_object)
 
     command <<<
+    
         set -eo pipefail
 
+        # gets the fc- bucket id only
         zip_dir=$(echo ~{tar_object} | tr '/' '\t' | awk '{ print $2 }')
-        echo $zip_dir
-        # compress objects that are localized to /cromwell_root
-        tar -vczf ~{tar_gz_filename} -C /cromwell_root/schaluva-bucket/ .
+  
+        # compress objects that are localized to /cromwell_root/fc-/
+        tar -vczf ~{tar_gz_filename} -C /cromwell_root/${zip_dir}/ .
 
         # copy the compressed object to its final destination
-        # gcloud storage cp ~{tar_gz_filename} ~{tar_object}
         gsutil cp -c -L copy_from_local_log.csv ~{tar_gz_filename} ~{tar_object}
 
     >>>
