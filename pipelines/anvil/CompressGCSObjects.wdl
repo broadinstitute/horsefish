@@ -28,6 +28,7 @@ workflow CompressGCSObjects {
     output {
         # File    uncompressed_objects    =   QueryUncompressedObjects.uncompressed_objects_tsv
         File    copy_logs               =   CompressObjects.copy_log
+        String  md5sum                  =   CompressObjects.md5
     }
 
 }
@@ -70,7 +71,7 @@ task CompressObjects {
     String  tar_gz_filename =   basename(tar_object)
 
     command <<<
-    
+
         set -eo pipefail
 
         # gets the fc- bucket id only
@@ -82,6 +83,9 @@ task CompressObjects {
         # copy the compressed object to its final destination
         gsutil cp -c -L copy_from_local_log.csv ~{tar_gz_filename} ~{tar_object}
 
+        # get the md5 of compressed object
+        cat copy_from_local_log.csv | | tail -1 | awk -F, '{print $5}' > tar_gz_file_md5sum
+
     >>>
 
     runtime {
@@ -91,5 +95,6 @@ task CompressObjects {
 
     output {
         File    copy_log    = "copy_from_local_log.csv"
+        String  md5         = read_string("tar_gz_file_md5sum")
     }
 }
