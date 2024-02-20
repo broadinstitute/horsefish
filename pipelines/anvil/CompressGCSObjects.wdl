@@ -67,10 +67,12 @@ task CompressObjects {
         String      docker = "broadinstitute/horsefish:compress_objects_v1"
     }
 
-    String  tar_gz_filename    =   basename(tar_object)
+    String  tar_gz_filename =   basename(tar_object)
 
     command <<<
 
+        zip_dir=$(echo ~{tar_object} | tr "/" "\t" | awk "{print $2}")
+        echo $zip_dir
         # compress objects that are localized to /cromwell_root
         tar -vczf ~{tar_gz_filename} -C /cromwell_root/schaluva-bucket/ .
 
