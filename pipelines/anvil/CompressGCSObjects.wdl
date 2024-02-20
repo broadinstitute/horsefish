@@ -7,26 +7,26 @@ workflow CompressGCSObjects {
         String  bq_dataset_table
 
         String  tar_object
-        Array[String]   uncompressed_objects
+        # Array[String]   uncompressed_objects
     }
 
-    # call QueryUncompressedObjects {
-    #     input:
-    #         gcp_project         =   gcp_project,
-    #         bq_dataset          =   bq_dataset,
-    #         bq_dataset_table    =   bq_dataset_table,
-    #         tar_object          =   tar_object
-    # }
+    call QueryUncompressedObjects {
+        input:
+            gcp_project         =   gcp_project,
+            bq_dataset          =   bq_dataset,
+            bq_dataset_table    =   bq_dataset_table,
+            tar_object          =   tar_object
+    }
 
     call CompressObjects {
         input:
             tar_object              =   tar_object,
-            uncompressed_objects    =   uncompressed_objects
-            # uncompressed_objects    =   QueryUncompressedObjects.uncompressed_objects
+            # uncompressed_objects    =   uncompressed_objects
+            uncompressed_objects    =   QueryUncompressedObjects.uncompressed_objects
     }
 
     output {
-        # File    uncompressed_objects    =   QueryUncompressedObjects.uncompressed_objects_tsv
+        File    uncompressed_objects    =   QueryUncompressedObjects.uncompressed_objects_tsv
         File    copy_logs               =   CompressObjects.copy_log
         String  md5sum                  =   CompressObjects.md5
     }
@@ -55,7 +55,7 @@ task QueryUncompressedObjects {
 
     output {
         File            uncompressed_objects_tsv    =   "uncompressed_objects_to_compress.tsv"
-        Array[String]   uncompressed_objects          = read_lines("uncompressed_objects_to_compress.tsv")
+        Array[String]   uncompressed_objects        = read_lines("uncompressed_objects_to_compress.tsv")
     }
 }
 
@@ -64,7 +64,7 @@ task CompressObjects {
         String      tar_object
         Array[File] uncompressed_objects
 
-        String      docker = "broadinstitute/horsefish:compress_objects_v1"
+        String      docker = "gcr.io/google.com/cloudsdktool/google-cloud-cli:latest"
     }
 
     String  tar_gz_filename =   basename(tar_object)
