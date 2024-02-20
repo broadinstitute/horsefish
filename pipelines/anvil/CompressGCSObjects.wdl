@@ -7,24 +7,26 @@ workflow CompressGCSObjects {
         String  bq_dataset_table
 
         String  tar_object
+        Array[String]   uncompressed_objects
     }
 
-    call QueryUncompressedObjects {
-        input:
-            gcp_project         =   gcp_project,
-            bq_dataset          =   bq_dataset,
-            bq_dataset_table    =   bq_dataset_table,
-            tar_object          =   tar_object
-    }
+    # call QueryUncompressedObjects {
+    #     input:
+    #         gcp_project         =   gcp_project,
+    #         bq_dataset          =   bq_dataset,
+    #         bq_dataset_table    =   bq_dataset_table,
+    #         tar_object          =   tar_object
+    # }
 
     call CompressObjects {
         input:
             tar_object              =   tar_object,
-            uncompressed_objects    =   QueryUncompressedObjects.uncompressed_objects
+            uncompressed_objects    =   uncompressed_objects
+            # uncompressed_objects    =   QueryUncompressedObjects.uncompressed_objects
     }
 
     output {
-        File    uncompressed_objects    =   QueryUncompressedObjects.uncompressed_objects_tsv
+        # File    uncompressed_objects    =   QueryUncompressedObjects.uncompressed_objects_tsv
         File    copy_logs               =   CompressObjects.copy_log
     }
 
