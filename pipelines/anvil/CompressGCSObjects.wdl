@@ -30,7 +30,6 @@ workflow CompressGCSObjects {
         File    copy_logs               =   CompressObjects.copy_log
         String  md5sum                  =   CompressObjects.md5
     }
-
 }
 
 task QueryUncompressedObjects {
