@@ -94,6 +94,7 @@ task CompressObjects {
     runtime {
         docker: docker
         disks: "local-disk 350 SSD"
+        memory: "250 GiB"
     }
 
     output {
