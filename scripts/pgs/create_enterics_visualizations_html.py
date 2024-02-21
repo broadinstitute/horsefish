@@ -715,11 +715,13 @@ def create_HTML(data, qc_metric_info, default_thresholds, entity_table_name, gro
     # Content-container for all plots and tables
     html_string += '<div id="content-container">'
 
+    sample_id_column = "entity:" + entity_table_name + "_id"
+
     for metric, label in qc_metric_info.items():
         # Section for total metric
         html_string += f'<div id="{metric}_total"><h2>{label} per sample</h2>'
         # Total metric plot code
-        fig = create_scatter_plot(data, "entity:broad_demo_id", grouping_column, metric, label)
+        fig = create_scatter_plot(data, sample_id_column, grouping_column, metric, label)
         html_string += fig.to_html(full_html=False, include_plotlyjs='cdn', config={'responsive': True})
         # End of total metric section
         html_string += '</div>'
@@ -782,13 +784,13 @@ def create_HTML(data, qc_metric_info, default_thresholds, entity_table_name, gro
                 # Add the plot to its own container if a threshold exists
                 html_string += '<div class="plot-container">'
                 threshold = default_thresholds[metric][genus]
-                fig = create_organism_specific_plot(data, "entity:broad_demo_id", grouping_column, metric, label, organism, threshold)
+                fig = create_organism_specific_plot(data, sample_id_column, grouping_column, metric, label, organism, threshold)
                 html_string += fig.to_html(full_html=False, include_plotlyjs='cdn', config={'responsive': True})
                 html_string += '</div>' # End of plot container
                 
                 # Add the table to its own container if a threshold exists
                 html_string += '<div class="table-container">'
-                table_fig = create_organism_specific_table(data, "entity:broad_demo_id", grouping_column, metric, organism, threshold)
+                table_fig = create_organism_specific_table(data, sample_id_column, grouping_column, metric, organism, threshold)
                 html_string += table_fig.to_html(full_html=False, include_plotlyjs='cdn')
                 html_string += '</div>'  # End of table container
 
