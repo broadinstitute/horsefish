@@ -75,15 +75,14 @@ task CompressObjects {
 
         # gets the fc- bucket id only
         zip_dir=$(echo ~{tar_object} | tr '/' '\t' | awk '{ print $2 }')
+        echo "ZIP DIR = ${zip_dir}"
+        echo ${ip_dir}
   
         # compress objects that are localized to /cromwell_root/fc-/
         tar -vczf ~{tar_gz_filename} -C /cromwell_root/${zip_dir}/ .
 
         # copy the compressed object to its final destination
-        # gsutil cp -c -L copy_from_local_log.csv ~{tar_gz_filename} ~{tar_object}
-
-        # manual test to own workspace bucket instead of src
-        gsutil cp -c -L copy_from_local_log.csv ~{tar_gz_filename} gs://fc-2b91e31f-1a58-4278-b043-7237df4cfcb7/compressed/
+        gsutil cp -c -L copy_from_local_log.csv ~{tar_gz_filename} ~{tar_object}
 
 
         # get the md5 of compressed object
