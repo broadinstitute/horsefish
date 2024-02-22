@@ -76,7 +76,7 @@ task CompressObjects {
         # gets the fc- bucket id only
         zip_dir=$(echo ~{tar_object} | tr '/' '\t' | awk '{ print $2 }')
         echo "ZIP DIR = ${zip_dir}"
-        echo ${ip_dir}
+        echo ${zip_dir}
   
         # compress objects that are localized to /cromwell_root/fc-/
         tar -vczf ~{tar_gz_filename} -C /cromwell_root/${zip_dir}/ .
