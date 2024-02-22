@@ -82,7 +82,8 @@ task CompressObjects {
         tar -vczf ~{tar_gz_filename} -C /cromwell_root/${zip_dir}/ .
 
         # copy the compressed object to its final destination
-        gsutil cp -c -L copy_from_local_log.csv ~{tar_gz_filename} ~{tar_object}
+        # gsutil cp -c -L copy_from_local_log.csv ~{tar_gz_filename} ~{tar_object}
+        gcloud storage cp -L copy_from_local_log.csv ~{tar_gz_filename} ~{tar_object}
 
 
         # get the md5 of compressed object
