@@ -64,7 +64,7 @@ task CompressObjects {
         String      tar_object
         Array[File] uncompressed_objects
 
-
+        # runtime variables
         Int         memory_gb = 250
         Int         disk_size_gb = 250
         String      docker = "gcr.io/google.com/cloudsdktool/google-cloud-cli:latest"
