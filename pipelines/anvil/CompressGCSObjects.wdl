@@ -87,7 +87,7 @@ task CompressObjects {
         # copy the compressed object to its final destination
         # gsutil cp -c -L copy_from_local_log.csv ~{tar_gz_filename} ~{tar_object}
         gcloud config set storage/parallel_composite_upload_enabled False
-        gcloud storage cp -L copy_from_local_log.csv ~{tar_gz_filename} ~{tar_object}
+        gcloud storage cp -L copy_from_local_log.csv ~{tar_gz_filename} ~{tar_object} --billing-project=anvil-datastorage
 
 
         # get the md5 of compressed object
