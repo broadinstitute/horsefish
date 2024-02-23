@@ -65,8 +65,8 @@ task CompressObjects {
         Array[File] uncompressed_objects
 
 
-        Int         memory_gb
-        Int         disk_size_gb
+        Int         memory_gb = 250
+        Int         disk_size_gb = 250
         String      docker = "gcr.io/google.com/cloudsdktool/google-cloud-cli:latest"
     }
 
