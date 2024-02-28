@@ -985,7 +985,17 @@ if __name__ == "__main__":
         update_thresholds_from_file(args.thresholds_file, default_thresholds)
 
     # extracting data from inputs and formatting into dataframe
-    data = pd.DataFrame({'Sample ID': args.samples, 'Gambit Predicted Taxon': args.gambit_predicted_taxon, 'Estimated Coverage': args.est_coverage_clean, 'Number Contigs': args.number_contigs, 'Assembly Length': args.assembly_length})  
+    try:
+        data = pd.DataFrame({
+            'Sample ID': args.samples,
+            'Gambit Predicted Taxon': args.gambit_predicted_taxon,
+            'Estimated Coverage': args.est_coverage_clean,
+            'Number Contigs': args.number_contigs,
+            'Assembly Length': args.assembly_length
+        })  
+    except ValueError:
+        print("Error: Selected data does not have all estimated coverage, number contigs, assembly length, and/or predicted gambit values filled in for all rows. Make sure your selected data has all the required values filled in for all rows.")
+        exit(1)
 
     # html_string = create_HTML(data, metric_info, default_thresholds, args.datatable_name, args.grouping_col)
     html_string = create_HTML(data, metric_info, default_thresholds)
