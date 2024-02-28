@@ -993,11 +993,12 @@ if __name__ == "__main__":
             'Number Contigs': args.number_contigs,
             'Assembly Length': args.assembly_length
         })  
+    # throw custom error message if data is missing
     except ValueError:
         print("Error: Selected data does not have all estimated coverage, number contigs, assembly length, and/or predicted gambit values filled in for all rows. Make sure your selected data has all the required values filled in for all rows.")
         exit(1)
 
-    # html_string = create_HTML(data, metric_info, default_thresholds, args.datatable_name, args.grouping_col)
+    # create HTML string and all visuals
     html_string = create_HTML(data, metric_info, default_thresholds)
 
     # Write the combined HTML string to a file with UTF-8 encoding
