@@ -4,7 +4,6 @@ import logging
 import re
 from typing import Optional, Any
 from google.cloud import bigquery
-from pathlib import Path
 
 
 logging.basicConfig(
@@ -47,7 +46,7 @@ join `{self.google_project}.dragen_illumina.tasks_status` as s on a.job_id = s.j
         return sample_workflow_dict
 
     @staticmethod
-    def _get_sample_information_from_cram_path(cram_path: str) -> dict:
+    def _get_sample_information_from_cram_path(cram_path: str) -> Optional[dict]:
         """Get sample information from input cram path"""
         # assume path like gs://{bucket}/{sample set}/{project}/{data_type}/{sample}/v{version}/{sample}.cram
         match = re.search(r'gs://\S+/\S+/(\S+)/(\S+)/(\S+)/v(\d+)/\S+.cram', cram_path)
@@ -59,15 +58,7 @@ join `{self.google_project}.dragen_illumina.tasks_status` as s on a.job_id = s.j
                 'version': match.group(4),
                 'sample_id': f'{match.group(1)}.{match.group(2)}.{match.group(3)}.{match.group(4)}'
             }
-        else:
-            # TODO: remove this after using production data
-            return {
-                'project': 'fake_project',
-                'data_type': 'WGS',
-                'sample': Path(cram_path).stem,
-                'version': 1,
-                'sample_id': f'fake_project.WGS.{Path(cram_path).stem}.1'
-            }
+        return None
 
     def _create_full_samples_dicts(self, query_results: Any) -> dict:
         """Creates full dictionary where key is sample name and value is dict with all jobs info"""
@@ -77,19 +68,20 @@ join `{self.google_project}.dragen_illumina.tasks_status` as s on a.job_id = s.j
             sample_information = self._get_sample_information_from_cram_path(
                 row['input_path'].replace('s3://', 'gs://')
             )
-            sample_id = sample_information['sample_id']
-            if sample_id not in samples_dict:
-                # Create initial dict for sample
-                samples_dict[sample_id] = self._create_sample_dict(row, sample_information)
-            else:
-                # Update existing sample dict with current run information
-                sample_dict = samples_dict[sample_id]
-                # Add to job ids set
-                sample_dict['job_ids'].add(row['job_id'])
-                # If entry has latest timestamp use this status
-                if row['timestamp'] > sample_dict['latest_timestamp']:
-                    sample_dict['latest_timestamp'] = row['timestamp']
-                    sample_dict['latest_status'] = row['status']
+            if sample_information:
+                sample_id = sample_information['sample_id']
+                if sample_id not in samples_dict:
+                    # Create initial dict for sample
+                    samples_dict[sample_id] = self._create_sample_dict(row, sample_information)
+                else:
+                    # Update existing sample dict with current run information
+                    sample_dict = samples_dict[sample_id]
+                    # Add to job ids set
+                    sample_dict['job_ids'].add(row['job_id'])
+                    # If entry has latest timestamp use this status
+                    if row['timestamp'] > sample_dict['latest_timestamp']:
+                        sample_dict['latest_timestamp'] = row['timestamp']
+                        sample_dict['latest_status'] = row['status']
         return samples_dict
 
     def run(self) -> dict:
@@ -132,4 +124,4 @@ if __name__ == "__main__":
 
     samples_dict = GetSampleInfo(google_project=gcp_project).run()
     CreateSampleTsv(samples_dict=samples_dict, output_tsv=output_tsv).create_tsv()
-    # TODO: Add functionality to upload tsv to workspace
+    print(f"To upload tsv to workspace run:\npython3 scripts/import_large_tsv/import_large_tsv.py --project <workspace-project> --workspace <workspace_name> --tsv {output_tsv}")
