@@ -1,7 +1,8 @@
 from argparse import ArgumentParser, Namespace
 import google.auth
 import logging
-from typing import Any
+import re
+from typing import Optional, Any
 from google.cloud import bigquery
 from pathlib import Path
 
@@ -17,9 +18,9 @@ class GetSampleInfo:
         self.google_project = google_project
         self.bqclient = bigquery.Client(credentials=credentials, project=google_project)
 
-    def query_for_batch_job_info(self) -> Any:
+    def _query_for_batch_job_info(self) -> Any:
         """Gets all batch job info from bigquery"""
-        query_string = f"""SELECT a.job_id, a.input_path, s.status, s.timestamp
+        query_string = f"""SELECT a.job_id, a.input_path, s.status, s.timestamp, a.output_path
 FROM `{self.google_project}.dragen_illumina.job_array` as a
 join `{self.google_project}.dragen_illumina.tasks_status` as s on a.job_id = s.job_id"""
 
@@ -31,27 +32,58 @@ join `{self.google_project}.dragen_illumina.tasks_status` as s on a.job_id = s.j
         # wait for the job to complete
         return query_job.result()
 
-    def create_sample_dict(self, row: dict, sample_name: str) -> dict:
+    def _create_sample_dict(self, row: dict, sample_info: dict) -> dict:
         """Create an initial sample dict"""
-        return {
-            'sample_name': sample_name,
+        sample_workflow_dict = {
             'latest_status': row['status'],
             'latest_timestamp': row['timestamp'],
             # Start a set for job ids
-            'job_ids': {row['job_id']}
+            'job_ids': {row['job_id']},
+            # Replace changed start of cloud path
+            'output_path': row['output_path'].replace('s3://', 'gs://')
         }
+        # Add all sample info to above dict
+        sample_workflow_dict.update(sample_info)
+        return sample_workflow_dict
 
-    def create_full_samples_dicts(self, query_results: Any) -> dict:
+    @staticmethod
+    def _get_sample_information_from_cram_path(cram_path: str) -> dict:
+        """Get sample information from input cram path"""
+        # assume path like gs://{bucket}/{sample set}/{project}/{data_type}/{sample}/v{version}/{sample}.cram
+        match = re.search(r'gs://\S+/\S+/(\S+)/(\S+)/(\S+)/v(\d+)/\S+.cram', cram_path)
+        if match:
+            return {
+                'project': match.group(1),
+                'data_type': match.group(2),
+                'sample': match.group(3),
+                'version': match.group(4),
+                'sample_id': f'{match.group(1)}.{match.group(2)}.{match.group(3)}.{match.group(4)}'
+            }
+        else:
+            # TODO: remove this after using production data
+            return {
+                'project': 'fake_project',
+                'data_type': 'WGS',
+                'sample': Path(cram_path).stem,
+                'version': 1,
+                'sample_id': f'fake_project.WGS.{Path(cram_path).stem}.1'
+            }
+
+    def _create_full_samples_dicts(self, query_results: Any) -> dict:
         """Creates full dictionary where key is sample name and value is dict with all jobs info"""
         samples_dict = {}
         for row in query_results:
-            # Get sample name from cram input
-            sample_name = Path(row['input_path']).stem
-            if sample_name not in samples_dict:
-                # Create initial dict
-                samples_dict[sample_name] = self.create_sample_dict(row, sample_name)
+            # Get sample information from cram input
+            sample_information = self._get_sample_information_from_cram_path(
+                row['input_path'].replace('s3://', 'gs://')
+            )
+            sample_id = sample_information['sample_id']
+            if sample_id not in samples_dict:
+                # Create initial dict for sample
+                samples_dict[sample_id] = self._create_sample_dict(row, sample_information)
             else:
-                sample_dict = samples_dict[sample_name]
+                # Update existing sample dict with current run information
+                sample_dict = samples_dict[sample_id]
                 # Add to job ids set
                 sample_dict['job_ids'].add(row['job_id'])
                 # If entry has latest timestamp use this status
@@ -61,8 +93,28 @@ join `{self.google_project}.dragen_illumina.tasks_status` as s on a.job_id = s.j
         return samples_dict
 
     def run(self) -> dict:
-        query_results = self.query_for_batch_job_info()
-        return self.create_full_samples_dicts(query_results)
+        query_results = self._query_for_batch_job_info()
+        return self._create_full_samples_dicts(query_results)
+
+
+class CreateSampleTsv:
+    def __init__(self, samples_dict: dict, output_tsv: str):
+        self.samples_dict = samples_dict
+        self.output_tsv = output_tsv
+
+    @staticmethod
+    def _create_terra_sample_id(sample_dict):
+        return f"{sample_dict['project']}_{sample_dict['sample']}_v{sample_dict['version']}_{sample_dict['data_type']}_GCP"
+
+    def create_tsv(self):
+        logging.info(f"Creating {self.output_tsv}")
+        with open(output_tsv, 'w') as f:
+            f.write('entity:sample_id\tattempts\tlatest_status\toutput_path\tlast_attempt\n')
+            for sample_dict in samples_dict.values():
+                f.write(
+                    f"{self._create_terra_sample_id(sample_dict)}\t{len(sample_dict['job_ids'])}\t" +
+                    f"{sample_dict['latest_status']}\t{sample_dict['output_path']}\t{sample_dict['latest_timestamp']}\n"
+                )
 
 
 def get_args() -> Namespace:
@@ -70,12 +122,14 @@ def get_args() -> Namespace:
 
     parser.add_argument('-g', '--gcp_project', type=str, help='Google project used for BigQuery.',
                         choices=['gp-cloud-dragen-dev', 'gp-cloud-dragen-prod'], required=True)
+    parser.add_argument('-t', '--output_tsv', type=str, help='path for output sample tsv', required=True)
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = get_args()
-    gcp_project = args.gcp_project
+    gcp_project, output_tsv = args.gcp_project, args.output_tsv
 
     samples_dict = GetSampleInfo(google_project=gcp_project).run()
-    # TODO: Once we figure out what tables will look like the next step is create new samples tsv and uploading to workspace
+    CreateSampleTsv(samples_dict=samples_dict, output_tsv=output_tsv).create_tsv()
+    # TODO: Add functionality to upload tsv to workspace
