@@ -56,7 +56,7 @@ join `{self.google_project}.dragen_illumina.tasks_status` as s on a.job_id = s.j
                 sample_dict['job_ids'].add(row['job_id'])
                 # If entry has latest timestamp use this status
                 if row['timestamp'] > sample_dict['latest_timestamp']:
-                    sample_dict['timestamp'] = row['timestamp']
+                    sample_dict['latest_timestamp'] = row['timestamp']
                     sample_dict['latest_status'] = row['status']
         return samples_dict
 
