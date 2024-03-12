@@ -12,16 +12,21 @@ logging.basicConfig(
 
 
 class GetSampleInfo:
-    def __init__(self, google_project: str):
+    def __init__(self, google_project: str, minimum_run_date: str, maximum_run_date: str):
         credentials, your_project_id = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
         self.google_project = google_project
         self.bqclient = bigquery.Client(credentials=credentials, project=google_project)
+        self.minimum_run_date = minimum_run_date
+        self.maximum_run_date = maximum_run_date
 
     def _query_for_batch_job_info(self) -> Any:
         """Gets all batch job info from bigquery"""
         query_string = f"""SELECT a.job_id, a.input_path, s.status, s.timestamp, a.output_path
-FROM `{self.google_project}.dragen_illumina.job_array` as a
-join `{self.google_project}.dragen_illumina.tasks_status` as s on a.job_id = s.job_id"""
+FROM `gp-cloud-dragen-dev.dragen_illumina.job_array` as a
+join `gp-cloud-dragen-dev.dragen_illumina.tasks_status` as s on a.job_id = s.job_id
+  and CAST(a.batch_task_index AS STRING)=REGEXP_EXTRACT(task_id, r'group0-(\d+)')
+where DATETIME "{self.maximum_run_date}" > a.timestamp
+and DATETIME "{self.minimum_run_date}" < a.timestamp"""
 
         logging.info(f"Querying for jobs status")
 
@@ -115,13 +120,15 @@ def get_args() -> Namespace:
     parser.add_argument('-g', '--gcp_project', type=str, help='Google project used for BigQuery.',
                         choices=['gp-cloud-dragen-dev', 'gp-cloud-dragen-prod'], required=True)
     parser.add_argument('-t', '--output_tsv', type=str, help='path for output sample tsv', required=True)
+    parser.add_argument('-a', '--min_start_date', type=str, help='tasks created after this time. YYYY-MM-DD', default="2008-10-30")
+    parser.add_argument('-b', '--max_start_date', type=str, help='tasks created before this time. YYYY-MM-DD', default="2028-10-30")
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = get_args()
-    gcp_project, output_tsv = args.gcp_project, args.output_tsv
+    gcp_project, output_tsv, min_start_date, max_start_date = args.gcp_project, args.output_tsv, args.min_start_date, args.max_start_date
 
-    samples_dict = GetSampleInfo(google_project=gcp_project).run()
+    samples_dict = GetSampleInfo(google_project=gcp_project, maximum_run_date=max_start_date, minimum_run_date=min_start_date).run()
     CreateSampleTsv(samples_dict=samples_dict, output_tsv=output_tsv).create_tsv()
     print(f"To upload tsv to workspace run:\npython3 scripts/import_large_tsv/import_large_tsv.py --project <workspace-project> --workspace <workspace_name> --tsv {output_tsv}")
