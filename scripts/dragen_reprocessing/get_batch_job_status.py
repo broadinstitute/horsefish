@@ -22,8 +22,8 @@ class GetSampleInfo:
     def _query_for_batch_job_info(self) -> Any:
         """Gets all batch job info from bigquery"""
         query_string = f"""SELECT a.job_id, a.input_path, s.status, s.timestamp, a.output_path
-FROM `gp-cloud-dragen-dev.dragen_illumina.job_array` as a
-join `gp-cloud-dragen-dev.dragen_illumina.tasks_status` as s on a.job_id = s.job_id
+FROM `{self.google_project}.dragen_illumina.job_array` as a
+join `{self.google_project}.dragen_illumina.tasks_status` as s on a.job_id = s.job_id
   and CAST(a.batch_task_index AS STRING)=REGEXP_EXTRACT(task_id, r'group0-(\d+)')
 where DATETIME "{self.maximum_run_date}" > a.timestamp
 and DATETIME "{self.minimum_run_date}" < a.timestamp"""
