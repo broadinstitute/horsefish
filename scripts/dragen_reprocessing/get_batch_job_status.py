@@ -21,7 +21,7 @@ class GetSampleInfo:
 
     def _query_for_batch_job_info(self) -> Any:
         """Gets all batch job info from bigquery"""
-        query_string = f"""SELECT a.job_id, a.input_path, s.status, s.timestamp, a.output_path
+        query_string = f"""SELECT a.job_id, a.input_path, s.status, s.task_id, s.timestamp, a.output_path
 FROM `{self.google_project}.dragen_illumina.job_array` as a
 join `{self.google_project}.dragen_illumina.tasks_status` as s on a.job_id = s.job_id
   and CAST(a.batch_task_index AS STRING)=REGEXP_EXTRACT(task_id, r'group0-(\d+)')
@@ -41,6 +41,7 @@ and DATETIME "{self.minimum_run_date}" < a.timestamp"""
         sample_workflow_dict = {
             'latest_status': row['status'],
             'latest_timestamp': row['timestamp'],
+            'latest_task_id': row['task_id'],
             # Start a set for job ids
             'job_ids': {row['job_id']},
             # Replace changed start of cloud path
@@ -87,6 +88,7 @@ and DATETIME "{self.minimum_run_date}" < a.timestamp"""
                     if row['timestamp'] > sample_dict['latest_timestamp']:
                         sample_dict['latest_timestamp'] = row['timestamp']
                         sample_dict['latest_status'] = row['status']
+                        sample_dict['latest_task_id'] = row['task_id']
         return samples_dict
 
     def run(self) -> dict:
@@ -106,11 +108,12 @@ class CreateSampleTsv:
     def create_tsv(self):
         logging.info(f"Creating {self.output_tsv}")
         with open(output_tsv, 'w') as f:
-            f.write('entity:sample_id\tattempts\tlatest_status\toutput_path\tlast_attempt\n')
+            f.write('entity:sample_id\tattempts\tlatest_status\tlatest_task_id\toutput_path\tlast_attempt\n')
             for sample_dict in samples_dict.values():
                 f.write(
                     f"{self._create_terra_sample_id(sample_dict)}\t{len(sample_dict['job_ids'])}\t" +
-                    f"{sample_dict['latest_status']}\t{sample_dict['output_path']}\t{sample_dict['latest_timestamp']}\n"
+                    f"{sample_dict['latest_status']}\t{sample_dict['latest_task_id']}\t" +
+                    f"{sample_dict['output_path']}\t{sample_dict['latest_timestamp']}\n"
                 )
 
 
