@@ -2,9 +2,11 @@ version 1.0
 
 workflow StartDragenWorkflow {
   input {
+    String        research_project
     String        ref_trigger
     String        ref_dragen_config
     String        ref_batch_config
+    String        output_bucket
     String        project_id
     String        data_type
     String        dragen_version
@@ -17,6 +19,13 @@ workflow StartDragenWorkflow {
     input:
       cram_paths  = cram_paths,
       sample_ids  = sample_ids
+  }
+
+  call CreateDragenConfig {
+    input:
+      rp                = research_project,
+      ref_dragen_config = ref_dragen_config,
+      output_bucket     = output_bucket
   }
 
   call StartDragen {
@@ -33,7 +42,6 @@ workflow StartDragenWorkflow {
   output {
     File sample_manifest  = CreateSampleManifest.reprocessing_manifest
   }
-
 }
 
 task CreateSampleManifest {
@@ -64,6 +72,39 @@ task CreateSampleManifest {
     File reprocessing_manifest = "sample_processing_manifest.txt"
   }
 }
+
+
+task CreateDragenConfig {
+  input {
+    String ref_dragen_config
+    String output_bucket
+    String rp
+  }
+
+  command <<<
+    # write output_dir to ref_dragen_config
+    # current: s3://fc-236ab095-52ca-4541-bcaa-795635feccd9/repro_output/COLLAB_SAMPLE_ID/<date>
+    # desired: s3://output_bucket/rp/collaborator_sample_id/<date>
+
+    INPUT_FILE=~{ref_dragen_config}
+    OUTPUT_BUCKET=~{output_bucket}
+    RP=~{rp}
+    OUTPUT_PATH=${OUTPUT_BUCKET}/${RP}
+
+    # create tmp file and copy original to tmp
+    touch "${INPUT_FILE}.tmp"
+    cp "$INPUT_FILE" "${INPUT_FILE}.tmp"
+
+    # now overwrite __OUT_PATH__ with OUTPUT_PATH
+    sed 's|__OUT_PATH__|'"$OUTPUT_PATH"'|g;
+        ' "${INPUT_FILE}.tmp" > ~{ref_dragen_config}
+  >>>
+
+  runtime {
+    docker: "gcr.io/google.com/cloudsdktool/cloud-sdk:305.0.0"
+  }
+}
+
 
 task StartDragen {
   input {
