@@ -3,9 +3,9 @@ version 1.0
 workflow StartDragenWorkflow {
   input {
     String        research_project
-    String        ref_trigger
-    String        ref_dragen_config
-    String        ref_batch_config
+    File          ref_trigger
+    File          ref_dragen_config
+    File          ref_batch_config
     String        output_bucket
     String        project_id
     String        data_type
@@ -76,7 +76,7 @@ task CreateSampleManifest {
 
 task CreateDragenConfig {
   input {
-    String ref_dragen_config
+    File ref_dragen_config
     String output_bucket
     String rp
   }
@@ -86,18 +86,14 @@ task CreateDragenConfig {
     # current: s3://fc-236ab095-52ca-4541-bcaa-795635feccd9/repro_output/COLLAB_SAMPLE_ID/<date>
     # desired: s3://output_bucket/rp/collaborator_sample_id/<date>
 
-    INPUT_FILE=~{ref_dragen_config}
-    OUTPUT_BUCKET=~{output_bucket}
-    RP=~{rp}
-    OUTPUT_PATH=${OUTPUT_BUCKET}/${RP}
+    OUTPUT_PATH=~{output_bucket}/~{rp}
 
     # create tmp file and copy original to tmp
-    touch "${INPUT_FILE}.tmp"
-    cp "$INPUT_FILE" "${INPUT_FILE}.tmp"
+    cp ~{ref_dragen_config} ~{ref_dragen_config}.tmp
 
     # now overwrite __OUT_PATH__ with OUTPUT_PATH
     sed 's|__OUT_PATH__|'"$OUTPUT_PATH"'|g;
-        ' "${INPUT_FILE}.tmp" > ~{ref_dragen_config}
+        ' ~{ref_dragen_config}.tmp > ~{ref_dragen_config}
   >>>
 
   runtime {
@@ -108,9 +104,9 @@ task CreateDragenConfig {
 
 task StartDragen {
   input {
-      String  ref_trigger
-      String  ref_dragen_config
-      String  ref_batch_config
+      File    ref_trigger
+      File    ref_dragen_config
+      File    ref_batch_config
       String  project_id
       String  data_type
       String  dragen_version
