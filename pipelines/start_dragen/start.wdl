@@ -31,7 +31,7 @@ workflow StartDragenWorkflow {
   call StartDragen {
     input:
       ref_trigger       = ref_trigger,
-      ref_dragen_config = ref_dragen_config,
+      dragen_config     = CreateDragenConfig.final_dragen_config,
       ref_batch_config  = ref_batch_config,
       project_id        = project_id,
       data_type         = data_type,
@@ -41,6 +41,7 @@ workflow StartDragenWorkflow {
 
   output {
     File sample_manifest  = CreateSampleManifest.reprocessing_manifest
+    File dragen_config    = CreateDragenConfig.final_dragen_config
   }
 }
 
@@ -108,7 +109,7 @@ task CreateDragenConfig {
 task StartDragen {
   input {
       File    ref_trigger
-      File    final_dragen_config
+      File    dragen_config
       File    ref_batch_config
       String  project_id
       String  data_type
@@ -119,7 +120,7 @@ task StartDragen {
   command <<<
 
     # copy files to dragen project to trigger batch jobs - per sample
-    gsutil cp ~{final_dragen_config} "gs://~{project_id}-config/"
+    gsutil cp ~{dragen_config} "gs://~{project_id}-config/"
     gsutil cp ~{ref_batch_config} "gs://~{project_id}-trigger/~{data_type}/~{dragen_version}/"
     gsutil cp ~{ref_trigger} "gs://~{project_id}-trigger/~{data_type}/~{dragen_version}/"
     gsutil cp ~{sample_manifest} "gs://~{project_id}-trigger/~{data_type}/input_list/"
