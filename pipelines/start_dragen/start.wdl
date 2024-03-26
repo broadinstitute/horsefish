@@ -88,16 +88,19 @@ task CreateDragenConfig {
 
     OUTPUT_PATH=~{output_bucket}/~{rp}
 
-    # create tmp file and copy original to tmp
-    cp ~{ref_dragen_config} ~{ref_dragen_config}.tmp
+    #    # create tmp file and copy original to tmp
+    #    cp ~{ref_dragen_config} ~{ref_dragen_config}.tmp
 
     # now overwrite __OUT_PATH__ with OUTPUT_PATH
     sed 's|__OUT_PATH__|'"$OUTPUT_PATH"'|g;
-        ' ~{ref_dragen_config}.tmp > ~{ref_dragen_config}
+        ' ~{ref_dragen_config} > dragen_config.json
   >>>
 
   runtime {
     docker: "gcr.io/google.com/cloudsdktool/cloud-sdk:305.0.0"
+  }
+  output {
+    File final_dragen_config = "dragen_config.json"
   }
 }
 
@@ -105,7 +108,7 @@ task CreateDragenConfig {
 task StartDragen {
   input {
       File    ref_trigger
-      File    ref_dragen_config
+      File    final_dragen_config
       File    ref_batch_config
       String  project_id
       String  data_type
@@ -116,7 +119,7 @@ task StartDragen {
   command <<<
 
     # copy files to dragen project to trigger batch jobs - per sample
-    gsutil cp ~{ref_dragen_config} "gs://~{project_id}-config/"
+    gsutil cp ~{final_dragen_config} "gs://~{project_id}-config/"
     gsutil cp ~{ref_batch_config} "gs://~{project_id}-trigger/~{data_type}/~{dragen_version}/"
     gsutil cp ~{ref_trigger} "gs://~{project_id}-trigger/~{data_type}/~{dragen_version}/"
     gsutil cp ~{sample_manifest} "gs://~{project_id}-trigger/~{data_type}/input_list/"
