@@ -2,7 +2,6 @@ version 1.0
 
 workflow StartDragenWorkflow {
   input {
-    String        research_project
     File          ref_trigger
     File          ref_dragen_config
     File          ref_batch_config
@@ -12,7 +11,7 @@ workflow StartDragenWorkflow {
     String        dragen_version
     Array[String] cram_paths
     Array[String] sample_ids
-
+    Array[String] rp
   }
 
   call CreateSampleManifest {
@@ -23,7 +22,7 @@ workflow StartDragenWorkflow {
 
   call CreateDragenConfig {
     input:
-      rp                = research_project,
+      rp                = rp,
       ref_dragen_config = ref_dragen_config,
       output_bucket     = output_bucket
   }
@@ -77,9 +76,9 @@ task CreateSampleManifest {
 
 task CreateDragenConfig {
   input {
-    File ref_dragen_config
-    String output_bucket
-    String rp
+    File          ref_dragen_config
+    String        output_bucket
+    Array[String] rp
   }
 
   command <<<
