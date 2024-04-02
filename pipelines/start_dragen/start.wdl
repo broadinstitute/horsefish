@@ -98,7 +98,7 @@ task CreateConfigs {
 
     # now overwrite __DATA_TYPE__ with data_type
     sed 's|__DATA_TYPE__|'"~{data_type}"'|g;
-        ' ~{ref_batch_config} > dragen_config.json
+        ' ~{ref_batch_config} > batch_config.json
   >>>
 
   runtime {
