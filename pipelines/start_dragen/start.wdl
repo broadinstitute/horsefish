@@ -2,6 +2,7 @@ version 1.0
 
 workflow StartDragenWorkflow {
   input {
+    String        research_project
     File          ref_trigger
     File          ref_dragen_config
     File          ref_batch_config
@@ -11,7 +12,6 @@ workflow StartDragenWorkflow {
     String        dragen_version
     Array[String] cram_paths
     Array[String] sample_ids
-    Array[String] rp
   }
 
   call CreateSampleManifest {
@@ -20,18 +20,20 @@ workflow StartDragenWorkflow {
       sample_ids  = sample_ids
   }
 
-  call CreateDragenConfig {
+  call CreateConfigs {
     input:
-      rp                = rp,
+      rp                = research_project,
+      data_type         = data_type,
       ref_dragen_config = ref_dragen_config,
-      output_bucket     = output_bucket
+      ref_batch_config  = ref_batch_config,
+      output_bucket     = output_bucket,
   }
 
   call StartDragen {
     input:
       ref_trigger       = ref_trigger,
-      dragen_config     = CreateDragenConfig.final_dragen_config,
-      ref_batch_config  = ref_batch_config,
+      dragen_config     = CreateConfigs.final_dragen_config,
+      batch_config      = CreateConfigs.final_batch_config,
       project_id        = project_id,
       data_type         = data_type,
       dragen_version    = dragen_version,
@@ -40,7 +42,8 @@ workflow StartDragenWorkflow {
 
   output {
     File sample_manifest  = CreateSampleManifest.reprocessing_manifest
-    File dragen_config    = CreateDragenConfig.final_dragen_config
+    File dragen_config    = CreateConfigs.final_dragen_config
+    File batch_config     = CreateConfigs.final_batch_config
   }
 }
 
@@ -74,26 +77,28 @@ task CreateSampleManifest {
 }
 
 
-task CreateDragenConfig {
+task CreateConfigs {
   input {
-    File          ref_dragen_config
-    String        output_bucket
-    Array[String] rp
+    File ref_dragen_config
+    File ref_batch_config
+    String output_bucket
+    String rp
+    String data_type
   }
 
   command <<<
-    # write output_dir to ref_dragen_config
-    # current: s3://fc-236ab095-52ca-4541-bcaa-795635feccd9/repro_output/COLLAB_SAMPLE_ID/<date>
-    # desired: s3://output_bucket/rp/collaborator_sample_id/<date>
+    # writes output_dir to ref_dragen_config
+    # writes data_type (cram, bge) to ref_batch_config
 
     OUTPUT_PATH=~{output_bucket}/~{rp}
-
-    #    # create tmp file and copy original to tmp
-    #    cp ~{ref_dragen_config} ~{ref_dragen_config}.tmp
 
     # now overwrite __OUT_PATH__ with OUTPUT_PATH
     sed 's|__OUT_PATH__|'"$OUTPUT_PATH"'|g;
         ' ~{ref_dragen_config} > dragen_config.json
+
+    # now overwrite __DATA_TYPE__ with data_type
+    sed 's|__DATA_TYPE__|'"~{data_type}"'|g;
+        ' ~{ref_batch_config} > dragen_config.json
   >>>
 
   runtime {
@@ -101,6 +106,7 @@ task CreateDragenConfig {
   }
   output {
     File final_dragen_config = "dragen_config.json"
+    File final_batch_config = "batch_config.json"
   }
 }
 
@@ -109,7 +115,7 @@ task StartDragen {
   input {
       File    ref_trigger
       File    dragen_config
-      File    ref_batch_config
+      File    batch_config
       String  project_id
       String  data_type
       String  dragen_version
@@ -120,7 +126,7 @@ task StartDragen {
 
     # copy files to dragen project to trigger batch jobs - per sample
     gsutil cp ~{dragen_config} "gs://~{project_id}-config/"
-    gsutil cp ~{ref_batch_config} "gs://~{project_id}-trigger/~{data_type}/~{dragen_version}/"
+    gsutil cp ~{batch_config} "gs://~{project_id}-trigger/~{data_type}/~{dragen_version}/"
     gsutil cp ~{ref_trigger} "gs://~{project_id}-trigger/~{data_type}/~{dragen_version}/"
     gsutil cp ~{sample_manifest} "gs://~{project_id}-trigger/~{data_type}/input_list/"
 
