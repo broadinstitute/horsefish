@@ -24,10 +24,14 @@ EXPECTED_METRICS = [
     CONTAMINATION_RATE, CHIMERA_RATE, MAPPED_READS, PERCENT_CALLABILITY
 ]
 Q1_COVERAGE = {
+    'file_extension': 'qc-coverage-region-1_coverage_metrics.csv',
     'file_name': '{sample}.qc-coverage-region-1_coverage_metrics.csv',
     'metrics': {
+        # Name of metrics in csv file
         'PCT of QC coverage region with coverage [ 10x: inf)': {
+            # What it should be called in tdr
             'tdr_name': PERCENTAGE_TARGET_BASES_AT_10X,
+            # The type of metrics, first column in csv file
             'metric_type': 'COVERAGE SUMMARY'
         },
         'Average alignment coverage over QC coverage region': {
@@ -37,6 +41,7 @@ Q1_COVERAGE = {
     }
 }
 Q3_COVERAGE = {
+    'file_extension': 'qc-coverage-region-3_coverage_metrics.csv',
     'file_name': '{sample}.qc-coverage-region-3_coverage_metrics.csv',
     'metrics': {
         'PCT of QC coverage region with coverage [  1x: inf)': {
@@ -51,6 +56,7 @@ Q3_COVERAGE = {
 }
 
 MAPPING_METRICS = {
+    'file_extension': 'mapping_metrics.csv',
     'file_name': '{sample}.mapping_metrics.csv',
     'metrics': {
         'Estimated sample contamination': {
@@ -68,6 +74,7 @@ MAPPING_METRICS = {
     }
 }
 VC_METRICS = {
+    'file_extension': 'vc_metrics.csv',
     'file_name': '{sample}.vc_metrics.csv',
     'metrics': {
         'Percent Callability': {
@@ -111,12 +118,13 @@ class GetMetricsFilesContents:
 
 
 class GetMetrics:
-    def __init__(self, metrics_contents: list[str], metrics_dict: dict):
+    def __init__(self, metrics_contents: list[str], file_info_dict: dict):
         self.metrics_contents = metrics_contents
-        self.metrics_dict = metrics_dict
+        self.file_info_dict = file_info_dict
+        self.metrics_dict = file_info_dict['metrics']
 
     def get_metrics(self) -> dict:
-        metrics_dict = {}
+        found_metrics_dict = {}
         for line in self.metrics_contents:
             if line:
                 split_line = line.split(',')
@@ -126,8 +134,15 @@ class GetMetrics:
                 expected_metric_dict = self.metrics_dict.get(metric_key)
                 if expected_metric_dict:
                     if expected_metric_dict['metric_type'] == metric_type:
-                        metrics_dict[expected_metric_dict['tdr_name']] = value
-        return metrics_dict
+                        found_metrics_dict[expected_metric_dict['tdr_name']] = value
+        # Get list of the tdr names of expected found metrics
+        missing_metrics = [
+            f"{metric_name}: {metric_dict['tdr_name']}" for metric_name, metric_dict in self.metrics_dict.items()
+            if metric_dict['tdr_name'] not in found_metrics_dict.keys()
+        ]
+        if missing_metrics:
+            logging.error(f"{self.file_info_dict['file_extension']} Missing (metrics file key: tdr name): {list(missing_metrics)}")
+        return found_metrics_dict
 
 
 if __name__ == "__main__":
@@ -139,11 +154,12 @@ if __name__ == "__main__":
     ).get_metrics_files()
 
     full_metrics_dict = {}
-    full_metrics_dict.update(GetMetrics(mapping_metrics, MAPPING_METRICS['metrics']).get_metrics())
-    full_metrics_dict.update(GetMetrics(q1_coverage_reports, Q1_COVERAGE['metrics']).get_metrics())
-    full_metrics_dict.update(GetMetrics(q3_coverage_reports, Q3_COVERAGE['metrics']).get_metrics())
-    full_metrics_dict.update(GetMetrics(vc_metrics, VC_METRICS['metrics']).get_metrics())
+    full_metrics_dict.update(GetMetrics(mapping_metrics, MAPPING_METRICS).get_metrics())
+    full_metrics_dict.update(GetMetrics(q1_coverage_reports, Q1_COVERAGE).get_metrics())
+    full_metrics_dict.update(GetMetrics(q3_coverage_reports, Q3_COVERAGE).get_metrics())
+    full_metrics_dict.update(GetMetrics(vc_metrics, VC_METRICS).get_metrics())
     if any([metric_name not in full_metrics_dict for metric_name in EXPECTED_METRICS]):
-        raise Exception(f"Missing metrics in output. Missing: {list(set(EXPECTED_METRICS) - set(full_metrics_dict.keys()))}")
+        missing_metrics = list(set(EXPECTED_METRICS) - set(full_metrics_dict.keys()))
+        raise Exception(f"Missing metrics in output: {missing_metrics}")
     # TODO: WHAT SHOULD WE DO WITH OUTPUTS?
     print(full_metrics_dict)
