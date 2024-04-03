@@ -1,7 +1,7 @@
 """Get all needed metrics from a dragen run.
 
 Usage:
-    > python3 get_dragen_metrics.py -o DRAGEN_OUTPUT -s SAMPLE_NAME STAGING_AREA_PATH"""
+    > python3 get_dragen_metrics.py -o DRAGEN_OUTPUT_PATH -s SAMPLE_NAME"""
 
 from argparse import ArgumentParser, Namespace
 from google.cloud import storage
@@ -81,7 +81,7 @@ VC_METRICS = {
 def get_args() -> Namespace:
     # Set up argument parser
     parser = ArgumentParser(description="Get dragen metrics from output metric files")
-    parser.add_argument('-o', '--output_path', required=True, help="Path to dragen output files")
+    parser.add_argument('-o', '--dragen_output_path', required=True, help="Path to dragen output files")
     parser.add_argument("-s", "--sample_name", required=True, help="Sample name")
     return parser.parse_args()
 
@@ -132,7 +132,7 @@ class GetMetrics:
 
 if __name__ == "__main__":
     args = get_args()
-    output_path, sample_name = args.output_path, args.sample_name
+    output_path, sample_name = args.dragen_output_path, args.sample_name
     mapping_metrics, q1_coverage_reports, q3_coverage_reports, vc_metrics = GetMetricsFilesContents(
         output_path=output_path,
         sample_name=sample_name
