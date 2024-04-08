@@ -121,7 +121,7 @@ def get_args() -> Namespace:
     parser = ArgumentParser(description='Query BQ table with GCS bucket object metadata inventory.')
 
     parser.add_argument('-g', '--gcp_project', type=str, help='Google project used for BigQuery.',
-                        choices=['gp-cloud-dragen-dev', 'gp-cloud-dragen-prod'], required=True)
+                        choices=['gp-cloud-dragen-dev', 'gp-cloud-dragen-prod', 'dsp-cloud-dragen-stanley'], required=True)
     parser.add_argument('-t', '--output_tsv', type=str, help='path for output sample tsv', required=True)
     parser.add_argument('-a', '--min_start_date', type=str, help='tasks created after this time. YYYY-MM-DD', default="2008-10-30")
     parser.add_argument('-b', '--max_start_date', type=str, help='tasks created before this time. YYYY-MM-DD', default="2028-10-30")
