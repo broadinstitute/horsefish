@@ -3,6 +3,7 @@ import google.auth
 import logging
 import re
 from typing import Optional, Any
+from dateutil.relativedelta import relativedelta
 from google.cloud import bigquery
 
 
@@ -21,7 +22,8 @@ class GetSampleInfo:
 
     def _query_for_batch_job_info(self) -> Any:
         """Gets all batch job info from bigquery"""
-        query_string = f"""SELECT a.job_id, a.input_path, s.status, s.task_id, s.timestamp, a.output_path
+        query_string = f"""SELECT a.job_id, a.input_path, s.status, s.task_id, a.timestamp as submit_time, a.output_path,
+  s.timestamp as task_time, s.timestamp - a.timestamp as total_running_time
 FROM `{self.google_project}.dragen_illumina.job_array` as a
 join `{self.google_project}.dragen_illumina.tasks_status` as s on a.job_id = s.job_id
   and CAST(a.batch_task_index AS STRING)=REGEXP_EXTRACT(task_id, r'group0-(\d+)')
@@ -40,8 +42,9 @@ and DATETIME "{self.minimum_run_date}" < a.timestamp"""
         """Create an initial sample dict"""
         sample_workflow_dict = {
             'latest_status': row['status'],
-            'latest_timestamp': row['timestamp'],
+            'latest_timestamp': row['task_time'],
             'latest_task_id': row['task_id'],
+            'latest_running_time': self._create_formatted_relative_time(row['total_running_time']),
             # Start a set for job ids
             'job_ids': {row['job_id']},
             # Replace changed start of cloud path
@@ -66,6 +69,12 @@ and DATETIME "{self.minimum_run_date}" < a.timestamp"""
             }
         return None
 
+    @staticmethod
+    def _create_formatted_relative_time(time_diff: relativedelta) -> str:
+        """Create formatted string for relative time"""
+        # Format the output as "HH:MM:SS"
+        return f"{time_diff.hours:02}:{time_diff.minutes:02}:{time_diff.seconds:02}"
+
     def _create_full_samples_dicts(self, query_results: Any) -> dict:
         """Creates full dictionary where key is sample name and value is dict with all jobs info"""
         samples_dict = {}
@@ -85,10 +94,11 @@ and DATETIME "{self.minimum_run_date}" < a.timestamp"""
                     # Add to job ids set
                     sample_dict['job_ids'].add(row['job_id'])
                     # If entry has latest timestamp use this status
-                    if row['timestamp'] > sample_dict['latest_timestamp']:
-                        sample_dict['latest_timestamp'] = row['timestamp']
+                    if row['task_time'] > sample_dict['latest_timestamp']:
+                        sample_dict['latest_timestamp'] = row['task_time']
                         sample_dict['latest_status'] = row['status']
                         sample_dict['latest_task_id'] = row['task_id']
+                        sample_dict['latest_running_time'] = self._create_formatted_relative_time(row['total_running_time'])
         return samples_dict
 
     def run(self) -> dict:
@@ -108,12 +118,13 @@ class CreateSampleTsv:
     def create_tsv(self):
         logging.info(f"Creating {self.output_tsv}")
         with open(output_tsv, 'w') as f:
-            f.write('entity:sample_id\tattempts\tlatest_status\tlatest_task_id\toutput_path\tlast_attempt\n')
+            f.write('entity:sample_id\tattempts\tlatest_status\tlatest_task_id\toutput_path\tlast_attempt\trunning_time\n')
             for sample_dict in samples_dict.values():
                 f.write(
                     f"{self._create_terra_sample_id(sample_dict)}\t{len(sample_dict['job_ids'])}\t" +
                     f"{sample_dict['latest_status']}\t{sample_dict['latest_task_id']}\t" +
-                    f"{sample_dict['output_path']}\t{sample_dict['latest_timestamp']}\n"
+                    f"{sample_dict['output_path']}\t{sample_dict['latest_timestamp']}\t" +
+                    f"{str(sample_dict['latest_running_time'])}\n"
                 )
 
 
