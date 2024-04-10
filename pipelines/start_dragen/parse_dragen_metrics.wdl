@@ -37,7 +37,7 @@ task get_metrics {
 
     command <<<
 
-        python3 ./scripts/get_dragen_metrics.py -s ~{sample_name} -o ~{output_path}
+        python3 scripts/get_dragen_metrics.py -s ~{sample_name} -o ~{output_path}
 
     >>>
 
