@@ -99,6 +99,7 @@ and DATETIME "{self.minimum_run_date}" < a.timestamp"""
                         sample_dict['latest_timestamp'] = row['task_time']
                         sample_dict['latest_status'] = row['status']
                         sample_dict['latest_task_id'] = row['task_id']
+                        sample_dict['output_path'] = row['output_path'].replace('s3://', 'gs://')
                         sample_dict['latest_running_time'] = self._create_formatted_relative_time(row['total_running_time'])
         return samples_dict
 
