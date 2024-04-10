@@ -30,13 +30,13 @@ task get_metrics {
 
     input {
         String  sample_name
-        String output_path
+        String  output_path
         String  docker_name
     }
 
     command {
 
-        python3 scripts/get_dragen_metrics.py -s ~{sample_name} -o ~{output_path}
+        python3 /scripts/get_dragen_metrics.py -s ~{sample_name} -o ~{output_path}
 
     }
 

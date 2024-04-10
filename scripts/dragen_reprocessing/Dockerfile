@@ -23,7 +23,7 @@ RUN rm /usr/bin/lsb_release \
     && apt-get install python3-pip idle3 -y \
     && python3 -m pip install --no-cache-dir --upgrade pip
 
-COPY get_dragen_metrics.py ./scripts/get_dragen_metrics.py
+COPY get_dragen_metrics.py /scripts/get_dragen_metrics.py
 
 COPY requirements.txt .
 RUN pip3 install -r requirements.txt
