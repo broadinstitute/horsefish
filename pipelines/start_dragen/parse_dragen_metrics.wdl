@@ -4,14 +4,14 @@ workflow parse_dragen_metrics {
     input {
         String  sample_name
         String  output_path
-        String  docker
+        String  docker_name
     }
 
     call get_metrics {
         input:
             sample_name = sample_name,
             output_path = output_path,
-            docker = docker
+            docker_name = docker_name
     }
 
     output {
@@ -31,8 +31,7 @@ task get_metrics {
     input {
         String  sample_name
         String output_path
-
-        String  docker
+        String  docker_name
     }
 
     command <<<
@@ -42,7 +41,7 @@ task get_metrics {
     >>>
 
     runtime {
-        docker: docker
+        docker: docker_name
     }
 
     output {
