@@ -34,7 +34,7 @@ task get_metrics {
         String  docker_name
     }
 
-    command{
+    command {
 
         python3 scripts/get_dragen_metrics.py -s ~{sample_name} -o ~{output_path}
 
