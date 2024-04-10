@@ -67,6 +67,7 @@ and DATETIME "{self.minimum_run_date}" < a.timestamp"""
                 'version': match.group(4),
                 'sample_id': f'{match.group(1)}.{match.group(2)}.{match.group(3)}.{match.group(4)}'
             }
+
         return None
 
     @staticmethod
@@ -113,7 +114,7 @@ class CreateSampleTsv:
 
     @staticmethod
     def _create_terra_sample_id(sample_dict):
-        return f"{sample_dict['project']}_{sample_dict['sample']}_v{sample_dict['version']}_{sample_dict['data_type']}_GCP"
+        return f"{sample_dict['project']}_{sample_dict['sample']}_v{sample_dict['version']}_{sample_dict['data_type']}_GCP".replace(".", "_")
 
     def create_tsv(self):
         logging.info(f"Creating {self.output_tsv}")
