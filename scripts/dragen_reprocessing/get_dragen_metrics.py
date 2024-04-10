@@ -161,5 +161,8 @@ if __name__ == "__main__":
     if any([metric_name not in full_metrics_dict for metric_name in EXPECTED_METRICS]):
         missing_metrics = list(set(EXPECTED_METRICS) - set(full_metrics_dict.keys()))
         raise Exception(f"Missing metrics in output: {missing_metrics}")
-    # TODO: WHAT SHOULD WE DO WITH OUTPUTS?
-    print(full_metrics_dict)
+    for metric_name, metric_value in full_metrics_dict.items():
+        logging.info(f"Creating {metric_name}.tsv")
+        with open(f"{metric_name}.tsv", "w") as f:
+            f.write(metric_value)
+
