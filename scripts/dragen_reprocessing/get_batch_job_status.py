@@ -44,8 +44,10 @@ and DATETIME "{self.minimum_run_date}" < a.timestamp"""
             'latest_status': row['status'],
             'latest_timestamp': row['task_time'],
             'latest_task_id': row['task_id'],
-            'running_time': 'NA',
-            'earliest_timestamp': row['task_time'],
+            'latest_job_id': row['job_id'],
+            'running_time_dict': {row['job_id']: "N/A"},
+            # Create a dictionary of task ids and earliest time stamp
+            'earliest_timestamp_dict': {row['job_id']: row['task_time']},
             # Start a set for job ids
             'job_ids': {row['job_id']},
             # Replace changed start of cloud path
@@ -68,14 +70,7 @@ and DATETIME "{self.minimum_run_date}" < a.timestamp"""
                 'version': match.group(4),
                 'sample_id': f'{match.group(1)}.{match.group(2)}.{match.group(3)}.{match.group(4)}'
             }
-
         return None
-
-    @staticmethod
-    def _create_formatted_relative_time(time_diff: relativedelta) -> str:
-        """Create formatted string for relative time"""
-        # Format the output as "HH:MM:SS"
-        return f"{time_diff.hours:02}:{time_diff.minutes:02}:{time_diff.seconds:02}"
 
     def _create_full_samples_dicts(self, query_results: Any) -> dict:
         """Creates full dictionary where key is sample name and value is dict with all jobs info"""
@@ -94,20 +89,29 @@ and DATETIME "{self.minimum_run_date}" < a.timestamp"""
                     # Update existing sample dict with current run information
                     sample_dict = samples_dict[sample_id]
                     # Add to job ids set
-                    sample_dict['job_ids'].add(row['job_id'])
-                    # Check if earliest entry of job
-                    if row['task_time'] < sample_dict['earliest_timestamp']:
-                        sample_dict['earliest_timestamp'] = row['task_time']
-                        # If this is the earliest entry then recalculate running time
-                        sample_dict['running_time'] = str(sample_dict['latest_timestamp'] - row['task_time'])
-                    # If entry has latest timestamp use this status
+                    job_id = row['job_id']
+                    sample_dict['job_ids'].add(job_id)
+                    # Check if job_id has a earliest time registered
+                    if job_id not in sample_dict['earliest_timestamp_dict']:
+                        # If no earliest time registered then only entry and cannot get total running time
+                        sample_dict['earliest_timestamp_dict'][job_id] = row['task_time']
+                        sample_dict['running_time_dict'][job_id] = "N/A"
+                    else:
+                        # Check if task time is the earliest time for this job_id
+                        if row['task_time'] < sample_dict['earliest_timestamp_dict'][job_id]:
+                            # Set earliest time for this job_id
+                            sample_dict['earliest_timestamp_dict'][job_id] = row['task_time']
+                            # recalculate running time for specific job
+                            sample_dict['running_time_dict'][job_id] = str(sample_dict['latest_timestamp'] - row['task_time'])
+                    # If entry is the latest timestamp use this status
                     if row['task_time'] > sample_dict['latest_timestamp']:
                         sample_dict['latest_timestamp'] = row['task_time']
                         sample_dict['latest_status'] = row['status']
+                        sample_dict['latest_job_id'] = row['job_id']
                         sample_dict['latest_task_id'] = row['task_id']
                         sample_dict['output_path'] = row['output_path'].replace('s3://', 'gs://')
-                        # If this is the latest entry then calculate running time
-                        sample_dict['running_time'] = str(row['task_time'] - sample_dict['earliest_timestamp'])
+                        # recaclulate running time for latest job
+                        sample_dict['running_time_dict'][job_id] = str(row['task_time'] - sample_dict['earliest_timestamp_dict'][job_id])
         return samples_dict
 
     def run(self) -> dict:
@@ -133,7 +137,7 @@ class CreateSampleTsv:
                     f"{self._create_terra_sample_id(sample_dict)}\t{len(sample_dict['job_ids'])}\t" +
                     f"{sample_dict['latest_status']}\t{sample_dict['latest_task_id']}\t" +
                     f"{sample_dict['output_path']}\t{sample_dict['latest_timestamp']}\t" +
-                    f"{str(sample_dict['running_time'])}\n"
+                    f"{str(sample_dict['running_time_dict'][sample_dict['latest_job_id']])}\n"
                 )
 
 
