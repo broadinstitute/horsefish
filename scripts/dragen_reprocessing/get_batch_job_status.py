@@ -45,10 +45,11 @@ and DATETIME "{self.minimum_run_date}" < a.timestamp"""
             'latest_timestamp': row['task_time'],
             'latest_task_id': row['task_id'],
             'latest_job_id': row['job_id'],
+            # Create a dictionary of jobs ids and running time for each one
             'running_time_dict': {row['job_id']: "N/A"},
-            # Create a dictionary of task ids and earliest time stamp
+            # Create a dictionary of jobs ids and earliest time stamp
             'earliest_timestamp_dict': {row['job_id']: row['task_time']},
-            # Start a set for job ids
+            # Start a set for total job ids
             'job_ids': {row['job_id']},
             # Replace changed start of cloud path
             'output_path': row['output_path'].replace('s3://', 'gs://')
@@ -91,9 +92,9 @@ and DATETIME "{self.minimum_run_date}" < a.timestamp"""
                     # Add to job ids set
                     job_id = row['job_id']
                     sample_dict['job_ids'].add(job_id)
-                    # Check if job_id has a earliest time registered
+                    # Check if job_id has the earliest time registered
                     if job_id not in sample_dict['earliest_timestamp_dict']:
-                        # If no earliest time registered then only entry and cannot get total running time
+                        # Register current time as the earliest job time for specific job id
                         sample_dict['earliest_timestamp_dict'][job_id] = row['task_time']
                         sample_dict['running_time_dict'][job_id] = "N/A"
                     else:
@@ -110,7 +111,7 @@ and DATETIME "{self.minimum_run_date}" < a.timestamp"""
                         sample_dict['latest_job_id'] = row['job_id']
                         sample_dict['latest_task_id'] = row['task_id']
                         sample_dict['output_path'] = row['output_path'].replace('s3://', 'gs://')
-                        # recaclulate running time for latest job
+                        # recalculate running time for latest job
                         sample_dict['running_time_dict'][job_id] = str(row['task_time'] - sample_dict['earliest_timestamp_dict'][job_id])
         return samples_dict
 
