@@ -23,7 +23,7 @@ class GetSampleInfo:
     def _query_for_batch_job_info(self) -> Any:
         """Gets all batch job info from bigquery"""
         query_string = f"""SELECT a.job_id, a.input_path, s.status, s.task_id, a.timestamp as submit_time, a.output_path,
-  s.timestamp as task_time, s.timestamp - a.timestamp as total_running_time
+  s.timestamp as task_time
 FROM `{self.google_project}.dragen_illumina.job_array` as a
 join `{self.google_project}.dragen_illumina.tasks_status` as s on a.job_id = s.job_id
   and CAST(a.batch_task_index AS STRING)=REGEXP_EXTRACT(task_id, r'group0-(\d+)')
@@ -44,7 +44,8 @@ and DATETIME "{self.minimum_run_date}" < a.timestamp"""
             'latest_status': row['status'],
             'latest_timestamp': row['task_time'],
             'latest_task_id': row['task_id'],
-            'latest_running_time': self._create_formatted_relative_time(row['total_running_time']),
+            'running_time': 'NA',
+            'earliest_timestamp': row['task_time'],
             # Start a set for job ids
             'job_ids': {row['job_id']},
             # Replace changed start of cloud path
@@ -94,13 +95,19 @@ and DATETIME "{self.minimum_run_date}" < a.timestamp"""
                     sample_dict = samples_dict[sample_id]
                     # Add to job ids set
                     sample_dict['job_ids'].add(row['job_id'])
+                    # Check if earliest entry of job
+                    if row['task_time'] < sample_dict['earliest_timestamp']:
+                        sample_dict['earliest_timestamp'] = row['task_time']
+                        # If this is the earliest entry then recalculate running time
+                        sample_dict['running_time'] = str(sample_dict['latest_timestamp'] - row['task_time'])
                     # If entry has latest timestamp use this status
                     if row['task_time'] > sample_dict['latest_timestamp']:
                         sample_dict['latest_timestamp'] = row['task_time']
                         sample_dict['latest_status'] = row['status']
                         sample_dict['latest_task_id'] = row['task_id']
                         sample_dict['output_path'] = row['output_path'].replace('s3://', 'gs://')
-                        sample_dict['latest_running_time'] = self._create_formatted_relative_time(row['total_running_time'])
+                        # If this is the latest entry then calculate running time
+                        sample_dict['running_time'] = str(row['task_time'] - sample_dict['earliest_timestamp'])
         return samples_dict
 
     def run(self) -> dict:
@@ -126,7 +133,7 @@ class CreateSampleTsv:
                     f"{self._create_terra_sample_id(sample_dict)}\t{len(sample_dict['job_ids'])}\t" +
                     f"{sample_dict['latest_status']}\t{sample_dict['latest_task_id']}\t" +
                     f"{sample_dict['output_path']}\t{sample_dict['latest_timestamp']}\t" +
-                    f"{str(sample_dict['latest_running_time'])}\n"
+                    f"{str(sample_dict['running_time'])}\n"
                 )
 
 
