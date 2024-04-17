@@ -89,11 +89,11 @@ class ConvertSampleMetadataToTsv:
         self.sample_metadata = sample_metadata
         self.output_tsv = output_tsv
         self.rp = rp
-
+        
     def create_tsv(self):
         pass
         
-
+        
 def get_args() -> Namespace:
     argparser = ArgumentParser(description=__doc__)
     argparser.add_argument("--sample_set", "-s", required=True)
