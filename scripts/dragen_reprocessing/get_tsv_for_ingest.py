@@ -1,7 +1,8 @@
 import requests
 from argparse import ArgumentParser, Namespace
 import logging
-import json
+import csv
+import os
 from oauth2client.client import GoogleCredentials
 
 logging.basicConfig(
@@ -85,13 +86,81 @@ class GetSampleInfo:
 
 
 class ConvertSampleMetadataToTsv:
-    def __init__(self, sample_metadata: list[dict], output_tsv: str, rp: str):
+    def __init__(self, sample_metadata: list[dict], output_tsv: str):
         self.sample_metadata = sample_metadata
         self.output_tsv = output_tsv
-        self.rp = rp
         
+    def _convert_to_tdr_dict(self, sample_dict: dict) -> dict:
+        """Convert sample metadata to TDR format."""
+        file_path_prefix = os.path.join(sample_dict['output_path'], str(sample_dict['collaborator_sample_id']))
+        return {
+            "analysis_date": sample_dict["last_attempt"],
+            "collaborator_participant_id": str(sample_dict["collaborator_participant_id"]),
+            "collaborator_sample_id": str(sample_dict["collaborator_sample_id"]),
+            "contamination_rate": sample_dict["contamination_rate"],
+            "genome_crai_path": f"{file_path_prefix}.cram.crai",
+            "genome_cram_md5_path": f"{file_path_prefix}.cram.md5sum",
+            "genome_cram_path": f"{file_path_prefix}.cram",
+            "data_type": sample_dict["data_type"],
+            "exome_gvcf_index_path": f"{file_path_prefix}.hard-filtered.gvcf.gz.md5sum",
+            "exome_gvcf_md5_path": f"{file_path_prefix}.hard-filtered.gvcf.gz.tbi",
+            "exome_gvcf_path": f"{file_path_prefix}.hard-filtered.gvcf.gz",
+            "mapping_metrics_file": f"{file_path_prefix}.mapping_metrics.csv",
+            "mean_target_coverage": sample_dict["mean_target_coverage"],
+            "percent_target_bases_at_10x": sample_dict["percent_target_bases_at_10x"],
+            "percent_callability": sample_dict["percent_callability"],
+            "percent_wgs_bases_at_1x": sample_dict["percent_wgs_bases_at_1x"],
+            "reported_sex": sample_dict["reported_sex"],
+            "research_project": sample_dict["rp"],
+            "root_sample_id": sample_dict["root_sample_id"],
+            "sample_id": sample_dict["collaborator_sample_id"],
+            "bge_single_sample_vcf_path": f"{file_path_prefix}.hard-filtered.vcf.gz",
+            "bge_single_sample_vcf_index_path": f"{file_path_prefix}.hard-filtered.vcf.gz.tbi",
+            "bge_single_sample_vcf_md5_path": f"{file_path_prefix}.hard-filtered.vcf.gz.md5sum",
+            "chimera_rate": sample_dict["chimera_rate"],
+            "mapped_reads": sample_dict["mapped_reads"],
+            "total_bases": sample_dict["total_bases"]
+
+
+
+
+        }
+
+    # Columns not included
+    # analysis_version
+    # exome_coverage_region_1_metrics
+    # off_target_coverage_region_2_metrics
+    # wgs_coverage_region_3_metrics
+    # material_type
+    # mean_off_target_coverage
+    # original_material_type
+    # participant_id
+    # file
+    # predicted_sex
+    # product
+    # receipt_date
+    # sample_type
+    # variant_calling_metrics_file
+    # version_timestamp
+    # mapped_percentage
+    # sidr_sample_id
+    # dragen_version
+
     def create_tsv(self):
-        pass
+        """Write sample metadata to TSV file."""
+        metrics_to_write_to_file = [
+            self._convert_to_tdr_dict(sample_dict)
+            for sample_dict in self.sample_metadata
+        ]
+        # Extract headers from the first dictionary in the list
+        headers = metrics_to_write_to_file[0].keys()
+
+        # Write data to the CSV file
+        logging.info(f"Writing to {self.output_tsv}")
+        with open(self.output_tsv, mode="w", newline="") as file:
+            writer = csv.DictWriter(file, fieldnames=headers, delimiter="\t")
+            writer.writeheader()  # Write the header row
+            writer.writerows(metrics_to_write_to_file)  # Write the data rows
         
         
 def get_args() -> Namespace:
@@ -105,4 +174,4 @@ if __name__ == "__main__":
     args = get_args()
     sample_set, output_tsv = args.sample_set, args.output_tsv
     sample_metadata = GetSampleInfo(sample_set=sample_set).run()
-    ConvertSampleMetadataToTsv(sample_metadata=sample_metadata, output_tsv=output_tsv, rp=rp).create_tsv()
+    ConvertSampleMetadataToTsv(sample_metadata=sample_metadata, output_tsv=output_tsv).create_tsv()
