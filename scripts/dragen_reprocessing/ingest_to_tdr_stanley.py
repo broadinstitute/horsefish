@@ -13,6 +13,7 @@ from oauth2client.client import GoogleCredentials
 # DEVELOPER: update this field anytime you make a new docker image and update changelog
 version = "1.0"
 
+
 def get_access_token():
     """Get access token."""
 
@@ -28,7 +29,7 @@ def get_job_result(job_id):
 
     # first check job status - retrieveJob
     uri = f"https://data.terra.bio/api/repository/v1/jobs/{job_id}/result"
-    
+
     headers = {"Authorization": "Bearer " + get_access_token(),
                "accept": "application/json"}
 
@@ -44,7 +45,7 @@ def get_job_status(job_id):
 
     # first check job status - retrieveJob
     uri = f"https://data.terra.bio/api/repository/v1/jobs/{job_id}"
-    
+
     headers = {"Authorization": "Bearer " + get_access_token(),
                "accept": "application/json"}
 
@@ -81,13 +82,13 @@ def create_ingest_dataset_request(ingest_records, target_table_name, load_tag=No
                  "records": ingest_records,
                  "table": target_table_name,
                  "resolve_existing_files": "true",
-                 "updateStrategy": "replace"
-                }
+                 "updateStrategy": "merge"
+                 }
     # if user provides a load_tag, add it to request body
     if load_tag:
         load_dict["load_tag"] = load_tag
 
-    load_json = json.dumps(load_dict) # dict -> json
+    load_json = json.dumps(load_dict)  # dict -> json
 
     return load_json
 
@@ -95,22 +96,23 @@ def create_ingest_dataset_request(ingest_records, target_table_name, load_tag=No
 def call_ingest_dataset(recoded_row_dicts, target_table_name, dataset_id, load_tag=None):
     """Create the ingestDataset API json request body and call API."""
 
-    ingest_dataset_request = create_ingest_dataset_request(recoded_row_dicts, target_table_name, load_tag) # create request for ingestDataset
+    ingest_dataset_request = create_ingest_dataset_request(recoded_row_dicts, target_table_name,
+                                                           load_tag)  # create request for ingestDataset
     print(f"ingestDataset request body: \n {ingest_dataset_request} \n")
 
-    ingest_response = ingest_dataset(dataset_id, ingest_dataset_request) # call ingestDataset
+    ingest_response = ingest_dataset(dataset_id, ingest_dataset_request)  # call ingestDataset
     print(f"ingestDataset response body: \n {ingest_response} \n")
 
-    ingest_job_id = ingest_response["id"] # check for presence of id in ingest_dataset()
+    ingest_job_id = ingest_response["id"]  # check for presence of id in ingest_dataset()
     ingest_status_code = ingest_response["status_code"]
 
     # 202 = job is running as confirmed in ingest_dataset()
     job_status_code, job_status_response = get_job_status(ingest_job_id)
 
-    while job_status_code == 202:           # while job is running
+    while job_status_code == 202:  # while job is running
         print(f"{ingest_job_id} --> running")
-        time.sleep(10) # wait 10 seconds before getting job status
-        job_status_code, job_status_response = get_job_status(ingest_job_id) # get updated status info
+        time.sleep(10)  # wait 10 seconds before getting job status
+        job_status_code, job_status_response = get_job_status(ingest_job_id)  # get updated status info
 
     # job completes (‘failed’ or ‘succeeded’) with 200 status_code
     # consider any combination other than 200 + succeeded as failure
@@ -118,12 +120,12 @@ def call_ingest_dataset(recoded_row_dicts, target_table_name, dataset_id, load_t
         print(f"{ingest_job_id} --> failed")
         # if failed, get the resulting error message
         job_result_code, job_result_response = get_job_result(ingest_job_id)
-        raise ValueError(job_result_response)    
+        raise ValueError(job_result_response)
 
-    # job completes successfully
+        # job completes successfully
     # success_code is 200 and "job_status" =is"succeeded"
     print(f"{ingest_job_id} --> succeeded")
-    
+
     # write load tag to output file from final succeeded job result response
     job_result_code, job_result_response = get_job_result(ingest_job_id)
     result_load_tag = job_result_response["load_tag"]
@@ -139,15 +141,15 @@ def create_recoded_json(row_json):
     recoded_row_json = dict(row_json)  # update copy instead of original
 
     for key in row_json.keys():  # for column name in row
-        value = row_json[key]    # get value
+        value = row_json[key]  # get value
         if value is not None:  # if value exists (non-empty cell)
             if isinstance(value, str):  # and is a string
                 if value.startswith("gs://"):  # starting with gs://
-                    relative_tdr_path = value.replace("gs://","/")  # create TDR relative path
+                    relative_tdr_path = value.replace("gs://", "/")  # create TDR relative path
                     # recode original value/path with expanded request
                     # TODO: add in description = id_col + col_name
-                    recoded_row_json[key] = {"sourcePath":value,
-                                    "targetPath":relative_tdr_path}
+                    recoded_row_json[key] = {"sourcePath": value,
+                                             "targetPath": relative_tdr_path}
                     continue
 
                 recoded_row_json_list = []  # instantiate empty list to store recoded values for arrayOf:True cols
@@ -166,12 +168,13 @@ def create_recoded_json(row_json):
                     # TODO: any cases where an item in a list is not gs:// should be a user error?
                     if any(gs_paths):
                         for item in value_list:  # for each item in the array
-                            relative_tdr_path = item.replace("gs://","/")  # create TDR relative path
+                            relative_tdr_path = item.replace("gs://", "/")  # create TDR relative path
                             # create the json request for list member
-                            recoded_list_member = {"sourcePath":item,
-                                                   "targetPath":relative_tdr_path}
+                            recoded_list_member = {"sourcePath": item,
+                                                   "targetPath": relative_tdr_path}
                             recoded_row_json_list.append(recoded_list_member)  # add json request to list
-                        recoded_row_json[key] = recoded_row_json_list  # add list of json requests to larger json request
+                        recoded_row_json[
+                            key] = recoded_row_json_list  # add list of json requests to larger json request
                         continue
 
                     else:  # when list values are strings that DO NOT start with gs:// (like filerefs)
@@ -193,7 +196,7 @@ def parse_json_outputs_file(input_tsv):
 
     for index, row in tsv_df.iterrows():
         last_modified_date = datetime.now(tz=pytz.UTC).strftime("%Y-%m-%dT%H:%M:%S")
-    
+
         # drop empty columns and add in timestamp
         remove_row_nan = row.dropna()
         remove_row_nan["last_modified_date"] = last_modified_date
@@ -204,13 +207,16 @@ def parse_json_outputs_file(input_tsv):
     return all_recoded_row_dicts, last_modified_date
 
 
-if __name__ == "__main__" :
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Push Arrays.wdl outputs to TDR dataset.')
 
     parser.add_argument('-f', '--tsv', required=True, type=str, help='tsv file of files to ingest to TDR')
-    parser.add_argument('-d', '--dataset_id', required=True, type=str, help='id of TDR dataset for destination of outputs')
-    parser.add_argument('-t', '--target_table_name', required=True, type=str, help='name of target table in TDR dataset')
-    parser.add_argument('-l', '--load_tag', required=False, type=str, help="load tag to allow for ingest of duplicate files in separate ingest calls")
+    parser.add_argument('-d', '--dataset_id', required=True, type=str,
+                        help='id of TDR dataset for destination of outputs')
+    parser.add_argument('-t', '--target_table_name', required=True, type=str,
+                        help='name of target table in TDR dataset')
+    parser.add_argument('-l', '--load_tag', required=False, type=str,
+                        help="load tag to allow for ingest of duplicate files in separate ingest calls")
 
     args = parser.parse_args()
 

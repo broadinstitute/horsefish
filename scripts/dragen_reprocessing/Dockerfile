@@ -25,6 +25,7 @@ RUN rm /usr/bin/lsb_release \
 
 COPY get_dragen_metrics.py /scripts/get_dragen_metrics.py
 COPY get_tsv_for_ingest.py /scripts/get_tsv_for_ingest.py
+COPY ingest_to_tdr_stanley.py /scripts/ingest_to_tdr_stanley.py
 
 COPY requirements.txt .
 RUN pip3 install -r requirements.txt

@@ -98,12 +98,11 @@ def get_args() -> Namespace:
     argparser = ArgumentParser(description=__doc__)
     argparser.add_argument("--sample_set", "-s", required=True)
     argparser.add_argument("--output_tsv", "-o", required=True)
-    argparser.add_argument("-rp", "-r", required=True)
     return argparser.parse_args()
 
 
 if __name__ == "__main__":
     args = get_args()
-    sample_set, output_tsv, rp = args.sample_set, args.output_tsv, args.rp
+    sample_set, output_tsv = args.sample_set, args.output_tsv
     sample_metadata = GetSampleInfo(sample_set=sample_set).run()
     ConvertSampleMetadataToTsv(sample_metadata=sample_metadata, output_tsv=output_tsv, rp=rp).create_tsv()
