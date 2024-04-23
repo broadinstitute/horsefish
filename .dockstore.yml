@@ -41,3 +41,9 @@ workflows:
    primaryDescriptorPath: /pipelines/start_dragen/parse_dragen_metrics.wdl
    testParameterFiles:
     - /pipelines/start_dragen/parse_dragen_metrics.wdl
+
+ - name: ingest_dragen_data_to_tdr
+   subclass: WDL
+   primaryDescriptorPath: /pipelines/start_dragen/ingest_dragen_data_to_tdr.wdl
+   testParameterFiles:
+     - /pipelines/start_dragen/ingest_dragen_data_to_tdr.wdl

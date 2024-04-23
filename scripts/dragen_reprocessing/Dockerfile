@@ -24,6 +24,7 @@ RUN rm /usr/bin/lsb_release \
     && python3 -m pip install --no-cache-dir --upgrade pip
 
 COPY get_dragen_metrics.py /scripts/get_dragen_metrics.py
+COPY get_tsv_for_ingest.py /scripts/get_tsv_for_ingest.py
 
 COPY requirements.txt .
 RUN pip3 install -r requirements.txt
