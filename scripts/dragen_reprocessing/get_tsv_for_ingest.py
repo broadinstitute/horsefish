@@ -8,6 +8,7 @@ from oauth2client.client import GoogleCredentials
 logging.basicConfig(
     format="%(levelname)s: %(asctime)s : %(message)s", level=logging.INFO
 )
+
 BILLING_PROJECT = "sc-bge-reprocessing"
 WORKSPACE_NAME = "SC_BGE_reprocessing_area"
 
@@ -120,10 +121,6 @@ class ConvertSampleMetadataToTsv:
             "chimera_rate": sample_dict["chimera_rate"],
             "mapped_reads": sample_dict["mapped_reads"],
             "total_bases": sample_dict["total_bases"]
-
-
-
-
         }
 
     # Columns not included

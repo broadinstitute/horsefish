@@ -6,7 +6,7 @@ workflow ingest_dragen_data_to_tdr {
         String  rp
         String  data_set_id
         String  target_table_name
-        String  docker_name = "us-central1-docker.pkg.dev/dsp-cloud-dragen-stanley/wdl-images/parse_dragen_metrics:v1"
+        String?  docker_name = "us-central1-docker.pkg.dev/dsp-cloud-dragen-stanley/wdl-images/parse_dragen_metrics:v1"
     }
 
     call create_ingest_tsv {
@@ -18,7 +18,7 @@ workflow ingest_dragen_data_to_tdr {
     call ingest_to_tdr {
         input:
             ingest_tsv = create_ingest_tsv.output_file,
-            data_set_id = data_set_id,
+            rp = rp,
             target_table_name = target_table_name,
             docker_name = docker_name
     }
@@ -31,14 +31,14 @@ workflow ingest_dragen_data_to_tdr {
 task ingest_to_tdr {
         input {
             File    ingest_tsv
-            String  data_set_id
+            String  rp
             String  target_table_name
             String  docker_name
         }
 
         command {
 
-            python3 /scripts/ingest_to_tdr_stanley.py --dataset_id ~{data_set_id} \
+            python3 /scripts/ingest_to_tdr_stanley.py --rp ~{rp} \
                                                  --target_table_name ~{target_table_name} \
                                                  --tsv ~{ingest_tsv}
         }
