@@ -4,7 +4,6 @@ workflow ingest_dragen_data_to_tdr {
     input {
         String  sample_set
         String  rp
-        String  data_set_id
         String  target_table_name
         String?  docker_name = "us-central1-docker.pkg.dev/dsp-cloud-dragen-stanley/wdl-images/parse_dragen_metrics:v1"
     }
