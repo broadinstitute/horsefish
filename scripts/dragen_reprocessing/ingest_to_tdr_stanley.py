@@ -13,6 +13,13 @@ from oauth2client.client import GoogleCredentials
 # DEVELOPER: update this field anytime you make a new docker image and update changelog
 version = "1.0"
 
+RP_TO_DATASET_ID = {
+    "RP-2720": "dbfdcd34-2937-4781-96c2-5bf0c22fddec",
+    "RP_2856": "d21a6291-3a5e-45c5-9ede-33b127142b79",
+    "RP-3026": "667bf107-fb59-4649-803b-8e302630eef9",
+    "RP-2065": "4aadfeb1-734d-4c72-ac9b-ac6d513d4d7f"
+}
+
 
 def get_access_token():
     """Get access token."""
@@ -207,18 +214,18 @@ def parse_json_outputs_file(input_tsv):
     return all_recoded_row_dicts, last_modified_date
 
 
-if __name__ == "__main__":
+if __name__ == "__main__" :
     parser = argparse.ArgumentParser(description='Push Arrays.wdl outputs to TDR dataset.')
 
     parser.add_argument('-f', '--tsv', required=True, type=str, help='tsv file of files to ingest to TDR')
-    parser.add_argument('-d', '--dataset_id', required=True, type=str,
-                        help='id of TDR dataset for destination of outputs')
-    parser.add_argument('-t', '--target_table_name', required=True, type=str,
-                        help='name of target table in TDR dataset')
-    parser.add_argument('-l', '--load_tag', required=False, type=str,
-                        help="load tag to allow for ingest of duplicate files in separate ingest calls")
+    parser.add_argument('-r', '--rp', required=True, type=str, help='research project')
+    parser.add_argument('-t', '--target_table_name', required=True, type=str, help='name of target table in TDR dataset')
+    parser.add_argument('-l', '--load_tag', required=False, type=str, help="load tag to allow for ingest of duplicate files in separate ingest calls")
 
     args = parser.parse_args()
-
-    all_recoded_row_dicts, last_modified_date = parse_json_outputs_file(args.tsv)
-    call_ingest_dataset(all_recoded_row_dicts, args.target_table_name, args.dataset_id, args.load_tag)
+    # Assign args
+    tsv, rp, target_table_name, load_tag = args.tsv, args.rp, args.target_table_name, args.load_tag
+    # Get dataset id using RP
+    data_set_id = RP_TO_DATASET_ID.get(rp)
+    all_recoded_row_dicts, last_modified_date = parse_json_outputs_file(tsv)
+    call_ingest_dataset(all_recoded_row_dicts, target_table_name, data_set_id, load_tag)
