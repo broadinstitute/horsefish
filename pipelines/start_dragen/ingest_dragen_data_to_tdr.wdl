@@ -5,13 +5,15 @@ workflow ingest_dragen_data_to_tdr {
         String  sample_set
         String  rp
         String  target_table_name
-        String?  docker_name = "us-central1-docker.pkg.dev/dsp-cloud-dragen-stanley/wdl-images/parse_dragen_metrics:v1"
+        String?  docker_name
     }
+
+    String docker = select_first([docker_name, "us-central1-docker.pkg.dev/dsp-cloud-dragen-stanley/wdl-images/parse_dragen_metrics:v1"])
 
     call create_ingest_tsv {
         input:
             sample_set = sample_set,
-            docker_name = docker_name
+            docker_name = docker
     }
 
     call ingest_to_tdr {
@@ -19,7 +21,7 @@ workflow ingest_dragen_data_to_tdr {
             ingest_tsv = create_ingest_tsv.output_file,
             rp = rp,
             target_table_name = target_table_name,
-            docker_name = docker_name
+            docker_name = docker
     }
 
     output {
