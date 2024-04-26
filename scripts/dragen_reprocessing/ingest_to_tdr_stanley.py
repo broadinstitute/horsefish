@@ -220,12 +220,14 @@ if __name__ == "__main__" :
     parser.add_argument('-f', '--tsv', required=True, type=str, help='tsv file of files to ingest to TDR')
     parser.add_argument('-r', '--rp', required=True, type=str, help='research project')
     parser.add_argument('-t', '--target_table_name', required=True, type=str, help='name of target table in TDR dataset')
+    parser.add_argument('-d', '--data_set_id', required=False, type=str, help='data set id if not one of the standard RP datasets')
     parser.add_argument('-l', '--load_tag', required=False, type=str, help="load tag to allow for ingest of duplicate files in separate ingest calls")
 
     args = parser.parse_args()
     # Assign args
-    tsv, rp, target_table_name, load_tag = args.tsv, args.rp, args.target_table_name, args.load_tag
+    tsv, rp, target_table_name, load_tag, data_set_id = args.tsv, args.rp, args.target_table_name, args.load_tag, args.data_set_id
     # Get dataset id using RP
-    data_set_id = RP_TO_DATASET_ID.get(rp)
+    if not data_set_id:
+        data_set_id = RP_TO_DATASET_ID.get(rp)
     all_recoded_row_dicts, last_modified_date = parse_json_outputs_file(tsv)
     call_ingest_dataset(all_recoded_row_dicts, target_table_name, data_set_id, load_tag)
