@@ -26,7 +26,7 @@ workflow ingest_dragen_data_to_tdr {
             rp = rp,
             target_table_name = target_table_name,
             docker_name = docker,
-            data_set_id = data_set_id
+            data_set_id = data_set_id,
             bulk_mode = bulk_mode
     }
 
