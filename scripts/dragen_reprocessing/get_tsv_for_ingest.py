@@ -120,7 +120,8 @@ class ConvertSampleMetadataToTsv:
             "bge_single_sample_vcf_md5_path": f"{file_path_prefix}.hard-filtered.vcf.gz.md5sum",
             "chimera_rate": sample_dict["chimera_rate"],
             "mapped_reads": sample_dict["mapped_reads"],
-            "total_bases": sample_dict["total_bases"]
+            "total_bases": sample_dict["total_bases"],
+            "pdo": sample_dict["pdo"]
         }
 
     # Columns not included

@@ -88,14 +88,14 @@ def ingest_dataset(dataset_id, data):
     return json.loads(response.text)
 
 
-def create_ingest_dataset_request(ingest_records, target_table_name, bulk_mode, load_tag=None):
+def create_ingest_dataset_request(ingest_records, target_table_name, bulk_mode, update_strategy, load_tag=None):
     """Create the ingestDataset request body."""
     load_dict = {
         "format": "array",
         "records": ingest_records,
         "table": target_table_name,
         "resolve_existing_files": "true",
-        "updateStrategy": "append",
+        "updateStrategy": update_strategy,
         "bulkMode": "true" if bulk_mode else "false"
     }
     # if user provides a load_tag, add it to request body
@@ -107,11 +107,16 @@ def create_ingest_dataset_request(ingest_records, target_table_name, bulk_mode, 
     return load_json
 
 
-def call_ingest_dataset(recoded_row_dicts, target_table_name, dataset_id, bulk_mode, load_tag=None):
+def call_ingest_dataset(recoded_row_dicts, target_table_name, dataset_id, bulk_mode, update_strategy, load_tag=None):
     """Create the ingestDataset API json request body and call API."""
 
-    ingest_dataset_request = create_ingest_dataset_request(recoded_row_dicts, target_table_name,
-                                                           load_tag, bulk_mode)  # create request for ingestDataset
+    ingest_dataset_request = create_ingest_dataset_request(
+        ingest_records=recoded_row_dicts,
+        target_table_name=target_table_name,
+        load_tag=load_tag,
+        bulk_mode=bulk_mode,
+        update_strategy=update_strategy
+    )  # create request for ingestDataset
     print(f"ingestDataset request body: \n {ingest_dataset_request} \n")
 
     ingest_response = ingest_dataset(dataset_id, ingest_dataset_request)  # call ingestDataset
@@ -229,15 +234,23 @@ if __name__ == "__main__" :
     parser.add_argument('-f', '--tsv', required=True, type=str, help='tsv file of files to ingest to TDR')
     parser.add_argument('-r', '--rp', required=True, type=str, help='research project')
     parser.add_argument('-b', '--bulk_mode', action="store_true", help='use if you want to use bulkMode in ingest')
+    parser.add_argument('-u', '--update_strategy', required=True, choices=['replace', 'merge', 'append'], type=str, help='which strategy to use for ingest')
     parser.add_argument('-t', '--target_table_name', required=True, type=str, help='name of target table in TDR dataset')
     parser.add_argument('-d', '--data_set_id', required=False, type=str, help='data set id if not one of the standard RP datasets')
     parser.add_argument('-l', '--load_tag', required=False, type=str, help="load tag to allow for ingest of duplicate files in separate ingest calls")
 
     args = parser.parse_args()
     # Assign args
-    tsv, rp, target_table_name, load_tag, data_set_id, bulk_mode = args.tsv, args.rp, args.target_table_name, args.load_tag, args.data_set_id, args.bulk_mode
+    tsv, rp, target_table_name, load_tag, data_set_id, bulk_mode, update_strategy = args.tsv, args.rp, args.target_table_name, args.load_tag, args.data_set_id, args.bulk_mode, args.update_strategy
     # Get dataset id using RP
     if not data_set_id:
         data_set_id = RP_TO_DATASET_ID.get(rp)
     all_recoded_row_dicts, last_modified_date = parse_json_outputs_file(tsv)
-    call_ingest_dataset(all_recoded_row_dicts, target_table_name, data_set_id, load_tag, bulk_mode)
+    call_ingest_dataset(
+        recoded_row_dicts=all_recoded_row_dicts,
+        target_table_name=target_table_name,
+        dataset_id=data_set_id,
+        load_tag=load_tag,
+        bulk_mode=bulk_mode,
+        update_strategy=update_strategy
+    )
