@@ -20,6 +20,12 @@ RP_TO_DATASET_ID = {
     "RP-2065": "4aadfeb1-734d-4c72-ac9b-ac6d513d4d7f"
 }
 
+KEYS_THAT_ARE_STRING = [
+    "sample_id",
+    "collaborator_participant_id",
+    "collaborator_sample_id",
+]
+
 
 def get_access_token():
     """Get access token."""
@@ -84,13 +90,13 @@ def ingest_dataset(dataset_id, data):
 
 def create_ingest_dataset_request(ingest_records, target_table_name, load_tag=None):
     """Create the ingestDataset request body."""
-
-    load_dict = {"format": "array",
-                 "records": ingest_records,
-                 "table": target_table_name,
-                 "resolve_existing_files": "true",
-                 "updateStrategy": "merge"
-                 }
+    load_dict = {
+        "format": "array",
+        "records": ingest_records,
+        "table": target_table_name,
+        "resolve_existing_files": "true",
+        "updateStrategy": "merge"
+    }
     # if user provides a load_tag, add it to request body
     if load_tag:
         load_dict["load_tag"] = load_tag
@@ -144,7 +150,6 @@ def call_ingest_dataset(recoded_row_dicts, target_table_name, dataset_id, load_t
 
 def create_recoded_json(row_json):
     """Update dictionary with TDR's dataset relative paths for keys with gs:// paths."""
-
     recoded_row_json = dict(row_json)  # update copy instead of original
 
     for key in row_json.keys():  # for column name in row
@@ -190,7 +195,10 @@ def create_recoded_json(row_json):
                         recoded_row_json[key] = recoded_row_json_list
                         continue
                 # if value is string but not a gs:// path or list of gs:// paths
-                recoded_row_json[key] = value
+                if key in KEYS_THAT_ARE_STRING:
+                    recoded_row_json[key] = str(value)
+                else:
+                    recoded_row_json[key] = value
 
     return recoded_row_json
 
