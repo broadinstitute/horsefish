@@ -8,6 +8,8 @@ workflow ingest_dragen_data_to_tdr {
         String?  docker_name
         # Only use if not going to one of standard RP data sets
         String?  data_set_id
+        # Use if you want bulk mode used for ingest
+        Boolean bulk_mode
     }
 
     String  docker = select_first([docker_name, "us-central1-docker.pkg.dev/dsp-cloud-dragen-stanley/wdl-images/parse_dragen_metrics:v1"])
@@ -25,6 +27,7 @@ workflow ingest_dragen_data_to_tdr {
             target_table_name = target_table_name,
             docker_name = docker,
             data_set_id = data_set_id
+            bulk_mode = bulk_mode
     }
 
     output {
@@ -38,6 +41,7 @@ task ingest_to_tdr {
             String  rp
             String  target_table_name
             String  docker_name
+            Boolean bulk_mode
             String? data_set_id
         }
 
@@ -46,7 +50,8 @@ task ingest_to_tdr {
             python3 /scripts/ingest_to_tdr_stanley.py --rp ~{rp} \
                                                  --target_table_name ~{target_table_name} \
                                                  --tsv ~{ingest_tsv} \
-                                                 ~{"-d " + data_set_id}
+                                                 ~{"--data_set_id " + data_set_id} \
+                                                 ~{if bulk_mode then "--bulk_mode" else ""}
         }
 
         runtime {
