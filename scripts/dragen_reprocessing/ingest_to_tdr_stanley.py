@@ -15,7 +15,7 @@ version = "1.0"
 
 RP_TO_DATASET_ID = {
     "RP-2720": "dbfdcd34-2937-4781-96c2-5bf0c22fddec",
-    "RP_2856": "d21a6291-3a5e-45c5-9ede-33b127142b79",
+    "RP-2856": "d21a6291-3a5e-45c5-9ede-33b127142b79",
     "RP-3026": "667bf107-fb59-4649-803b-8e302630eef9",
     "RP-2065": "4aadfeb1-734d-4c72-ac9b-ac6d513d4d7f"
 }
@@ -105,6 +105,22 @@ def create_ingest_dataset_request(ingest_records, target_table_name, bulk_mode, 
     load_json = json.dumps(load_dict)  # dict -> json
 
     return load_json
+
+
+def get_data_set_sample_ids(dataset_id, target_table_name):
+    """Get existing ids from dataset."""
+    uri = f"https://data.terra.bio/api/repository/v1/datasets/{dataset_id}/data/{target_table_name}"
+
+    headers = {"Authorization": "Bearer " + get_access_token(),
+               "accept": "application/json"}
+    response = requests.get(uri, headers=headers)
+    response_json = json.loads(response.text)
+    status_code = response.status_code
+    if response.status_code not in [200, 201, 202]:
+        raise ValueError(response.text)
+    return [
+        str(sample_dict['sample_id']) for sample_dict in response_json["result"]
+    ]
 
 
 def call_ingest_dataset(recoded_row_dicts, target_table_name, dataset_id, bulk_mode, update_strategy, load_tag=None):
@@ -225,7 +241,7 @@ def parse_json_outputs_file(input_tsv):
 
         all_recoded_row_dicts.append(recoded_row_dict)
 
-    return all_recoded_row_dicts, last_modified_date
+    return all_recoded_row_dicts
 
 
 if __name__ == "__main__" :
@@ -245,7 +261,26 @@ if __name__ == "__main__" :
     # Get dataset id using RP
     if not data_set_id:
         data_set_id = RP_TO_DATASET_ID.get(rp)
-    all_recoded_row_dicts, last_modified_date = parse_json_outputs_file(tsv)
+
+    # Get existing ids from dataset
+    existing_sample_ids = get_data_set_sample_ids(data_set_id, target_table_name)
+
+    all_recoded_row_dicts = parse_json_outputs_file(tsv)
+
+    # If using append or replace then fail if sample_id already exists in dataset
+    if update_strategy in ['append', 'replace']:
+        id_already_in_dataset = [
+            row['sample_id']
+            for row in all_recoded_row_dicts
+            if row['sample_id'] in existing_sample_ids
+        ]
+        if id_already_in_dataset:
+            print(
+                f"Found {len(id_already_in_dataset)} samples in dataset {data_set_id} that already exist."
+            )
+            id_list_str = ', '.join(id_already_in_dataset)
+            raise ValueError(f"Sample ids {id_list_str} already exist in dataset {data_set_id} when using {update_strategy} update strategy.")
+
     call_ingest_dataset(
         recoded_row_dicts=all_recoded_row_dicts,
         target_table_name=target_table_name,
