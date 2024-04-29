@@ -112,7 +112,7 @@ class ConvertSampleMetadataToTsv:
             "percent_callability": sample_dict["percent_callability"],
             "percent_wgs_bases_at_1x": sample_dict["percent_wgs_bases_at_1x"],
             "reported_sex": sample_dict["reported_sex"],
-            "research_project": sample_dict["rp"],
+            "research_project": sample_dict["rp"].replace('RP-1915', 'RP-3026'),
             "root_sample_id": sample_dict["root_sample_id"],
             "sample_id": sample_dict["collaborator_sample_id"],
             "bge_single_sample_vcf_path": f"{file_path_prefix}.hard-filtered.vcf.gz",
@@ -123,26 +123,6 @@ class ConvertSampleMetadataToTsv:
             "total_bases": sample_dict["total_bases"],
             "pdo": sample_dict["pdo"]
         }
-
-    # Columns not included
-    # analysis_version
-    # exome_coverage_region_1_metrics
-    # off_target_coverage_region_2_metrics
-    # wgs_coverage_region_3_metrics
-    # material_type
-    # mean_off_target_coverage
-    # original_material_type
-    # participant_id
-    # file
-    # predicted_sex
-    # product
-    # receipt_date
-    # sample_type
-    # variant_calling_metrics_file
-    # version_timestamp
-    # mapped_percentage
-    # sidr_sample_id
-    # dragen_version
 
     def create_tsv(self):
         """Write sample metadata to TSV file."""
