@@ -10,6 +10,7 @@ workflow StartDragenWorkflow {
     String        project_id
     String        data_type
     String        dragen_version
+    String        file_name
     Array[String] cram_paths
     Array[String] sample_ids
   }
@@ -66,7 +67,7 @@ task CreateSampleManifest {
     echo "~{sep='\n' cram_paths}"   > cram_paths.txt
 
     # combine to final
-    paste -d " " sample_ids.txt cram_paths.txt >> sample_processing_manifest.txt
+    paste -d " " sample_ids.txt cram_paths.txt >> ~{rp}_sample_manifest.txt
   }
 
   runtime {
@@ -74,7 +75,7 @@ task CreateSampleManifest {
   }
 
   output {
-    File reprocessing_manifest = "~{rp}_sample_processing_manifest.txt"
+    File reprocessing_manifest = "~{rp}_sample_manifest.txt"
   }
 }
 
