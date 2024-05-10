@@ -10,7 +10,6 @@ workflow StartDragenWorkflow {
     String        project_id
     String        data_type
     String        dragen_version
-    String        file_name
     Array[String] cram_paths
     Array[String] sample_ids
   }
