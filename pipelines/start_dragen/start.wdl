@@ -59,7 +59,7 @@ task CreateSampleManifest {
   command {
 
     # generate header
-    echo "collaborator_sample_id cram_path" >> sample_processing_manifest.txt
+    echo "collaborator_sample_id cram_path" >> ~{rp}_sample_manifest.txt
 
     # write values to file in newline delimited format
     echo "~{sep='\n' sample_ids}"   > sample_ids.txt
