@@ -98,11 +98,9 @@ task CreateConfigs {
         ' ~{ref_dragen_config} > dragen_config.json
 
     # now overwrite __DATA_TYPE__ with data_type
+    # and overwrite __INPUT_LIST__ with reprocessing_manifest
     sed 's|__DATA_TYPE__|'"~{data_type}"'|g;
-        ' ~{ref_batch_config} > batch_config.json
-
-    # now overwrite __INPUT_LIST__ with reprocessing_manifest
-    sed 's|__INPUT_LIST__|'"~{rp}_sample_manifest.txt"'|g;
+         s|__INPUT_LIST__|'"~{rp}_sample_manifest.txt"'|g;
         ' ~{ref_batch_config} > batch_config.json
   >>>
 
