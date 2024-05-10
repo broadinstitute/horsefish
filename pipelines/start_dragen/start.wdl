@@ -28,7 +28,6 @@ workflow StartDragenWorkflow {
       ref_dragen_config = ref_dragen_config,
       ref_batch_config  = ref_batch_config,
       output_bucket     = output_bucket,
-      sample_manifest   = CreateSampleManifest.reprocessing_manifest
   }
 
   call StartDragen {
@@ -86,7 +85,6 @@ task CreateConfigs {
     String output_bucket
     String rp
     String data_type
-    File sample_manifest
   }
 
   command <<<
@@ -104,7 +102,7 @@ task CreateConfigs {
         ' ~{ref_batch_config} > batch_config.json
 
     # now overwrite __INPUT_LIST__ with reprocessing_manifest
-    sed 's|__INPUT_LIST__|'"~{sample_manifest}"'|g;
+    sed 's|__INPUT_LIST__|'"~{rp}_sample_manifest.txt"'|g;
         ' ~{ref_batch_config} > batch_config.json
   >>>
 
