@@ -10,6 +10,7 @@ workflow StartDragenWorkflow {
     String        project_id
     String        data_type
     String        dragen_version
+    String        file_name
     Array[String] cram_paths
     Array[String] sample_ids
   }
@@ -17,7 +18,8 @@ workflow StartDragenWorkflow {
   call CreateSampleManifest {
     input:
       cram_paths  = cram_paths,
-      sample_ids  = sample_ids
+      sample_ids  = sample_ids,
+      rp          = research_project
   }
 
   call CreateConfigs {
@@ -27,6 +29,7 @@ workflow StartDragenWorkflow {
       ref_dragen_config = ref_dragen_config,
       ref_batch_config  = ref_batch_config,
       output_bucket     = output_bucket,
+      sample_manifest   = CreateSampleManifest.reprocessing_manifest
   }
 
   call StartDragen {
@@ -51,6 +54,7 @@ task CreateSampleManifest {
   input {
     Array[String] cram_paths
     Array[String] sample_ids
+    String        rp
   }
 
   command {
@@ -64,7 +68,6 @@ task CreateSampleManifest {
 
     # combine to final
     paste -d " " sample_ids.txt cram_paths.txt >> sample_processing_manifest.txt
-
   }
 
   runtime {
@@ -72,7 +75,7 @@ task CreateSampleManifest {
   }
 
   output {
-    File reprocessing_manifest = "sample_processing_manifest.txt"
+    File reprocessing_manifest = "~{rp}_sample_processing_manifest.txt"
   }
 }
 
@@ -84,6 +87,7 @@ task CreateConfigs {
     String output_bucket
     String rp
     String data_type
+    File sample_manifest
   }
 
   command <<<
@@ -98,6 +102,10 @@ task CreateConfigs {
 
     # now overwrite __DATA_TYPE__ with data_type
     sed 's|__DATA_TYPE__|'"~{data_type}"'|g;
+        ' ~{ref_batch_config} > batch_config.json
+
+    # now overwrite __INPUT_LIST__ with reprocessing_manifest
+    sed 's|__INPUT_LIST__|'"~{sample_manifest}"'|g;
         ' ~{ref_batch_config} > batch_config.json
   >>>
 
@@ -128,7 +136,7 @@ task StartDragen {
     gsutil cp ~{dragen_config} "gs://~{project_id}-config/"
     gsutil cp ~{batch_config} "gs://~{project_id}-trigger/~{data_type}/~{dragen_version}/"
     gsutil cp ~{ref_trigger} "gs://~{project_id}-trigger/~{data_type}/~{dragen_version}/"
-    gsutil cp ~{sample_manifest} "gs://~{project_id}-trigger/~{data_type}/input_list/"
+    gsutil cp ~{sample_manifest} "gs://~{project_id}-trigger/~{data_type}/input_list/~{sample_manifest}"
 
   >>>
 
