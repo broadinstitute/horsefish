@@ -17,8 +17,7 @@ workflow StartDragenWorkflow {
   call CreateSampleManifest {
     input:
       cram_paths  = cram_paths,
-      sample_ids  = sample_ids,
-      rp          = research_project
+      sample_ids  = sample_ids
   }
 
   call CreateConfigs {
@@ -52,20 +51,20 @@ task CreateSampleManifest {
   input {
     Array[String] cram_paths
     Array[String] sample_ids
-    String        rp
   }
 
   command {
 
     # generate header
-    echo "collaborator_sample_id cram_path" >> ~{rp}_sample_manifest.txt
+    echo "collaborator_sample_id cram_path" >> sample_processing_manifest.txt
 
     # write values to file in newline delimited format
     echo "~{sep='\n' sample_ids}"   > sample_ids.txt
     echo "~{sep='\n' cram_paths}"   > cram_paths.txt
 
     # combine to final
-    paste -d " " sample_ids.txt cram_paths.txt >> ~{rp}_sample_manifest.txt
+    paste -d " " sample_ids.txt cram_paths.txt >> sample_processing_manifest.txt
+
   }
 
   runtime {
@@ -73,7 +72,7 @@ task CreateSampleManifest {
   }
 
   output {
-    File reprocessing_manifest = "~{rp}_sample_manifest.txt"
+    File reprocessing_manifest = "sample_processing_manifest.txt"
   }
 }
 
@@ -98,9 +97,7 @@ task CreateConfigs {
         ' ~{ref_dragen_config} > dragen_config.json
 
     # now overwrite __DATA_TYPE__ with data_type
-    # and overwrite __INPUT_LIST__ with reprocessing_manifest
     sed 's|__DATA_TYPE__|'"~{data_type}"'|g;
-         s|__INPUT_LIST__|'"~{rp}_sample_manifest.txt"'|g;
         ' ~{ref_batch_config} > batch_config.json
   >>>
 
