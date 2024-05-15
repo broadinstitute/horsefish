@@ -1,4 +1,4 @@
-# Reheader CRAM Workflow (reheader_cram)
+# Create MD5 Workflow (create_md5)
 
 ### Overview
 The create_md5 workflow is designed for generating MD5 checksum files for any type of files. It allows users to create an MD5 checksum for file validation purposes. This workflow is particularly useful in data integrity assurance across file transfers and storage.
