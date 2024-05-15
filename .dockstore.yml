@@ -35,3 +35,9 @@ workflows:
    primaryDescriptorPath: /pipelines/start_dragen/start.wdl
    testParameterFiles:
     - /pipelines/start_dragen/start.wdl
+
+ - name: create_md5
+   subclass: WDL
+   primaryDescriptorPath: /scripts/create_md5/create_md5.wdl
+   testParameterFiles:
+    - /scripts/create_md5/create_md5.wdl
