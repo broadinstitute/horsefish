@@ -11,6 +11,7 @@ logging.basicConfig(
 
 BILLING_PROJECT = "sc-bge-reprocessing"
 WORKSPACE_NAME = "SC_BGE_reprocessing_area"
+DRAGEN_VERSION = "07.021.604.3.7.8"
 
 
 class GetTerraEntity:
@@ -122,10 +123,12 @@ class ConvertSampleMetadataToTsv:
             "mapped_reads": sample_dict["mapped_reads"],
             "total_bases": sample_dict["total_bases"],
             "pdo": sample_dict["pdo"],
+            "product": sample_dict["product"],
             "exome_coverage_region_1_metrics": f"{file_path_prefix}.qc-coverage-region-1_coverage_metrics.csv",
             "off_target_coverage_region_2_metrics": f"{file_path_prefix}.qc-coverage-region-2_coverage_metrics.csv",
             "wgs_coverage_region_3_metrics": f"{file_path_prefix}.qc-coverage-region-3_coverage_metrics.csv",
-            "variant_calling_metrics_file": f"{file_path_prefix}.vc_metrics.csv"
+            "variant_calling_metrics_file": f"{file_path_prefix}.vc_metrics.csv",
+            "dragen_version": DRAGEN_VERSION
         }
 
     def create_tsv(self):
