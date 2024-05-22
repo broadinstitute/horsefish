@@ -35,7 +35,7 @@ task generate_checksum {
         set -e
 
         # Generate MD5 checksum for the file
-        md5sum ~{input_file} > ~{new_md5}
+        md5sum ~{input_file} > "output_file.md5"
     }
 
     # Runtime parameters including docker image, memory, CPU, disk, and retries
@@ -49,6 +49,6 @@ task generate_checksum {
 
     # Output files from the task
     output {
-        File new_md5 = "~{new_md5}"
+        File new_md5 = "output_file.md5"
     }
 }
