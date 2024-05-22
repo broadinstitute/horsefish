@@ -86,7 +86,7 @@ def create_ingest_dataset_request(ingest_records, target_table_name, load_tag=No
     # if user provides a load_tag, add it to request body
     if load_tag:
         load_dict["load_tag"] = load_tag
-
+    print(load_dict)
     load_json = json.dumps(load_dict) # dict -> json
 
     return load_json
