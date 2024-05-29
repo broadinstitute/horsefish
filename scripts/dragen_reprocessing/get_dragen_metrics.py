@@ -7,6 +7,7 @@ from argparse import ArgumentParser, Namespace
 from google.cloud import storage
 import logging
 import os
+import json
 
 logging.basicConfig(
     format="%(levelname)s: %(asctime)s : %(message)s", level=logging.INFO
@@ -33,11 +34,14 @@ Q1_COVERAGE = {
             # What it should be called in tdr
             'tdr_name': PERCENTAGE_TARGET_BASES_AT_10X,
             # The type of metrics, first column in csv file
-            'metric_type': 'COVERAGE SUMMARY'
+            'metric_type': 'COVERAGE SUMMARY',
+            # The column index of the value
+            'metric_column_index': -1
         },
         'Average alignment coverage over QC coverage region': {
             'tdr_name': MEAN_TARGET_COVERAGE,
-            'metric_type': 'COVERAGE SUMMARY'
+            'metric_type': 'COVERAGE SUMMARY',
+            'metric_column_index': -1
         }
     }
 }
@@ -48,11 +52,13 @@ Q3_COVERAGE = {
     'metrics': {
         'PCT of QC coverage region with coverage [  1x: inf)': {
             'tdr_name': PERCENT_WGS_BASES_AT_1X,
-            'metric_type': 'COVERAGE SUMMARY'
+            'metric_type': 'COVERAGE SUMMARY',
+            'metric_column_index': -1
         },
         'Aligned bases': {
             'tdr_name': TOTAL_BASES,
-            'metric_type': 'COVERAGE SUMMARY'
+            'metric_type': 'COVERAGE SUMMARY',
+            'metric_column_index': -1
         }
     }
 }
@@ -63,15 +69,18 @@ MAPPING_METRICS = {
     'metrics': {
         'Estimated sample contamination': {
             'tdr_name': CONTAMINATION_RATE,
-            'metric_type': 'MAPPING/ALIGNING SUMMARY'
+            'metric_type': 'MAPPING/ALIGNING SUMMARY',
+            'metric_column_index': -1,
         },
         'Not properly paired reads (discordant)': {
             'tdr_name': CHIMERA_RATE,
-            'metric_type': 'MAPPING/ALIGNING SUMMARY'
+            'metric_type': 'MAPPING/ALIGNING SUMMARY',
+            'metric_column_index': -1
         },
         'Mapped reads': {
             'tdr_name': MAPPED_READS,
-            'metric_type': 'MAPPING/ALIGNING SUMMARY'
+            'metric_type': 'MAPPING/ALIGNING SUMMARY',
+            'metric_column_index': -2
         }
     }
 }
@@ -81,7 +90,8 @@ VC_METRICS = {
     'metrics': {
         'Percent Callability': {
             'tdr_name': PERCENT_CALLABILITY,
-            'metric_type': 'VARIANT CALLER POSTFILTER'
+            'metric_type': 'VARIANT CALLER POSTFILTER',
+            'metric_column_index': -1
         }
     }
 }
@@ -125,10 +135,10 @@ class GetMetrics:
                 split_line = line.split(',')
                 metric_type = split_line[0]
                 metric_key = split_line[2]
-                value = split_line[3]
                 expected_metric_dict = self.metrics_dict.get(metric_key)
                 if expected_metric_dict:
                     if expected_metric_dict['metric_type'] == metric_type:
+                        value = split_line[self.metrics_dict[metric_key]['metric_column_index']]
                         found_metrics_dict[expected_metric_dict['tdr_name']] = value
         # Get list of the tdr names of expected found metrics
         missing_metrics = [
@@ -148,6 +158,7 @@ class GetMeanCoverage:
         # Prefix of how metric starts. This file line tmp file location that is different in every file
         'metric_prefix': 'Average alignment coverage over',
         'tdr_name': MEAN_OFF_TARGET_COVERAGE,
+        'metric_column_index': -1
     }
 
     def __init__(self, q2_mean_coverage_contents: list[str]):
@@ -159,7 +170,7 @@ class GetMeanCoverage:
             if line:
                 split_line = line.split(',')
                 metric_type = split_line[0]
-                value = split_line[1]
+                value = split_line[self.Q2_MEAN_COVERAGE['metric_column_index']]
                 if metric_type.startswith(self.Q2_MEAN_COVERAGE['metric_prefix']):
                     found_metrics_dict[self.Q2_MEAN_COVERAGE['tdr_name']] = value
 
