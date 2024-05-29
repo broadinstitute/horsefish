@@ -23,6 +23,7 @@ workflow parse_dragen_metrics {
         String total_bases = get_metrics.total_bases
         String percent_wgs_bases_at_1x = get_metrics.percent_wgs_bases_at_1x
         String percent_callability = get_metrics.percent_callability
+        String mean_off_target_coverage = get_metrics.mean_off_target_coverage
     }
 }
 
@@ -53,5 +54,6 @@ task get_metrics {
         String total_bases = read_string("total_bases.tsv")
         String percent_wgs_bases_at_1x = read_string("percent_wgs_bases_at_1x.tsv")
         String percent_callability = read_string("percent_callability.tsv")
+        String mean_off_target_coverage = read_string("mean_off_target_coverage.tsv")
     }
 }

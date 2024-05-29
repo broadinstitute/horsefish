@@ -13,6 +13,7 @@ logging.basicConfig(
 )
 PERCENTAGE_TARGET_BASES_AT_10X = "percent_target_bases_at_10x"
 MEAN_TARGET_COVERAGE = "mean_target_coverage"
+MEAN_OFF_TARGET_COVERAGE = "mean_off_target_coverage"
 PERCENT_WGS_BASES_AT_1X = "percent_wgs_bases_at_1x"
 TOTAL_BASES = "total_bases"
 CONTAMINATION_RATE = "contamination_rate"
@@ -21,7 +22,7 @@ MAPPED_READS = "mapped_reads"
 PERCENT_CALLABILITY = "percent_callability"
 EXPECTED_METRICS = [
     PERCENTAGE_TARGET_BASES_AT_10X, MEAN_TARGET_COVERAGE, PERCENT_WGS_BASES_AT_1X, TOTAL_BASES,
-    CONTAMINATION_RATE, CHIMERA_RATE, MAPPED_READS, PERCENT_CALLABILITY
+    CONTAMINATION_RATE, CHIMERA_RATE, MAPPED_READS, PERCENT_CALLABILITY, MEAN_OFF_TARGET_COVERAGE
 ]
 Q1_COVERAGE = {
     'file_extension': 'qc-coverage-region-1_coverage_metrics.csv',
@@ -40,6 +41,7 @@ Q1_COVERAGE = {
         }
     }
 }
+
 Q3_COVERAGE = {
     'file_extension': 'qc-coverage-region-3_coverage_metrics.csv',
     'file_name': '{sample}.qc-coverage-region-3_coverage_metrics.csv',
@@ -109,12 +111,14 @@ class GetMetricsFilesContents:
         logging.info(f"Reading {full_gcp_path}")
         return blob.download_as_string().decode().split('\n')
 
-    def get_metrics_files(self) -> tuple[list[str], list[str], list[str], list[str]]:
+    def get_metrics_files(self) -> tuple[list[str], list[str], list[str], list[str], list[str]]:
         mapping_metrics_contents = self.read_file(MAPPING_METRICS['file_name'])
         q1_coverage_reports_contents = self.read_file(Q1_COVERAGE['file_name'])
         q3_coverage_reports_contents = self.read_file(Q3_COVERAGE['file_name'])
         vc_metrics_contents = self.read_file(VC_METRICS['file_name'])
-        return mapping_metrics_contents, q1_coverage_reports_contents, q3_coverage_reports_contents, vc_metrics_contents
+        q2_mean_coverage_contents = self.read_file(Q2_MEAN_COVERAGE['file_name'])
+        return mapping_metrics_contents, q1_coverage_reports_contents, \
+               q3_coverage_reports_contents, vc_metrics_contents, q2_mean_coverage_contents
 
 
 class GetMetrics:
@@ -145,10 +149,38 @@ class GetMetrics:
         return found_metrics_dict
 
 
+class GetMeanCoverage:
+    # One metrics that we collect information differently
+    Q2_MEAN_COVERAGE = {
+        'file_extension': 'qc-coverage-region-2_overall_mean_cov.csv',
+        'file_name': '{sample}.qc-coverage-region-2_overall_mean_cov.csv',
+        # Prefix of how metric starts. This file line tmp file location that is different in every file
+        'metric_prefix': 'Average alignment coverage over',
+        'tdr_name': MEAN_OFF_TARGET_COVERAGE,
+    }
+
+    def __init__(self, q2_mean_coverage_contents: list[str]):
+        self.q2_mean_coverage_contents = q2_mean_coverage_contents
+
+    def get_metrics(self) -> dict:
+        found_metrics_dict = {}
+        for line in self.q2_mean_coverage_contents:
+            if line:
+                split_line = line.split(',')
+                metric_type = split_line[0]
+                value = split_line[2]
+                if metric_type.startswith(self.Q2_MEAN_COVERAGE['metric_prefix']):
+                    found_metrics_dict[self.Q2_MEAN_COVERAGE['tdr_name']] = value
+
+        if self.Q2_MEAN_COVERAGE['tdr_name'] not in found_metrics_dict.keys():
+            logging.error(f"{self.Q2_MEAN_COVERAGE['file_extension']} Missing (metrics file key: tdr name): {self.Q2_MEAN_COVERAGE['metric_prefix']} : {self.Q2_MEAN_COVERAGE['tdr_name']}")
+        return found_metrics_dict
+
+
 if __name__ == "__main__":
     args = get_args()
     output_path, sample_name = args.dragen_output_path, args.sample_name
-    mapping_metrics, q1_coverage_reports, q3_coverage_reports, vc_metrics = GetMetricsFilesContents(
+    mapping_metrics, q1_coverage_reports, q3_coverage_reports, vc_metrics, q2_mean_coverage_contents = GetMetricsFilesContents(
         output_path=output_path,
         sample_name=sample_name
     ).get_metrics_files()
@@ -158,6 +190,8 @@ if __name__ == "__main__":
     full_metrics_dict.update(GetMetrics(q1_coverage_reports, Q1_COVERAGE).get_metrics())
     full_metrics_dict.update(GetMetrics(q3_coverage_reports, Q3_COVERAGE).get_metrics())
     full_metrics_dict.update(GetMetrics(vc_metrics, VC_METRICS).get_metrics())
+    # mean coverage metric file is different then others
+    full_metrics_dict.update(GetMeanCoverage(q2_mean_coverage_contents).get_metrics())
     if any([metric_name not in full_metrics_dict for metric_name in EXPECTED_METRICS]):
         missing_metrics = list(set(EXPECTED_METRICS) - set(full_metrics_dict.keys()))
         raise Exception(f"Missing metrics in output: {missing_metrics}")

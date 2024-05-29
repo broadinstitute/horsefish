@@ -124,6 +124,7 @@ class ConvertSampleMetadataToTsv:
             "total_bases": sample_dict["total_bases"],
             "pdo": sample_dict["pdo"],
             "product": sample_dict["product"],
+            "mean_off_target_coverage": sample_dict["mean_off_target_coverage"],
             "exome_coverage_region_1_metrics": f"{file_path_prefix}.qc-coverage-region-1_coverage_metrics.csv",
             "off_target_coverage_region_2_metrics": f"{file_path_prefix}.qc-coverage-region-2_coverage_metrics.csv",
             "wgs_coverage_region_3_metrics": f"{file_path_prefix}.qc-coverage-region-3_coverage_metrics.csv",
