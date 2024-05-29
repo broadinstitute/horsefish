@@ -101,24 +101,15 @@ class GetMetricsFilesContents:
         self.sample_name = sample_name
         self.gcs_client = storage.Client()
 
-    def read_file(self, metrics_file: str) -> list[str]:
+    def read_file(self, file_name) -> list[str]:
         full_gcp_path = os.path.join(
-            self.output_path, metrics_file.format(sample=self.sample_name)
+            self.output_path, file_name.format(sample=self.sample_name)
         )
         bucket_name, blob_name = full_gcp_path.split('/')[2], '/'.join(full_gcp_path.split('/')[3:])
         bucket = self.gcs_client.get_bucket(bucket_name)
         blob = bucket.blob(blob_name)
         logging.info(f"Reading {full_gcp_path}")
         return blob.download_as_string().decode().split('\n')
-
-    def get_metrics_files(self) -> tuple[list[str], list[str], list[str], list[str], list[str]]:
-        mapping_metrics_contents = self.read_file(MAPPING_METRICS['file_name'])
-        q1_coverage_reports_contents = self.read_file(Q1_COVERAGE['file_name'])
-        q3_coverage_reports_contents = self.read_file(Q3_COVERAGE['file_name'])
-        vc_metrics_contents = self.read_file(VC_METRICS['file_name'])
-        q2_mean_coverage_contents = self.read_file(Q2_MEAN_COVERAGE['file_name'])
-        return mapping_metrics_contents, q1_coverage_reports_contents, \
-               q3_coverage_reports_contents, vc_metrics_contents, q2_mean_coverage_contents
 
 
 class GetMetrics:
@@ -168,7 +159,7 @@ class GetMeanCoverage:
             if line:
                 split_line = line.split(',')
                 metric_type = split_line[0]
-                value = split_line[2]
+                value = split_line[1]
                 if metric_type.startswith(self.Q2_MEAN_COVERAGE['metric_prefix']):
                     found_metrics_dict[self.Q2_MEAN_COVERAGE['tdr_name']] = value
 
@@ -180,10 +171,13 @@ class GetMeanCoverage:
 if __name__ == "__main__":
     args = get_args()
     output_path, sample_name = args.dragen_output_path, args.sample_name
-    mapping_metrics, q1_coverage_reports, q3_coverage_reports, vc_metrics, q2_mean_coverage_contents = GetMetricsFilesContents(
-        output_path=output_path,
-        sample_name=sample_name
-    ).get_metrics_files()
+
+    get_metrics_util = GetMetricsFilesContents(output_path=output_path, sample_name=sample_name)
+    mapping_metrics = get_metrics_util.read_file(MAPPING_METRICS['file_name'])
+    q1_coverage_reports = get_metrics_util.read_file(Q1_COVERAGE['file_name'])
+    q3_coverage_reports = get_metrics_util.read_file(Q3_COVERAGE['file_name'])
+    vc_metrics = get_metrics_util.read_file(VC_METRICS['file_name'])
+    q2_mean_coverage_contents = get_metrics_util.read_file(GetMeanCoverage.Q2_MEAN_COVERAGE['file_name'])
 
     full_metrics_dict = {}
     full_metrics_dict.update(GetMetrics(mapping_metrics, MAPPING_METRICS).get_metrics())
