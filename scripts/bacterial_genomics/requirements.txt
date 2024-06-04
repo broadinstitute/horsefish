@@ -1,1 +1,7 @@
 pandas==2.2.2
+firecloud==0.16.37
+oauth2client==4.1.3
+pip==21.1
+tenacity==5.1.1
+google-cloud-storage==1.36.1
+
