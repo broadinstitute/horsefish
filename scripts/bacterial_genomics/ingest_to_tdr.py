@@ -11,7 +11,7 @@ from google.cloud import storage as gcs
 from oauth2client.client import GoogleCredentials
 
 # DEVELOPER: update this field anytime you make a new docker image and update changelog
-version = "1.0"
+docker_version = "1.0"
 
 def get_access_token():
     """Get access token."""
@@ -202,17 +202,3 @@ def parse_json_outputs_file(input_tsv):
         all_recoded_row_dicts.append(recoded_row_dict)
 
     return all_recoded_row_dicts, last_modified_date
-
-
-if __name__ == "__main__" :
-    parser = argparse.ArgumentParser(description='Push Arrays.wdl outputs to TDR dataset.')
-
-    parser.add_argument('-f', '--tsv', required=True, type=str, help='tsv file of files to ingest to TDR')
-    parser.add_argument('-d', '--dataset_id', required=True, type=str, help='id of TDR dataset for destination of outputs')
-    parser.add_argument('-t', '--target_table_name', required=True, type=str, help='name of target table in TDR dataset')
-    parser.add_argument('-l', '--load_tag', required=False, type=str, help="load tag to allow for ingest of duplicate files in separate ingest calls")
-
-    args = parser.parse_args()
-
-    all_recoded_row_dicts, last_modified_date = parse_json_outputs_file(args.tsv)
-    call_ingest_dataset(all_recoded_row_dicts, args.target_table_name, args.dataset_id, args.load_tag)
