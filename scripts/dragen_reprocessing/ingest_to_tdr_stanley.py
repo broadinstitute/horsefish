@@ -1,17 +1,22 @@
 # imports and environment variables
-import argparse
 import json
-import pandas as pd
 import pytz
+import csv
 import requests
-import time
-
+from argparse import ArgumentParser, Namespace
+import logging
+import backoff
 from datetime import datetime
-from google.cloud import storage as gcs
+from typing import Union, Any
 from oauth2client.client import GoogleCredentials
+import sys
 
 # DEVELOPER: update this field anytime you make a new docker image and update changelog
 version = "1.0"
+
+logging.basicConfig(
+    format="%(levelname)s: %(asctime)s : %(message)s", level=logging.INFO
+)
 
 RP_TO_DATASET_ID = {
     "RP-2720": "dbfdcd34-2937-4781-96c2-5bf0c22fddec",
@@ -25,267 +30,361 @@ KEYS_THAT_ARE_STRING = [
     "collaborator_participant_id",
     "collaborator_sample_id",
 ]
+BILLING_PROJECT = 'sc-bge-reprocessing'
+WORKSPACE_NAME = 'SC_BGE_reprocessing_area'
+ONE_DAY_IN_SECONDS = 86400
+MAX_BACKOFF_TIME = 600
+MAX_RETRIES = 1
+INGEST_CHECK_INTERVAL = 120
 
 
-def get_access_token():
-    """Get access token."""
+class Terra:
+    ACCEPTABLE_STATUS_CODES = [200, 202]
+    TDR_LINK = "https://data.terra.bio/api/repository/v1"
+    TERRA_LINK = "https://api.firecloud.org/api"
+    LEONARDO_LINK = "https://leonardo.dsde-prod.broadinstitute.org/api"
+    WORKSPACE_LINK = "https://workspace.dsde-prod.broadinstitute.org/api/workspaces/v1"
+    GET = 'get'
+    POST = 'post'
 
-    scopes = ["https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/userinfo.email"]
-    credentials = GoogleCredentials.get_application_default()
-    credentials = credentials.create_scoped(scopes)
+    def __init__(self, max_retries: int, max_backoff_time: int):
+        self.max_retries = max_retries
+        self.max_backoff_time = max_backoff_time
 
-    return credentials.get_access_token().access_token
+    def _get_access_token(self):
+        """Get access token."""
+        scopes = ["https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/userinfo.email"]
+        credentials = GoogleCredentials.get_application_default()
+        credentials = credentials.create_scoped(scopes)
 
+        return credentials.get_access_token().access_token
 
-def get_job_result(job_id):
-    """retrieveJobResult"""
+    def _create_headers(self, content_type: str = None) -> dict:
+        """Create headers for API calls."""
+        headers = {"Authorization": f"Bearer {self._get_access_token()}", "accept": "application/json"}
+        if content_type:
+            headers["Content-Type"] = content_type
+        return headers
 
-    # first check job status - retrieveJob
-    uri = f"https://data.terra.bio/api/repository/v1/jobs/{job_id}/result"
+    def _check_return_code(self, response: requests.Response) -> None:
+        """Check if status code is acceptable."""
+        if response.status_code not in self.ACCEPTABLE_STATUS_CODES:
+            raise ValueError(
+                f"Status code {response.status_code} is not acceptable: {response.text}")
 
-    headers = {"Authorization": "Bearer " + get_access_token(),
-               "accept": "application/json"}
+    @staticmethod
+    def _create_backoff_decorator(max_tries: int, factor: int, max_time: int) -> Any:
+        """Create backoff decorator so we can pass in max_tries."""
+        return backoff.on_exception(
+            backoff.expo,
+            requests.exceptions.RequestException,
+            max_tries=max_tries,
+            factor=factor,
+            max_time=max_time
+        )
 
-    response = requests.get(uri, headers=headers)
-    response_json = json.loads(response.text)
-    status_code = response.status_code
+    def _run_request(self, uri: str, method: str, headers: dict, data: Any = None,
+                     factor: int = 15) -> requests.Response:
+        """Run request."""
+        # Create a custom backoff decorator with the provided parameters
+        backoff_decorator = self._create_backoff_decorator(
+            max_tries=self.max_retries,
+            factor=factor,
+            max_time=self.max_backoff_time
+        )
 
-    return status_code, response_json
+        # Apply the backoff decorator to the actual request execution
+        @backoff_decorator
+        def make_request() -> requests.Response:
+            if method == self.GET:
+                response = requests.get(uri, headers=headers)
+            elif method == self.POST:
+                response = requests.post(uri, headers=headers, data=data)
+            else:
+                raise ValueError(f"Method {method} is not supported")
+            response.raise_for_status()  # Raise an exception for non-200 status codes
+            return response
+        return make_request()
 
+    def get_job_result(self, job_id: str) -> dict:
+        """retrieveJobResult"""
+        uri = f"{self.TDR_LINK}/jobs/{job_id}/result"
+        response = self._run_request(uri=uri, method=self.GET, headers=self._create_headers())
+        return json.loads(response.text)
 
-def get_job_status(job_id):
-    """retrieveJobStatus"""
+    def get_job_status(self, job_id: str) -> requests.Response:
+        """retrieveJobStatus"""
+        # first check job status - retrieveJob
+        uri = f"{self.TDR_LINK}/jobs/{job_id}"
+        response = self._run_request(uri=uri, method=self.GET, headers=self._create_headers())
+        return response
 
-    # first check job status - retrieveJob
-    uri = f"https://data.terra.bio/api/repository/v1/jobs/{job_id}"
+    def ingest_dataset(self, dataset_id: str, data: json) -> dict:
+        """Load data into TDR with ingestDataset."""
+        uri = f"{self.TDR_LINK}/datasets/{dataset_id}/ingest"
+        response = self._run_request(
+            uri=uri,
+            method=self.POST,
+            headers=self._create_headers(content_type="application/json"),
+            data=data
+        )
+        return json.loads(response.text)
 
-    headers = {"Authorization": "Bearer " + get_access_token(),
-               "accept": "application/json"}
-
-    response = requests.get(uri, headers=headers)
-    response_json = json.loads(response.text)
-    status_code = response.status_code
-
-    return status_code, response_json
-
-
-def ingest_dataset(dataset_id, data):
-    """Load data into TDR with ingestDataset."""
-
-    uri = f"https://data.terra.bio/api/repository/v1/datasets/{dataset_id}/ingest"
-
-    headers = {"Authorization": "Bearer " + get_access_token(),
-               "accept": "application/json",
-               "Content-Type": "application/json"}
-
-    response = requests.post(uri, headers=headers, data=data)
-    status_code = response.status_code
-
-    if status_code != 202:  # if ingest start-up fails
-        raise ValueError(response.text)
-
-    # if ingest start-up succeeds
-    return json.loads(response.text)
-
-
-def create_ingest_dataset_request(ingest_records, target_table_name, bulk_mode, update_strategy, load_tag=None):
-    """Create the ingestDataset request body."""
-    load_dict = {
-        "format": "array",
-        "records": ingest_records,
-        "table": target_table_name,
-        "resolve_existing_files": "true",
-        "updateStrategy": update_strategy,
-        "bulkMode": "true" if bulk_mode else "false"
-    }
-    # if user provides a load_tag, add it to request body
-    if load_tag:
-        load_dict["load_tag"] = load_tag
-
-    load_json = json.dumps(load_dict)  # dict -> json
-
-    return load_json
-
-
-def get_data_set_sample_ids(dataset_id, target_table_name):
-    """Get existing ids from dataset."""
-    uri = f"https://data.terra.bio/api/repository/v1/datasets/{dataset_id}/data/{target_table_name}"
-
-    headers = {"Authorization": "Bearer " + get_access_token(),
-               "accept": "application/json"}
-    response = requests.get(uri, headers=headers)
-    response_json = json.loads(response.text)
-    status_code = response.status_code
-    if response.status_code not in [200, 201, 202]:
-        raise ValueError(response.text)
-    return [
-        str(sample_dict['sample_id']) for sample_dict in response_json["result"]
-    ]
-
-
-def call_ingest_dataset(recoded_row_dicts, target_table_name, dataset_id, bulk_mode, update_strategy, load_tag=None):
-    """Create the ingestDataset API json request body and call API."""
-
-    ingest_dataset_request = create_ingest_dataset_request(
-        ingest_records=recoded_row_dicts,
-        target_table_name=target_table_name,
-        load_tag=load_tag,
-        bulk_mode=bulk_mode,
-        update_strategy=update_strategy
-    )  # create request for ingestDataset
-    print(f"ingestDataset request body: \n {ingest_dataset_request} \n")
-
-    ingest_response = ingest_dataset(dataset_id, ingest_dataset_request)  # call ingestDataset
-    print(f"ingestDataset response body: \n {ingest_response} \n")
-
-    ingest_job_id = ingest_response["id"]  # check for presence of id in ingest_dataset()
-    ingest_status_code = ingest_response["status_code"]
-
-    # 202 = job is running as confirmed in ingest_dataset()
-    job_status_code, job_status_response = get_job_status(ingest_job_id)
-
-    while job_status_code == 202:  # while job is running
-        print(f"{ingest_job_id} --> running")
-        time.sleep(10)  # wait 10 seconds before getting job status
-        job_status_code, job_status_response = get_job_status(ingest_job_id)  # get updated status info
-
-    # job completes (‘failed’ or ‘succeeded’) with 200 status_code
-    # consider any combination other than 200 + succeeded as failure
-    if not (job_status_code == 200 and job_status_response["job_status"] == "succeeded"):
-        print(f"{ingest_job_id} --> failed")
-        # if failed, get the resulting error message
-        job_result_code, job_result_response = get_job_result(ingest_job_id)
-        raise ValueError(job_result_response)
-
-        # job completes successfully
-    # success_code is 200 and "job_status" =is"succeeded"
-    print(f"{ingest_job_id} --> succeeded")
-
-    # write load tag to output file from final succeeded job result response
-    job_result_code, job_result_response = get_job_result(ingest_job_id)
-    result_load_tag = job_result_response["load_tag"]
-    with open("load_tag.txt", "w") as loadfile:
-        loadfile.write(result_load_tag)
-
-    print("File ingest to TDR dataset completed successfully.")
-
-
-def create_recoded_json(row_json):
-    """Update dictionary with TDR's dataset relative paths for keys with gs:// paths."""
-    recoded_row_json = dict(row_json)  # update copy instead of original
-
-    for key in row_json.keys():  # for column name in row
-        value = row_json[key]  # get value
-        if value is not None:  # if value exists (non-empty cell)
-            if isinstance(value, str):  # and is a string
-                if value.startswith("gs://"):  # starting with gs://
-                    relative_tdr_path = value.replace("gs://", "/")  # create TDR relative path
-                    # recode original value/path with expanded request
-                    # TODO: add in description = id_col + col_name
-                    recoded_row_json[key] = {"sourcePath": value,
-                                             "targetPath": relative_tdr_path}
-                    continue
-
-                recoded_row_json_list = []  # instantiate empty list to store recoded values for arrayOf:True cols
-                if value.startswith("[") and value.endswith("]"):  # if value is an array
-                    value_list = json.loads(value)  # convert <str> to <liist>
-
-                    # check if any of the list values are non-string types
-                    non_string_list_values = [isinstance(item, str) for item in value_list]
-                    # if non-string types, add value without recoding
-                    if not any(non_string_list_values):
-                        recoded_row_json[key] = value_list
-                        continue
-
-                    # check if any of the list_values are strings that start with gs://
-                    gs_paths = [item.startswith('gs://') for item in value_list]
-                    # TODO: any cases where an item in a list is not gs:// should be a user error?
-                    if any(gs_paths):
-                        for item in value_list:  # for each item in the array
-                            relative_tdr_path = item.replace("gs://", "/")  # create TDR relative path
-                            # create the json request for list member
-                            recoded_list_member = {"sourcePath": item,
-                                                   "targetPath": relative_tdr_path}
-                            recoded_row_json_list.append(recoded_list_member)  # add json request to list
-                        recoded_row_json[
-                            key] = recoded_row_json_list  # add list of json requests to larger json request
-                        continue
-
-                    else:  # when list values are strings that DO NOT start with gs:// (like filerefs)
-                        for item in value_list:  # for each string item in non gs:// path array
-                            recoded_row_json_list.append(item)
-                        recoded_row_json[key] = recoded_row_json_list
-                        continue
-                # if value is string but not a gs:// path or list of gs:// paths
-                if key in KEYS_THAT_ARE_STRING:
-                    recoded_row_json[key] = str(value)
-                else:
-                    recoded_row_json[key] = value
-
-    return recoded_row_json
-
-
-def parse_json_outputs_file(input_tsv):
-    """Create a recoded json dictionary per row in input."""
-
-    tsv_df = pd.read_csv(input_tsv, sep="\t")
-    all_recoded_row_dicts = []
-
-    for index, row in tsv_df.iterrows():
-        last_modified_date = datetime.now(tz=pytz.UTC).strftime("%Y-%m-%dT%H:%M:%S")
-
-        # drop empty columns and add in timestamp
-        remove_row_nan = row.dropna()
-        remove_row_nan["last_modified_date"] = last_modified_date
-        recoded_row_dict = create_recoded_json(remove_row_nan)
-
-        all_recoded_row_dicts.append(recoded_row_dict)
-
-    return all_recoded_row_dicts
-
-
-if __name__ == "__main__" :
-    parser = argparse.ArgumentParser(description='Push Arrays.wdl outputs to TDR dataset.')
-
-    parser.add_argument('-f', '--tsv', required=True, type=str, help='tsv file of files to ingest to TDR')
-    parser.add_argument('-r', '--rp', required=True, type=str, help='research project')
-    parser.add_argument('-b', '--bulk_mode', action="store_true", help='use if you want to use bulkMode in ingest')
-    parser.add_argument('-u', '--update_strategy', required=True, choices=['replace', 'merge', 'append'], type=str, help='which strategy to use for ingest')
-    parser.add_argument('-t', '--target_table_name', required=True, type=str, help='name of target table in TDR dataset')
-    parser.add_argument('-d', '--data_set_id', required=False, type=str, help='data set id if not one of the standard RP datasets')
-    parser.add_argument('-l', '--load_tag', required=False, type=str, help="load tag to allow for ingest of duplicate files in separate ingest calls")
-
-    args = parser.parse_args()
-    # Assign args
-    tsv, rp, target_table_name, load_tag, data_set_id, bulk_mode, update_strategy = args.tsv, args.rp, args.target_table_name, args.load_tag, args.data_set_id, args.bulk_mode, args.update_strategy
-    # Get dataset id using RP
-    if not data_set_id:
-        data_set_id = RP_TO_DATASET_ID.get(rp)
-
-    # Get existing ids from dataset
-    existing_sample_ids = get_data_set_sample_ids(data_set_id, target_table_name)
-
-    all_recoded_row_dicts = parse_json_outputs_file(tsv)
-
-    # If using append or replace then fail if sample_id already exists in dataset
-    if update_strategy in ['append', 'replace']:
-        id_already_in_dataset = [
-            row['sample_id']
-            for row in all_recoded_row_dicts
-            if row['sample_id'] in existing_sample_ids
-        ]
-        if id_already_in_dataset:
-            print(
-                f"Found {len(id_already_in_dataset)} samples in dataset {data_set_id} that already exist."
+    def _yield_data_set_metrics(self, dataset_id: str, target_table_name: str, query_limit: int = 1000) -> Any:
+        """Yield all entity metrics from dataset."""
+        search_request = {
+            "offset": 0,
+            "limit": query_limit,
+            "sort": "datarepo_row_id"
+        }
+        uri = f"{self.TDR_LINK}/datasets/{dataset_id}/data/{target_table_name}"
+        while True:
+            batch_number = int((search_request["offset"] / query_limit)) + 1
+            response = self._run_request(
+                uri=uri,
+                method=self.POST,
+                headers=self._create_headers(content_type="application/json"),
+                data=json.dumps(search_request)
             )
-            id_list_str = ', '.join(id_already_in_dataset)
-            raise ValueError(f"Sample ids {id_list_str} already exist in dataset {data_set_id} when using {update_strategy} update strategy.")
+            if not response or not response.json()["result"]:
+                break
+            logging.info(
+                f"Downloading batch {batch_number} of max {query_limit} records from {target_table_name} table in dataset {dataset_id}")
+            for record in response.json()["result"]:
+                yield record
+            search_request["offset"] += query_limit
 
-    call_ingest_dataset(
-        recoded_row_dicts=all_recoded_row_dicts,
-        target_table_name=target_table_name,
-        dataset_id=data_set_id,
-        load_tag=load_tag,
-        bulk_mode=bulk_mode,
-        update_strategy=update_strategy
+    def get_data_set_sample_ids(self, dataset_id: str, target_table_name: str, entity_id: str) -> List[str]:
+        """Get existing ids from dataset."""
+        data_set_metadata = self._yield_data_set_metrics(dataset_id=dataset_id, target_table_name=target_table_name)
+        return [
+            str(sample_dict[entity_id]) for sample_dict in data_set_metadata
+        ]
+
+
+class ReformatMetricsForIngest:
+    def __init__(self, sample_metrics: list[dict]):
+        self.sample_metrics = sample_metrics
+        self.file_prefix = "gs://"
+
+    def _format_relative_tdr_path(self, cloud_path: str) -> str:
+        """Format cloud path to TDR path."""
+        return '/' + '/'.join(cloud_path.split('/')[3:])
+
+    def _check_and_format_file_path(self, column_value: str) -> Union[str, dict]:
+        """Check if column value is a gs:// path and reformat to TDR's dataset relative path"""
+        if isinstance(column_value, str):
+            if column_value.startswith(self.file_prefix):
+                return {
+                    "sourcePath": column_value,
+                    "targetPath": self._format_relative_tdr_path(column_value)
+                }
+        return column_value
+
+    def _reformat_metric(self, row_dict: dict) -> dict:
+        """Reformat metric for ingest."""
+        reformatted_dict = {}
+        for key, value in row_dict.items():
+            # Ignore where there is no value
+            if value:
+                if key in KEYS_THAT_ARE_STRING:
+                    reformatted_dict[key] = str(value)
+                # If it is a list go through each item and recreate list
+                elif isinstance(value, list):
+                    reformatted_dict[key] = [
+                        self._check_and_format_file_path(item) for item in value
+                    ]
+                else:
+                    reformatted_dict[key] = self._check_and_format_file_path(value)
+        # add in timestamp
+        reformatted_dict['last_modified_date'] = datetime.now(tz=pytz.UTC).strftime("%Y-%m-%dT%H:%M:%S")
+        return reformatted_dict
+
+    def run(self) -> list[dict]:
+        return [
+            self._reformat_metric(row_dict) for row_dict in self.sample_metrics
+        ]
+
+
+class FilterOutSampleIdsAlreadyInDataset:
+    def __init__(self, workspace_metrics: list[dict], dataset_id: str, terra: Terra, target_table_name: str, filter_entity_id: str):
+        self.workspace_metrics = workspace_metrics
+        self.terra = terra
+        self.dataset_id = dataset_id
+        self.target_table_name = target_table_name
+        self.filter_entity_id = filter_entity_id
+
+    def run(self) -> list[dict]:
+        # Get all sample ids that already exist in dataset
+        logging.info(f"Getting all sample ids that already exist in dataset {self.dataset_id}")
+        data_set_sample_ids = self.terra.get_data_set_sample_ids(
+            dataset_id=self.dataset_id,
+            target_table_name=self.target_table_name,
+            entity_id=self.filter_entity_id
+        )
+        # Filter out rows that already exist in dataset
+        filtered_workspace_metrics = [
+            row
+            for row in self.workspace_metrics
+            if str(row[filter_entity_id]) not in data_set_sample_ids
+        ]
+        if len(filtered_workspace_metrics) < len(self.workspace_metrics):
+            logging.info(f"Filtered out {len(self.workspace_metrics) - len(filtered_workspace_metrics)} rows that already exist in dataset")
+            if filtered_workspace_metrics:
+                return filtered_workspace_metrics
+            else:
+                logging.info("All rows filtered out as they all exist in dataset, nothing to ingest")
+                sys.exit(0)
+        else:
+            logging.info("No rows were filtered out as they all do not exist in dataset")
+            return filtered_workspace_metrics
+
+
+class StartIngest:
+    def __init__(self, terra: Terra, ingest_records: List[dict], target_table_name: str, dataset_id: str, load_tag: str, bulk_mode: bool, update_strategy: str):
+        self.terra = terra
+        self.ingest_records = ingest_records
+        self.target_table_name = target_table_name
+        self.dataset_id = dataset_id
+        self.load_tag = load_tag
+        self.bulk_mode = bulk_mode
+        self.update_strategy = update_strategy
+
+    def _create_ingest_dataset_request(self) -> Any:
+        """Create the ingestDataset request body."""
+        # https://support.terra.bio/hc/en-us/articles/23460453585819-How-to-ingest-and-update-TDR-data-with-APIs
+        load_dict = {
+            "format": "array",
+            "records": self.ingest_records,
+            "table": self.target_table_name,
+            "resolve_existing_files": "true",
+            "updateStrategy": self.update_strategy,
+            "load_tag": self.load_tag,
+            "bulkMode": "true" if self.bulk_mode else "false"
+        }
+        return json.dumps(load_dict)  # dict -> json
+
+    def run(self) -> str:
+        ingest_request = self._create_ingest_dataset_request()
+        logging.info(f"Starting ingest to {self.dataset_id}")
+        ingest_response = self.terra.ingest_dataset(
+            dataset_id=self.dataset_id, data=ingest_request)
+        return ingest_response["id"]
+
+
+class MonitorIngest:
+    def __init__(self, terra: Terra, ingest_id: str, check_interval: int):
+        self.terra = terra
+        self.ingest_id = ingest_id
+        self.check_interval = check_interval
+
+    def run(self) -> bool:
+        """Monitor ingest until completion."""
+        while True:
+            ingest_response = self.terra.get_job_status(self.ingest_id)
+            if ingest_response.status_code == 202:
+                logging.info(f"Ingest {self.ingest_id} is still running")
+                # Check every x seconds if ingest is still running
+                time.sleep(self.check_interval)
+            elif ingest_response.status_code == 200:
+                response_json = json.loads(ingest_response.text)
+                if response_json["job_status"] == "succeeded":
+                    logging.info(f"Ingest {self.ingest_id} succeeded")
+                    return True
+                else:
+                    logging.error(f"Ingest {self.ingest_id} failed")
+                    job_result = self.terra.get_job_result(self.ingest_id)
+                    raise ValueError(
+                        f"Status code {ingest_response.status_code}: {response_json}\n{job_result}")
+            else:
+                logging.error(f"Ingest {self.ingest_id} failed")
+                job_result = self.terra.get_job_result(self.ingest_id)
+                raise ValueError(f"Status code {ingest_response.status_code}: {ingest_response.text}\n{job_result}")
+
+
+def get_args() -> Namespace:
+    parser = ArgumentParser(description='Move GCP data from Terra workspace to TDR.')
+    parser.add_argument('-d', '--dataset_id', required=False, type=str,
+                        help='id of TDR dataset for destination of outputs')
+    parser.add_argument('-t', '--target_table_name', required=True, type=str,
+                        help='name of target table in TDR dataset')
+    parser.add_argument('--max_retries', default=MAX_RETRIES, type=int,
+                        help=f'Max retries to have on all API calls. Defaults to {MAX_RETRIES}.')
+    parser.add_argument('--max_backoff_time', default=MAX_BACKOFF_TIME, type=int,
+                        help=f'Max backoff time for all API calls. Defaults to {MAX_BACKOFF_TIME}.')
+    parser.add_argument('--waiting_time_to_poll', default=INGEST_CHECK_INTERVAL, type=int,
+                        help=f'time to wait before polling ingest status again in seconds. Default is {INGEST_CHECK_INTERVAL}.')
+    parser.add_argument('--batch_size', required=True, type=int, help="Ingest batch size is based on number of rows and not number of files")
+    parser.add_argument('-u', '--update_strategy', required=True, choices=['replace', 'merge', 'append'], type=str,
+                        help='which strategy to use for ingest')
+    parser.add_argument('--bulk_mode', action="store_true",
+                        help='use if you want to use bulkMode in ingest')
+    parser.add_argument('--filter_entity_already_in_dataset', action="store_true",
+                        help='use if you want to remove sample_ids already in dataset')
+    parser.add_argument('--rp', help='research_project')
+    parser.add_argument('--input_tsv', '-i', required=True, help='path to input tsv file')
+    parser.add_argument('--filter_entity_id', action="store", default='sample_id',
+                        help='use if you want to remove sample_ids already in dataset. Use if using filter_entity_already_in_dataset. default is sample_id')
+    return parser.parse_args()
+
+
+if __name__ == "__main__":
+    args = get_args()
+    # Initialize all args
+    dataset_id, target_table_name = args.dataset_id, args.target_table_name
+    batch_size, waiting_time_to_poll, filter_entity_id = args.batch_size, args.waiting_time_to_poll, args.filter_entity_id
+    update_strategy, bulk_mode, rp = args.update_strategy, args.bulk_mode, args.rp
+    filter_entity_already_in_dataset = args.filter_entity_already_in_dataset
+    max_retries, max_backoff_time, input_tsv = args.max_retries, args.max_backoff_time, args.input_tsv
+
+    # If dataset not provided used ones linked to RP
+    if not dataset_id:
+        RP_TO_DATASET_ID.get(rp)
+
+    load_tag_prefix = f"{BILLING_PROJECT}.{WORKSPACE_NAME}"
+
+    # Read input tsv
+    with open(input_tsv) as f:
+        dict_reader = csv.DictReader(f, delimiter='\t')
+        workspace_metrics = [row for row in dict_reader]
+    logging.info(f"Read in {len(workspace_metrics)} rows from {input_tsv}")
+
+    terra = Terra(
+        max_retries=max_retries,
+        max_backoff_time=max_backoff_time
     )
+
+    if filter_entity_already_in_dataset:
+        workspace_metrics = FilterOutSampleIdsAlreadyInDataset(
+            workspace_metrics=workspace_metrics,
+            dataset_id=dataset_id,
+            terra=terra,
+            target_table_name=target_table_name,
+            filter_entity_id=filter_entity_id
+        ).run()
+
+    logging.info(f"Batching {len(workspace_metrics)} total rows into batches of {batch_size} for ingest")
+    total_batches = len(workspace_metrics) // batch_size + 1
+    for i in range(0, len(workspace_metrics), batch_size):
+        batch_number = i // batch_size + 1
+        logging.info(f"Starting ingest batch {batch_number} of {total_batches}")
+        metrics_batch = workspace_metrics[i:i + batch_size]
+        # Reformat metrics for ingest for paths
+        reformatted_metrics = ReformatMetricsForIngest(
+            sample_metrics=metrics_batch
+        ).run()
+        # Start actual ingest
+        ingest_id = StartIngest(
+            terra=terra,
+            ingest_records=reformatted_metrics,
+            target_table_name=target_table_name,
+            dataset_id=dataset_id,
+            load_tag=f"{load_tag_prefix}.batch_{batch_number}",
+            bulk_mode=bulk_mode,
+            update_strategy=update_strategy
+        ).run()
+        # monitor ingest until completion
+        MonitorIngest(terra=terra, ingest_id=ingest_id,
+                      check_interval=waiting_time_to_poll).run()
+        logging.info(f"Completed batch ingest of {len(reformatted_metrics)} rows.")
+

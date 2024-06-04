@@ -1,16 +1,22 @@
 version 1.0
 
+
 workflow ingest_dragen_data_to_tdr {
     input {
-        String  sample_set
-        String  rp
-        String  target_table_name
+        String   sample_set
+        String   rp
+        String   target_table_name
         String?  docker_name
         # Only use if not going to one of standard RP data sets
         String?  data_set_id
         # Use if you want bulk mode used for ingest
-        Boolean bulk_mode
-        String update_strategy = "append" # append or merge
+        Boolean  bulk_mode
+        Boolean  filter_entity_already_in_dataset = false
+        Int      batch_size = 100
+        Int      max_retries = 5
+        Int      max_backoff_time = 300
+        Int      waiting_time_to_poll = 60
+        String   update_strategy = "append" # append or merge
     }
 
     String  docker = select_first([docker_name, "us-central1-docker.pkg.dev/dsp-cloud-dragen-stanley/wdl-images/parse_dragen_metrics:v1"])
@@ -29,7 +35,12 @@ workflow ingest_dragen_data_to_tdr {
             docker_name = docker,
             update_strategy = update_strategy,
             data_set_id = data_set_id,
-            bulk_mode = bulk_mode
+            bulk_mode = bulk_mode,
+            batch_size = batch_size,
+            max_retries = max_retries,
+            max_backoff_time = max_backoff_time,
+            waiting_time_to_poll = waiting_time_to_poll,
+            filter_entity_already_in_dataset = filter_entity_already_in_dataset
     }
 
     output {
@@ -44,7 +55,12 @@ task ingest_to_tdr {
             String  target_table_name
             String  docker_name
             Boolean bulk_mode
+            Boolean filter_entity_already_in_dataset
             String  update_strategy
+            Int     batch_size
+            Int     max_retries
+            Int     max_backoff_time
+            Int     waiting_time_to_poll
             String? data_set_id
         }
 
@@ -52,10 +68,15 @@ task ingest_to_tdr {
 
             python3 /scripts/ingest_to_tdr_stanley.py --rp ~{rp} \
                                                  --target_table_name ~{target_table_name} \
-                                                 --tsv ~{ingest_tsv} \
+                                                 --input_tsv ~{ingest_tsv} \
                                                  --update_strategy ~{update_strategy} \
+                                                 --batch_size ~{batch_size} \
+                                                 --max_retries ~{max_retries} \
+                                                 --max_backoff_time ~{max_backoff_time} \
+                                                 --waiting_time_to_poll ~{waiting_time_to_poll} \
                                                  ~{"--data_set_id " + data_set_id} \
                                                  ~{if bulk_mode then "--bulk_mode" else ""}
+                                                 ~{if filter_entity_already_in_dataset then "--filter_entity_already_in_dataset" else ""}
         }
 
         runtime {
