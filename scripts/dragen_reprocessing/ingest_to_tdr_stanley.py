@@ -5,6 +5,7 @@ import csv
 import requests
 from argparse import ArgumentParser, Namespace
 import logging
+import time
 import backoff
 from datetime import datetime
 from typing import Union, Any
@@ -266,6 +267,9 @@ class StartIngest:
 
     def run(self) -> str:
         ingest_request = self._create_ingest_dataset_request()
+        logging.info(f"Writing ingest request to {self.load_tag}.json")
+        with open(f"{self.load_tag}.json", "w") as f:
+            f.write(ingest_request)
         logging.info(f"Starting ingest to {self.dataset_id}")
         ingest_response = self.terra.ingest_dataset(
             dataset_id=self.dataset_id, data=ingest_request)
@@ -339,7 +343,7 @@ if __name__ == "__main__":
 
     # If dataset not provided used ones linked to RP
     if not dataset_id:
-        RP_TO_DATASET_ID.get(rp)
+        dataset_id = RP_TO_DATASET_ID.get(rp)
 
     load_tag_prefix = f"{BILLING_PROJECT}.{WORKSPACE_NAME}"
 
