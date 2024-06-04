@@ -154,7 +154,7 @@ class Terra:
                 yield record
             search_request["offset"] += query_limit
 
-    def get_data_set_sample_ids(self, dataset_id: str, target_table_name: str, entity_id: str) -> List[str]:
+    def get_data_set_sample_ids(self, dataset_id: str, target_table_name: str, entity_id: str) -> list[str]:
         """Get existing ids from dataset."""
         data_set_metadata = self._yield_data_set_metrics(dataset_id=dataset_id, target_table_name=target_table_name)
         return [
@@ -241,7 +241,7 @@ class FilterOutSampleIdsAlreadyInDataset:
 
 
 class StartIngest:
-    def __init__(self, terra: Terra, ingest_records: List[dict], target_table_name: str, dataset_id: str, load_tag: str, bulk_mode: bool, update_strategy: str):
+    def __init__(self, terra: Terra, ingest_records: list[dict], target_table_name: str, dataset_id: str, load_tag: str, bulk_mode: bool, update_strategy: str):
         self.terra = terra
         self.ingest_records = ingest_records
         self.target_table_name = target_table_name
