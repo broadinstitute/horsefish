@@ -41,8 +41,8 @@ task generate_checksum {
     # Runtime parameters including docker image, memory, CPU, disk, and retries
     runtime {
         docker: "us.gcr.io/broad-gotc-prod/samtools:1.0.0-1.11-1624651616"
-        preemptible: 3
-        memory: "7 GiB"
+        preemptible: 1
+        memory: "1 GiB"
         cpu: "1"
         disks: "local-disk " + disk_size + " HDD"
     }
