@@ -115,7 +115,7 @@ class ConvertSampleMetadataToTsv:
             "reported_sex": sample_dict["reported_sex"],
             "research_project": sample_dict["rp"].replace('RP-1915', 'RP-3026'),
             "root_sample_id": sample_dict["root_sample_id"],
-            "sample_id": sample_dict["collaborator_sample_id"],
+            "sample_id": sample_dict["root_sample_id"],
             "bge_single_sample_vcf_path": f"{file_path_prefix}.hard-filtered.vcf.gz",
             "bge_single_sample_vcf_index_path": f"{file_path_prefix}.hard-filtered.vcf.gz.tbi",
             "bge_single_sample_vcf_md5_path": f"{file_path_prefix}.hard-filtered.vcf.gz.md5sum",
