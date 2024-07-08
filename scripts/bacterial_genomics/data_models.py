@@ -1,15 +1,53 @@
 """ Datable models to be ingested into TDR. Key values represent table names and key values are column names """
-ingest_tables = {
-    "Sample": ["entity:sample_id", "sent_to_broad", "broad_ship_date", "sent_to_dzd_pre-p01", "dzd_pre-p01_ship_date", "sent_to_dzd_for_p01", "uci_regrowth",
+
+" Data models that are created from the sample entity"
+
+isolates_instance = {
+    "tables": [
+        {
+            "name": "Sample",
+            "columns": ["entity:sample_id", "sent_to_broad", "broad_ship_date", "sent_to_dzd_pre-p01", "dzd_pre-p01_ship_date", "sent_to_dzd_for_p01", "uci_regrowth",
                "uci_regrowth_outcome", "uci_id", "raw_reads1", "raw_reads2", "dzd_plate", "dzd_batch", "dzd_id", "dzd_rack", "dzd_rack_row",
-               "dzd_rack_column", "dzd_rack_position", "dzd_glycerol_rack_code", "mbs", "duplication_rate", "gc", "fail_contam", "fail_mb"
+               "dzd_rack_column", "dzd_rack_position", "dzd_glycerol_rack_code", "mbs", "duplication_rate", "gc", "fail_contam", "fail_mb", "swab_id", "resident_id", 
+               "culture_id", "stock_id"
                ],
-    "Culture": ["culture_id", "organism"],
-    "Swab": ["swab_id", "site"],
-    "Stock": ["stock_id", "species", "morphotype_indicator", "freezer_box_name", "freezer_box_number", "freezer_box_column", "freezer_box_row"],
-    "Resident": ["resident_id", "record_id", "project", "nh_code", "room_bed"],
-    "CLEANResident": [ "CLEAN_object_code", "CLEAN_phase", "CLEAN_sweep", "room_type"],
-    "plate_swipe": ["plate_swipe_id", "amrfinderplus_all_report", "amrfinderplus_amr_classes", "amrfinderplus_amr_core_genes", 
+            # Renames column names
+            "rename": 
+                { "entity:sample_id": "sample_id",
+                 "sent_to_dzd_pre-p01": "sent_to_dzd_pre_p01",
+                 "dzd_pre-p01_ship_date": "dzd_pre_p01_ship_date"
+                 }
+        },     
+        {
+            "name": "Culture",
+            "columns": ["culture_id", "organism", "swab_id"]
+        },
+        {
+            "name": "Swab",
+            "columns": ["swab_id", "site", "resident_id"]
+         },
+        {
+            "name":  "Stock",
+            "columns": ["stock_id", "species", "morphotype_indicator", "freezer_box_name", "freezer_box_number", "freezer_box_column", "freezer_box_row"],
+        },
+        {
+            "name": "Resident",
+            "columns": ["resident_id", "record_id", "project", "nh_code", "room_bed", "CLEAN_object_code", "CLEAN_phase", "CLEAN_sweep", "room_type"],
+        },
+        {
+            "name": "isolate",
+             "columns": [ "dzd_id", "raw_reads1", "raw_reads2", "read1_clean", "read2_clean", "entity:sample_id"],
+            "rename": { "entity:sample_id": "sample_id"}
+        },
+    ],   
+}
+
+" Metadata that are created from the plate swipe entity"
+plate_swipes_instance = {
+    "tables": [
+        {
+            "name": "plate_swipe",
+            "columns": [ "amrfinderplus_all_report", "amrfinderplus_amr_classes", "amrfinderplus_amr_core_genes", 
                     "amrfinderplus_amr_plus_genes", "amrfinderplus_amr_report", "amrfinderplus_amr_subclasses", "amrfinderplus_db_version", 
                     "amrfinderplus_stress_genes", "amrfinderplus_stress_report", "amrfinderplus_version", "amrfinderplus_virulence_genes", 
                     "amrfinderplus_virulence_report", "analysis_date", "assembly_fasta", "assembly_length", "assembly_mean_coverage", 
@@ -27,7 +65,12 @@ ingest_tables = {
                     "sent_to_dzd_for_p01", "sent_to_dzd_pre-p01", "site", "species", "stock_id", "strainge_docker", "strainge_pe_wf_analysis_date", 
                     "strainge_pe_wf_version", "strainge_version", "straingr_concat_fasta", "straingr_read_alignment", "straingr_report", "straingr_variants", 
                     "straingst_found_db", "straingst_kmerized_reads", "straingst_selected_db", "straingst_statistics", "straingst_strains", "swab_id", 
-                    "trimmomatic_docker", "trimmomatic_version"],
-    "isolate": ["isolate_id", "dzd_id", "raw_reads1", "raw_reads2", "read1_clean", "read2_clean"]
-
+                    "trimmomatic_docker", "trimmomatic_version", "entity:sample_id"
+                    ],
+            # Renames column names
+            "rename":                     
+                { "entity:sample_id": "sample_id",
+                    "sent_to_dzd_pre-p01": "sent_to_dzd_pre_p01"}
+        }
+    ]
 }

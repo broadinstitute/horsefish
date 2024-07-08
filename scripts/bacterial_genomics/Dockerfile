@@ -1,9 +1,19 @@
 FROM python:3.10.14-alpine
 
-WORKDIR /app
+ENV HOME=/
 
-COPY . .
+COPY requirements.txt .
 
-RUN pip3 install --upgrade pip && pip3 install -r requirements.txt
+RUN pip install -r requirements.txt
 
-ENTRYPOINT  ["python3", "-m", "ingest"  ]
+COPY * /scripts/bacterial_genomics/
+
+
+# OS updates for security
+RUN apk update
+RUN apk upgrade
+RUN apk add --no-cache bash
+
+ENV PYTHONPATH "/scripts:${PYTHONPATH}"
+
+CMD ["/bin/bash"]
