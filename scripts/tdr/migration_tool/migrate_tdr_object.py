@@ -20,11 +20,11 @@ CONFIGURATION
         "tdr_billing_profile": "72c87190-e50f-4fa5-80bd-44cd8780394f",
         "tdr_dataset_uuid": "",
         "tdr_dataset_name": "TDR_Migration_Tool_Test_1_20230915",
-        "tdr_dataset_cloud": "azure",
         "tdr_dataset_properties": {},
         "copy_policies": True
     },
     "ingest": {
+        "records_fetching_method": "tdr_api",
         "records_processing_method": "in_memory", 
         "write_to_cloud_platform": "",
         "write_to_cloud_location": "",
@@ -50,6 +50,7 @@ import data_repo_client
 import google.auth
 import datetime
 import os
+import re
 import sys
 import logging
 import argparse
@@ -344,7 +345,7 @@ def fetch_source_records_bigquery(config, new_dataset_id, array_col_dict, table,
     api_client = refresh_tdr_api_client(tdr_host)
     datasets_api = data_repo_client.DatasetsApi(api_client=api_client)
     snapshots_api = data_repo_client.SnapshotsApi(api_client=api_client)
-    client = bigquery.Client()
+    client = bigquery.Client(project=bq_project)
     
     # Retrieve table data from the original dataset
     logging.info(f"Fetching rows {str(start_row)}-{str(end_row)} from table '{table}' in the original {src_tdr_object_type} ({src_tdr_object_uuid}).")
@@ -524,13 +525,14 @@ def fetch_source_records_tdr_api(config, new_dataset_id, table, start_row, end_r
         return records_orig
 
 # Function to process ingests for specific table
-def ingest_table_data(config, new_dataset_id, fileref_col_dict, array_col_dict, table, start_row, end_row):
+def ingest_table_data(config, new_dataset_id, fileref_col_dict, array_col_dict, table, start_row, end_row, source_file_list):
     # Extract parameters from config
     src_tdr_object_uuid = config["source"]["tdr_object_uuid"]
     src_tdr_object_type = config["source"]["tdr_object_type"]
     src_tdr_object_cloud = config["source"]["tdr_object_cloud"]
     tdr_host = config["source"]["tdr_host"]
     tar_tdr_billing_profile = config["target"]["tdr_billing_profile"]
+    records_fetching_method = config["ingest"]["records_fetching_method"]
     records_processing_method = config["ingest"]["records_processing_method"]
     write_to_cloud_platform = config["ingest"]["write_to_cloud_platform"]
     apply_anvil_transforms = config["ingest"]["apply_anvil_transforms"] 
@@ -542,10 +544,13 @@ def ingest_table_data(config, new_dataset_id, fileref_col_dict, array_col_dict, 
     
     # Retrieve table data from the original dataset
     table_recs_str = f"Table: {table} -- Rows: {str(start_row)}-{str(end_row)}"
-    if src_tdr_object_cloud == "gcp":
-        records_orig = fetch_source_records_bigquery(config, new_dataset_id, array_col_dict, table, start_row, end_row)
+    if records_fetching_method == "cloud_native" and src_tdr_object_type == "azure":
+        logging.info("Record fetching method 'cloud_native' not yet supported for Azure source TDR objects. Using the 'tdr_api' method instead.")
+        records_orig = fetch_source_records_tdr_api(config, new_dataset_id, table, start_row, end_row) 
+    elif records_fetching_method == "tdr_api":
+        records_orig = fetch_source_records_tdr_api(config, new_dataset_id, table, start_row, end_row)        
     else:
-        records_orig = fetch_source_records_tdr_api(config, new_dataset_id, table, start_row, end_row)
+        records_orig = fetch_source_records_bigquery(config, new_dataset_id, array_col_dict, table, start_row, end_row) 
     if not records_orig:
         return
 
@@ -564,58 +569,30 @@ def ingest_table_data(config, new_dataset_id, fileref_col_dict, array_col_dict, 
                     if isinstance(int_record[fileref_col], list):
                         fileref_obj_list = []
                         for val in int_record[fileref_col]:
-                            attempt_counter = 0
-                            while True:
-                                try:
-                                    if src_tdr_object_type == "dataset":
-                                        file_results = datasets_api.lookup_file_by_id(id=src_tdr_object_uuid, fileid=val)
-                                    elif src_tdr_object_type == "snapshot":
-                                        file_results = snapshots_api.lookup_snapshot_file_by_id(id=src_tdr_object_uuid, fileid=val[-36:]) 
-                                    else:
-                                        raise Exception("Source TDR object type must be 'dataset' or 'snapshot'.") 
+                            if val:
+                                file_id = val if src_tdr_object_type == "dataset" else re.match(r".*_([^_]+$)", val).group(1)
+                                file_results = source_file_list.get(file_id)
+                                if file_results:
                                     fileref_obj = {
-                                        "sourcePath": file_results.file_detail.access_url,
-                                        "targetPath": file_results.path,
-                                        "description": file_results.description,
-                                        "mimeType": file_results.file_detail.mime_type
+                                        "sourcePath": file_results["source_url"],
+                                        "targetPath": file_results["file_path"],
+                                        "description": file_results["description"],
+                                        "mimeType": file_results["mime_type"]
                                     }
                                     fileref_obj_list.append(fileref_obj)
-                                    break
-                                except Exception as e:
-                                    if attempt_counter < 5:
-                                        sleep(5)
-                                        attempt_counter += 1
-                                        continue
-                                    else:
-                                        break
-                        int_record[fileref_col] = fileref_obj_list
+                        int_record[fileref_col] = fileref_obj_list    
                     elif int_record[fileref_col]:
                         fileref_obj = {}
-                        attempt_counter = 0
-                        while True:
-                            try:
-                                if src_tdr_object_type == "dataset":
-                                    file_results = datasets_api.lookup_file_by_id(id=src_tdr_object_uuid, fileid=int_record[fileref_col])
-                                elif src_tdr_object_type == "snapshot":
-                                    file_results = snapshots_api.lookup_snapshot_file_by_id(id=src_tdr_object_uuid, fileid=int_record[fileref_col][-36:]) 
-                                else:
-                                    raise Exception("Source TDR object type must be 'dataset' or 'snapshot'.") 
-                                fileref_obj = {
-                                    "sourcePath": file_results.file_detail.access_url,
-                                    "targetPath": file_results.path,
-                                    "description": file_results.description,
-                                    "mimeType": file_results.file_detail.mime_type
-                                }
-                                int_record[fileref_col] = fileref_obj
-                                break
-                            except Exception as e:
-                                if attempt_counter < 5:
-                                    sleep(5)
-                                    attempt_counter += 1
-                                    continue
-                                else:
-                                    break
-                        int_record[fileref_col] = fileref_obj
+                        file_id = int_record[fileref_col] if src_tdr_object_type == "dataset" else re.match(r".*_([^_]+$)", int_record[fileref_col]).group(1)
+                        file_results = source_file_list.get(file_id)
+                        if file_results:
+                            fileref_obj = {
+                                "sourcePath": file_results["source_url"],
+                                "targetPath": file_results["file_path"],
+                                "description": file_results["description"],
+                                "mimeType": file_results["mime_type"]
+                            }
+                            int_record[fileref_col] = fileref_obj
                 records_processed.append(int_record)
         except Exception as e:
             err_str = f"Failure in pre-processing: {str(e)}"
@@ -710,6 +687,50 @@ def ingest_table_data(config, new_dataset_id, fileref_col_dict, array_col_dict, 
             blob = BlobClient.from_blob_url(control_file_path)
             blob.delete_blob()
 
+# Function to build a list of files in the source TDR object for use in populating the new TDR dataset
+def build_source_file_list(config):
+    # Extract parameters from config
+    src_tdr_object_uuid = config["source"]["tdr_object_uuid"]
+    src_tdr_object_type = config["source"]["tdr_object_type"]
+    tdr_host = config["source"]["tdr_host"]
+
+    # Setup/refresh TDR clients
+    api_client = refresh_tdr_api_client(tdr_host)
+    datasets_api = data_repo_client.DatasetsApi(api_client=api_client)
+    snapshots_api = data_repo_client.SnapshotsApi(api_client=api_client)
+
+    # Retrieve file list from TDR object
+    source_file_dict = {}
+    logging.info(f"Retrieving files from source {src_tdr_object_type}.")
+    max_page_size = 1000
+    total_records_fetched = 0
+    while True:
+        row_start = total_records_fetched
+        if src_tdr_object_type == "snapshot":
+            file_results = snapshots_api.list_files(id=src_tdr_object_uuid, offset=row_start, limit=max_page_size)
+        else:
+            file_results = datasets_api.list_files(id=src_tdr_object_uuid, offset=row_start, limit=max_page_size)
+        if file_results:
+            total_records_fetched += len(file_results)
+            for entry in file_results:
+                record = entry.to_dict()
+                file_detail_dict = {
+                    "file_path": record["path"],
+                    "file_name": os.path.basename(record["path"]),
+                    "source_url": record["file_detail"]["access_url"],
+                    "file_size": record["size"],
+                    "description": record["description"],
+                    "mime_type": record["file_detail"]["mime_type"]
+                }
+                file_id = record["file_id"]
+                source_file_dict[file_id] = file_detail_dict
+            logging.info(f"{total_records_fetched} records fetched...")
+        else:
+            break
+    file_len = len(source_file_dict)
+    logging.info(f"File retrieval complete. {file_len} files found.")
+    return source_file_dict
+
 # Function to populate new TDR dataset
 def populate_new_dataset(config, new_dataset_id, fileref_col_dict, array_col_dict):
     # Extract parameters from config
@@ -730,7 +751,7 @@ def populate_new_dataset(config, new_dataset_id, fileref_col_dict, array_col_dic
     datasets_api = data_repo_client.DatasetsApi(api_client=api_client)
     snapshots_api = data_repo_client.SnapshotsApi(api_client=api_client)
     
-    # Retrieve TDR SA to add from new dataset and add to original object
+    # Retrieve TDR SA to add from new dataset
     logging.info(f"Adding TDR SA to original {src_tdr_object_type}: {src_tdr_object_uuid}")
     try:
         dataset_details = datasets_api.retrieve_dataset(id=new_dataset_id).to_dict()
@@ -744,20 +765,46 @@ def populate_new_dataset(config, new_dataset_id, fileref_col_dict, array_col_dic
         config["migration_results"].append(["Dataset Ingestion", "All Tables", "Failure", error_str])
         return
     logging.info(f"TDR SA to add: {tdr_sa_to_use}")
+
+    # Add TDR SA to original object, if not already present
+    sa_user_already_present = False
     try:
         if src_tdr_object_type == "dataset":
-            resp = datasets_api.add_dataset_policy_member(id=src_tdr_object_uuid, policy_name="steward", policy_member={"email": tdr_sa_to_use}) 
+            resp = datasets_api.retrieve_dataset_policies(id=src_tdr_object_uuid).to_dict()
         elif src_tdr_object_type == "snapshot":
-            resp = snapshots_api.add_snapshot_policy_member(id=src_tdr_object_uuid, policy_name="steward", policy_member={"email": tdr_sa_to_use}) 
+            resp = snapshots_api.retrieve_snapshot_policies(id=src_tdr_object_uuid).to_dict()
         else:
             raise Exception("Source TDR object type must be 'dataset' or 'snapshot'.")
-        logging.info("TDR SA added successfully.")
-    except:
-        error_str = f"Error adding TDR SA to {src_tdr_object_type} {src_tdr_object_uuid} in TDR {src_tdr_object_env} environment: {str(e)}"
+        for policy in resp["policies"]:
+            if policy["name"] in ["custodian", "steward", "admin", "snapshot_creator", "reader"] and tdr_sa_to_use in policy["members"]:
+                sa_user_already_present = True
+                break
+    except Exception as e:
+        error_str = f"Error retrieving existing policies from {src_tdr_object_type} {src_tdr_object_uuid} in TDR {src_tdr_object_env} environment: {str(e)}"
         logging.error(error_str)
         config["migration_results"].append(["Dataset Ingestion", "All Tables", "Failure", error_str])
         return
+    if not sa_user_already_present:
+        try:
+            if src_tdr_object_type == "dataset":
+                resp = datasets_api.add_dataset_policy_member(id=src_tdr_object_uuid, policy_name="snapshot_creator", policy_member={"email": tdr_sa_to_use}) 
+            elif src_tdr_object_type == "snapshot":
+                resp = snapshots_api.add_snapshot_policy_member(id=src_tdr_object_uuid, policy_name="reader", policy_member={"email": tdr_sa_to_use}) 
+            else:
+                raise Exception("Source TDR object type must be 'dataset' or 'snapshot'.")
+            logging.info("TDR SA added successfully. Pausing processing for a few minutes to allow for permissions to propagate.")
+            sleep(600)
+        except Exception as e:
+            error_str = f"Error adding TDR SA to {src_tdr_object_type} {src_tdr_object_uuid} in TDR {src_tdr_object_env} environment: {str(e)}"
+            logging.error(error_str)
+            config["migration_results"].append(["Dataset Ingestion", "All Tables", "Failure", error_str])
+            return
+    else:
+        logging.info("TDR SA already present on original {src_tdr_object_type}: {src_tdr_object_uuid}. Continuing processing.")
     
+    # Pull a list of files from the source TDR object for use in table processing
+    source_file_list = build_source_file_list(config)
+
     # Loop through and process tables for ingestion
     logging.info("Processing dataset ingestion requests.")
     if apply_anvil_transforms:
@@ -788,6 +835,7 @@ def populate_new_dataset(config, new_dataset_id, fileref_col_dict, array_col_dic
         api_client = refresh_tdr_api_client(tdr_host)
         datasets_api = data_repo_client.DatasetsApi(api_client=api_client)
         snapshots_api = data_repo_client.SnapshotsApi(api_client=api_client)
+        attempt_counter = 0
         while True:
             payload = {
               "offset": 0,
@@ -806,6 +854,7 @@ def populate_new_dataset(config, new_dataset_id, fileref_col_dict, array_col_dic
                 total_record_count = record_results["total_row_count"]
                 break
             except Exception as e:
+                logging.error(str(e))
                 if attempt_counter < 5:
                     sleep(10)
                     attempt_counter += 1
@@ -836,7 +885,7 @@ def populate_new_dataset(config, new_dataset_id, fileref_col_dict, array_col_dic
         while start_row <= total_record_count:
             if end_row > total_record_count:
                 end_row = total_record_count
-            ingest_table_data(config, new_dataset_id, fileref_col_dict, array_col_dict, table, start_row, end_row)    
+            ingest_table_data(config, new_dataset_id, fileref_col_dict, array_col_dict, table, start_row, end_row, source_file_list)    
             start_row += chunk_size
             end_row += chunk_size
             
@@ -976,6 +1025,7 @@ def create_dataset_from_dataset(config):
     src_tdr_object_type = config["source"]["tdr_object_type"]
     src_tdr_object_env = config["source"]["tdr_object_env"]
     tdr_host = config["source"]["tdr_host"]
+    tdr_general_sa = config["tdr_general_sa"]
     tar_tdr_billing_profile = config["target"]["tdr_billing_profile"]
     tar_tdr_dataset_uuid = config["target"]["tdr_dataset_uuid"]
     tar_tdr_dataset_name = config["target"]["tdr_dataset_name"]
@@ -1093,7 +1143,7 @@ def create_dataset_from_dataset(config):
         # Determine dataset properties - Dedicated Ingest SA
         dedicated_ingest_sa = tar_tdr_dataset_props.get("dedicatedIngestServiceAccount")
         if dedicated_ingest_sa == None:
-            dedicated_ingest_sa = True if dataset_details["ingest_service_account"] else False
+            dedicated_ingest_sa = False if dataset_details["ingest_service_account"] == tdr_general_sa else True
 
         # Determine dataset properties - Self-Hosted
         self_hosted = False
@@ -1401,13 +1451,34 @@ def migrate_object():
     else:
         logging.error("Please set source.tdr_object_env to one of 'dev' or 'prod'.")
         return 
-        
-    # Validate Target Dataset Cloud
-    if config["target"]["tdr_dataset_cloud"] not in ["gcp", "azure"]:
-        logging.error("Please set target.tdr_dataset_cloud to either 'gcp' or 'azure'.")
-        return
+
+    # Setup/refresh TDR clients
+    api_client = refresh_tdr_api_client(config["source"]["tdr_host"])
+    datasets_api = data_repo_client.DatasetsApi(api_client=api_client)
+    snapshots_api = data_repo_client.SnapshotsApi(api_client=api_client)
+    profiles_api = data_repo_client.ProfilesApi(api_client=api_client)
+
+    # Determine target dataset cloud based on billing profile:
+    resp = profiles_api.retrieve_profile(id=config["target"]["tdr_billing_profile"]).to_dict()
+    try:
+        resp = profiles_api.retrieve_profile(id=config["target"]["tdr_billing_profile"]).to_dict()
+        config["target"]["tdr_dataset_cloud"] = resp["cloud_platform"]
+    except:
+        logging.error("Unable to retrieve the billing profile specified in target.tdr_billing_profile. Please confirm the user has access to this profile.")
+        return 
+
+    if config["source"]["tdr_object_type"] == "dataset":
+        resp = datasets_api.retrieve_user_dataset_roles(id=config["source"]["tdr_object_uuid"])
+    else:
+        resp = snapshots_api.retrieve_user_snapshot_roles(id=config["source"]["tdr_object_uuid"])
+    if not "steward" in resp:
+        logging.error("User has insufficient priviliges on the source TDR object. For both datasets and snapshots, the user must be a 'steward' to use this tool.")
+        return  
 
     # Validate ingest options
+    if config["ingest"]["records_fetching_method"] not in ["tdr_api", "cloud_native"]:
+        logging.error("Please set ingest.records_fetching_method to either 'tdr_api' or 'cloud_native'.")
+        return
     if config["ingest"]["records_processing_method"] not in ["in_memory", "write_to_cloud"]:
         logging.error("Please set ingest.records_processing_method to either 'in_memory' or 'write_to_cloud'.")
         return
@@ -1422,6 +1493,9 @@ def migrate_object():
         return
     if config["ingest"]["records_processing_method"] == "write_to_cloud" and config["ingest"]["write_to_cloud_platform"] != config["target"]["tdr_dataset_cloud"]:
         logging.error("For 'write_to_cloud' records processing method, the ingest.write_to_cloud_platform parameter must have the same value as target.tdr_dataset_cloud.")
+        return
+    if config["ingest"]["apply_anvil_transforms"] == True and not (config["ingest"]["records_fetching_method"] == "cloud_native" and config["source"]["tdr_object_type"] == "dataset"):
+        logging.error("Application of anvil transforms (ingest.apply_anvil_transforms) is only currently supported when source.tdr_object_type is 'dataset' and ingest.records_fetching_method is 'cloud_native'.")
         return
 
     # Determine record/fileref limits
@@ -1443,11 +1517,21 @@ def migrate_object():
         config["target"]["tdr_dataset_properties"]["region"] = "southcentralus"
 
     # Enforce tool/TDR limitations
-    logging.info("Dedicated dataset-specific SAs not currently supported for TDR-to-TDR ingestions, so setting 'dedicatedIngestServiceAccount' dataset property to False by default.")
-    config["target"]["tdr_dataset_properties"]["dedicatedIngestServiceAccount"] = False
     if config["target"]["tdr_dataset_cloud"] == "azure":
+        logging.info("Dedicated dataset-specific SAs not available for Azure datasets, so setting 'dedicatedIngestServiceAccount' dataset property to False by default.")
+        config["target"]["tdr_dataset_properties"]["dedicatedIngestServiceAccount"] = False
         logging.info("Self-hosted functionality not available for Azure datasets, so setting 'experimentalSelfHosted' dataset property to False by default.")
         config["target"]["tdr_dataset_properties"]["experimentalSelfHosted"] = False
+
+    # Validate user role on source object
+    logging.info("Validating user permissions.")
+    if config["source"]["tdr_object_type"] == "dataset":
+        resp = datasets_api.retrieve_user_dataset_roles(id=config["source"]["tdr_object_uuid"])
+    else:
+        resp = snapshots_api.retrieve_user_snapshot_roles(id=config["source"]["tdr_object_uuid"])
+    if not "steward" in resp:
+        logging.error("User has insufficient priviliges on the source TDR object. For both datasets and snapshots, the user must be a 'steward' to use this tool.")
+        return  
 
     # Initiate migration pipeline
     config["migration_results"] = []

@@ -15,7 +15,7 @@
 ##### Description
     Takes a TDR dataset or snapshot as input and creates a copy of the data in a new TDR dataset, based on a configuration provided by the user. In general, the steps this script will follow are:
         1. Create a new dataset in the specified TDR cloud based on the schema, properties, and policies of the original TDR object (with an option for the user to override the properties and policies of the target dataset as desired).
-        2. Add the TDR service account for the new dataset as a reader on the original TDR object. 
+        2. Add the TDR service account for the new dataset to the original TDR object with the minimum permissions needed. 
         3. For each table in the original TDR object, pull out the records and preprocess for ingestion into the new TDR dataset. This includes rebuilding fileref objects for fileref fields in the original TDR object. 
         4. Optionally write out the preprocessed records to the appropriate cloud for ingest into the new TDR dataset. 
         4. Ingest the preprocessed records into the new TDR dataset. 
@@ -32,11 +32,11 @@
             "tdr_billing_profile": "72c87190-e50f-4fa5-80bd-44cd8780394f",
             "tdr_dataset_uuid": "",
             "tdr_dataset_name": "TDR_Migration_Tool_Test_1_20230925_4",
-            "tdr_dataset_cloud": "azure",
             "tdr_dataset_properties": {},
             "copy_policies": true
         },
         "ingest": {
+            "records_fetching_method": "tdr_api",
             "records_processing_method": "in_memory", 
             "write_to_cloud_platform": "",
             "write_to_cloud_location": "",
@@ -62,9 +62,9 @@
     * target.tdr_billing_profile - The billing profile to be used for the new TDR dataset.
     * target.tdr_dataset_uuid - The UUID of the target TDR dataset ingests should be run against. This is used in cases where the migration fails part of the way through and the resultant TDR dataset needs to be patched (rather than starting off with a whole new dataset). If this property is populated, the dataset creation step will be skipped. 
     * target.tdr_dataset_name - The name for the new TDR dataset to be created. If target.tdr_dataset_uuid is populated, this will be ignored.
-    * target.tdr_dataset_cloud - The cloud platform to use for the new TDR dataset. Currently the migration scripts only support GCP-to-GCP or GCP-to-Azure migrations. Valid values: 'gcp', 'azure'
     * target.tdr_dataset_properties - The createDataset properties that should be used for the new TDR dataset. Whichever properties are not specified here will be copied from the original TDR object. 
     * target.copy_policies - A boolean indicating whether the original TDR object policies should be copied to the new TDR dataset. Note that this only works for cases where the source TDR object is a dataset.
+    * ingest.records_fetching_method - The method used to fetch the records from the original TDR object for use in pre-processing. Currently the tool supports "tdr_api", which will use the TDR API to fetch the records, and "cloud_native", which will attempt to fetch the records using a more performant, cloud-native tool such as BigQuery for GCP based TDR objects.
     * ingest.records_processing_method - The method used to process records for ingestion into TDR. Currently the tool supports "in_memory", which will hold the records in memory and then ingest them into TDR as records on the ingestDataset requests, and "write_to_cloud", which will write the records to files on the cloud for use in the ingestDataset requests. Valid values: 'in_memory', 'write_to_cloud'
     * ingest.write_to_cloud_platform - For cases where the records processing method is "write_to_cloud", the cloud to which the preprocessed records should be written.
     * ingest.write_to_cloud_location - For cases where the records processing method is "write_to_cloud", the cloud path where the preprocessed records should be written (i.e. a GS path for GCP or a HTTPS Azure storage path for Azure).
@@ -85,3 +85,18 @@
 
 ##### Flags
     1. -c: A relative path to the config file that should be used by the script. (REQUIRED)
+
+##### Limitations
+    * It is a assumed (and validated) that the user has Steward level access to the TDR object they are trying to copy data from. If the user has a lower level of permissions than this, they will not be able to run the tool. 
+    * Currently, only GCP TDR objects may be migrated using this tool. If the source TDR object is backed by Azure, the tool will not run. 
+    * In cases where the dataset being migrated does NOT contain file reference objects, there should not be any real limitations to this tool. Where considerations must be made is when trying to provide TDR with the appropriate permissions to ingest referenced data file objects from where they currently live into a new TDR dataset. The various ways TDR currently references and/or stores data file objects introduces a number of different scenarios for the tool to handle, not all of which have been tested. A summary of the use cases that have been tested is included below:
+    | Source Object Type | Source Object File Hosting Method | Target Dataset Service Account | Comments |
+    | --- | --- | --- | --- | --- |
+    | Dataset | TDR Hosted | General SA | Fully Supported | |
+    | Dataset | TDR Hosted | Dedicated Dataset SA | Fully Supported | |
+    | Dataset | Self Hosted | General SA | Conditionally Supported | User must manually grant both themselves and the TDR SA access to the files where they live (such as a GCS bucket). Note that the TDR SA may already have access if the source dataset uses the General TDR SA as its ingest service account. |
+    | Dataset | Self Hosted | Dedicated Dataset SA | Conditionally Supported | User must manually grant the TDR SA access to the files where they live (such as a GCS bucket). |
+    | Snapshot | TDR Hosted | General SA | Still Testing | |
+    | Snapshot | TDR Hosted | Dedicated Dataset SA | Fully Supported | |
+    | Snapshot | Self Hosted | General SA | Not Tested | |
+    | Snapshot | Self Hosted | Dedicated Dataset SA | Not Tested | |
