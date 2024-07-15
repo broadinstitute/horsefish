@@ -22,6 +22,7 @@ Takes a TDR dataset or snapshot as input and creates a copy of the data in a new
     5. If the source TDR object is a snapshot, optionally recreate this snapshot from the new TDR dataset. 
 
 Example Configration:
+
     {
         "source": {
             "tdr_object_uuid": "6c91433f-2b61-491c-baa4-a212a4f380a3",
@@ -91,7 +92,7 @@ Locally
 * Currently, only GCP TDR objects may be migrated using this tool. If the source TDR object is backed by Azure, the tool will not run. 
 * In cases where the dataset being migrated does NOT contain file reference objects, there should not be any real limitations to this tool. Where considerations must be made is when trying to provide TDR with the appropriate permissions to ingest referenced data file objects from where they currently live into a new TDR dataset. The various ways TDR currently references and/or stores data file objects introduces a number of different scenarios for the tool to handle, not all of which have been tested. A summary of the use cases that have been tested is included below:
 
-| Source Object Type | Source Object File Hosting Method | Target Dataset Service Account | Comments |
+| Source Object Type | Source Object File Hosting Method | Target Dataset Service Account | Status | Comments |
 | --- | --- | --- | --- | --- |
 | Dataset | TDR Hosted | General SA | Fully Supported | |
 | Dataset | TDR Hosted | Dedicated Dataset SA | Fully Supported | |
