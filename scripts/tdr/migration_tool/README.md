@@ -22,38 +22,38 @@ Takes a TDR dataset or snapshot as input and creates a copy of the data in a new
     5. If the source TDR object is a snapshot, optionally recreate this snapshot from the new TDR dataset. 
 
 Example Configration:
-{
-    "source": {
-        "tdr_object_uuid": "6c91433f-2b61-491c-baa4-a212a4f380a3",
-        "tdr_object_type": "dataset",
-        "tdr_object_env": "dev"
-    },
-    "target": {
-        "tdr_billing_profile": "72c87190-e50f-4fa5-80bd-44cd8780394f",
-        "tdr_dataset_uuid": "",
-        "tdr_dataset_name": "TDR_Migration_Tool_Test_1_20230925_4",
-        "tdr_dataset_properties": {},
-        "copy_policies": true
-    },
-    "ingest": {
-        "records_fetching_method": "tdr_api",
-        "records_processing_method": "in_memory", 
-        "write_to_cloud_platform": "",
-        "write_to_cloud_location": "",
-        "write_to_cloud_sas_token": "",
-        "max_records_per_ingest_request": 250000,
-        "max_filerefs_per_ingest_request": 50000,
-        "files_already_ingested": True,
-        "tables_to_ingest": [],
-        "datarepo_row_ids_to_ingest": [],
-        "apply_anvil_transforms": true
-    },
-    "snapshot": {
-        "recreate_snapshot": true,
-        "new_snapshot_name": "TDR_Migration_Tool_Test_1_20230925_SS",
-        "copy_snapshot_policies": true
+    {
+        "source": {
+            "tdr_object_uuid": "6c91433f-2b61-491c-baa4-a212a4f380a3",
+            "tdr_object_type": "dataset",
+            "tdr_object_env": "dev"
+        },
+        "target": {
+            "tdr_billing_profile": "72c87190-e50f-4fa5-80bd-44cd8780394f",
+            "tdr_dataset_uuid": "",
+            "tdr_dataset_name": "TDR_Migration_Tool_Test_1_20230925_4",
+            "tdr_dataset_properties": {},
+            "copy_policies": true
+        },
+        "ingest": {
+            "records_fetching_method": "tdr_api",
+            "records_processing_method": "in_memory", 
+            "write_to_cloud_platform": "",
+            "write_to_cloud_location": "",
+            "write_to_cloud_sas_token": "",
+            "max_records_per_ingest_request": 250000,
+            "max_filerefs_per_ingest_request": 50000,
+            "files_already_ingested": True,
+            "tables_to_ingest": [],
+            "datarepo_row_ids_to_ingest": [],
+            "apply_anvil_transforms": true
+        },
+        "snapshot": {
+            "recreate_snapshot": true,
+            "new_snapshot_name": "TDR_Migration_Tool_Test_1_20230925_SS",
+            "copy_snapshot_policies": true
+        }
     }
-}
 
 Configuration Definitions:
 * source.tdr_object_uuid - The UUID of the original TDR dataset or snapshot to be copied. 
@@ -90,6 +90,7 @@ Locally
 * It is a assumed (and validated) that the user has Steward level access to the TDR object they are trying to copy data from. If the user has a lower level of permissions than this, they will not be able to run the tool. 
 * Currently, only GCP TDR objects may be migrated using this tool. If the source TDR object is backed by Azure, the tool will not run. 
 * In cases where the dataset being migrated does NOT contain file reference objects, there should not be any real limitations to this tool. Where considerations must be made is when trying to provide TDR with the appropriate permissions to ingest referenced data file objects from where they currently live into a new TDR dataset. The various ways TDR currently references and/or stores data file objects introduces a number of different scenarios for the tool to handle, not all of which have been tested. A summary of the use cases that have been tested is included below:
+
 | Source Object Type | Source Object File Hosting Method | Target Dataset Service Account | Comments |
 | --- | --- | --- | --- | --- |
 | Dataset | TDR Hosted | General SA | Fully Supported | |
