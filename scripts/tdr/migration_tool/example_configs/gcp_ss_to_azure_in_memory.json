@@ -1,31 +1,32 @@
 {
     "source": {
-        "tdr_object_uuid": "bfb59b12-e693-4247-b677-c4eccc23a26d",
+        "tdr_object_uuid": "864525ab-80a6-4851-a006-d0b0a934b267",
         "tdr_object_type": "snapshot",
         "tdr_object_env": "dev"
     },
     "target": {
         "tdr_billing_profile": "72c87190-e50f-4fa5-80bd-44cd8780394f",
         "tdr_dataset_uuid": "",
-        "tdr_dataset_name": "TDR_Migration_Tool_Test_2_20230925",
-        "tdr_dataset_cloud": "azure",
+        "tdr_dataset_name": "TDR_Migration_Tool_Test_3_20240715",
         "tdr_dataset_properties": {},
         "copy_policies": true
     },
     "ingest": {
+        "records_fetching_method": "tdr_api",
         "records_processing_method": "in_memory", 
         "write_to_cloud_platform": "",
         "write_to_cloud_location": "",
         "write_to_cloud_sas_token": "",
         "max_records_per_ingest_request": 250000,
         "max_filerefs_per_ingest_request": 50000,
-        "tables_to_ingest": ["file_inventory", "subject", "anvil_donor"],
+        "files_already_ingested": false,
+        "tables_to_ingest": [],
         "datarepo_row_ids_to_ingest": [],
-        "apply_anvil_transforms": true
+        "apply_anvil_transforms": false
     },
     "snapshot": {
         "recreate_snapshot": true,
-        "new_snapshot_name": "TDR_Migration_Tool_Test_2_20230915_SS",
+        "new_snapshot_name": "TDR_Migration_Tool_Test_3_20240715_SS",
         "copy_snapshot_policies": true
     }
 }

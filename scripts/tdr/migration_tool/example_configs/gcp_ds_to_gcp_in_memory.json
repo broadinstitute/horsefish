@@ -1,25 +1,27 @@
 {
     "source": {
-        "tdr_object_uuid": "6c91433f-2b61-491c-baa4-a212a4f380a3",
+        "tdr_object_uuid": "6521ad5d-7126-4eb3-be82-d305d4eaf5fd",
         "tdr_object_type": "dataset",
         "tdr_object_env": "dev"
     },
     "target": {
         "tdr_billing_profile": "ab050a35-e597-4c81-9d24-331a49e86016",
         "tdr_dataset_uuid": "",
-        "tdr_dataset_name": "TDR_Migration_Tool_Test_6_20240715",
+        "tdr_dataset_name": "TDR_Migration_Tool_Test_2_20240715",
+        "tdr_dataset_cloud": "gcp",
         "tdr_dataset_properties": {},
         "copy_policies": true
     },
     "ingest": {
         "records_fetching_method": "tdr_api",
-        "records_processing_method": "write_to_cloud", 
-        "write_to_cloud_platform": "gcp",
-        "write_to_cloud_location": "gs://fc-4c0c548b-e30b-4b4d-b82b-50c22310400c/migration_tool_test",
+        "records_processing_method": "in_memory", 
+        "write_to_cloud_platform": "",
+        "write_to_cloud_location": "",
         "write_to_cloud_sas_token": "",
         "max_records_per_ingest_request": 250000,
         "max_filerefs_per_ingest_request": 50000,
-        "tables_to_ingest": ["file_inventory", "subject"],
+        "files_already_ingested": false,
+        "tables_to_ingest": [],
         "datarepo_row_ids_to_ingest": [],
         "apply_anvil_transforms": false
     },
