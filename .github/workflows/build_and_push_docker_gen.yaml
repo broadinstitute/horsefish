@@ -31,9 +31,9 @@ jobs:
       - name: Build and Push General Docker Image
         run: |
           docker build -t us-east4-docker.pkg.dev/$GCP_PROJECT_ID/$GCP_REPOSITORY_GENERAL/general_python:$GITHUB_SHA -f scripts/general/Dockerfile .
-          docker push us-east4-docker.pkg.dev/dsp-fieldeng-dev/horsefish/general_python:$GITHUB_SHA
+          docker push us-east4-docker.pkg.dev/$GCP_PROJECT_ID/$GCP_REPOSITORY_GENERAL/general_python:$GITHUB_SHA
 
       - name: Set image tag to 'dev'
         run: |
-          docker tag us-east4-docker.pkg.dev/$GCP_PROJECT_ID/$GCP_REPOSITORY_GENERAL/general_python:$GITHUB_SHA us-east4-docker.pkg.dev/$PROJECT_ID/$GCP_REPOSITORY_GENERAL/general_python:dev
+          docker tag us-east4-docker.pkg.dev/$GCP_PROJECT_ID/$GCP_REPOSITORY_GENERAL/general_python:$GITHUB_SHA us-east4-docker.pkg.dev/$GCP_PROJECT_ID/$GCP_REPOSITORY_GENERAL/general_python:dev
           docker push us-east4-docker.pkg.dev/$GCP_PROJECT_ID/$GCP_REPOSITORY_GENERAL/general_python:dev
