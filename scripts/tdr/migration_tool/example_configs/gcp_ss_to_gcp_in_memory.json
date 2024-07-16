@@ -1,19 +1,18 @@
 {
     "source": {
-        "tdr_object_uuid": "59d7aa04-ad69-4325-b489-03cae423fe06",
-        "tdr_object_type": "dataset",
+        "tdr_object_uuid": "919ad48b-cb03-4557-a192-e74b9f15f905",
+        "tdr_object_type": "snapshot",
         "tdr_object_env": "dev"
     },
     "target": {
-        "tdr_billing_profile": "72c87190-e50f-4fa5-80bd-44cd8780394f",
+        "tdr_billing_profile": "ab050a35-e597-4c81-9d24-331a49e86016",
         "tdr_dataset_uuid": "",
-        "tdr_dataset_name": "TDR_Migration_Tool_Test_1_20240712",
-        "tdr_dataset_cloud": "azure",
+        "tdr_dataset_name": "TDR_Migration_Tool_Test_4_20240712",
         "tdr_dataset_properties": {},
         "copy_policies": true
     },
     "ingest": {
-        "records_fetching_method": "tdr_api",
+        "records_fetching_method": "cloud_native",
         "records_processing_method": "in_memory", 
         "write_to_cloud_platform": "",
         "write_to_cloud_location": "",
@@ -26,8 +25,8 @@
         "apply_anvil_transforms": false
     },
     "snapshot": {
-        "recreate_snapshot": false,
-        "new_snapshot_name": "",
-        "copy_snapshot_policies": false
+        "recreate_snapshot": true,
+        "new_snapshot_name": "TDR_Migration_Tool_Test_4_20240712_SS",
+        "copy_snapshot_policies": true
     }
 }

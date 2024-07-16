@@ -7,12 +7,12 @@
     "target": {
         "tdr_billing_profile": "72c87190-e50f-4fa5-80bd-44cd8780394f",
         "tdr_dataset_uuid": "",
-        "tdr_dataset_name": "TDR_Migration_Tool_Test_4_20230925",
-        "tdr_dataset_cloud": "azure",
+        "tdr_dataset_name": "TDR_Migration_Tool_Test_5_20240715",
         "tdr_dataset_properties": {},
         "copy_policies": true
     },
     "ingest": {
+        "records_fetching_method": "tdr_api",
         "records_processing_method": "write_to_cloud", 
         "write_to_cloud_platform": "azure",
         "write_to_cloud_location": "https://lz304a1e79fd7359e5327eda.blob.core.windows.net/sc-a8aa628b-b7c2-4bf3-b232-e8098e080866",
