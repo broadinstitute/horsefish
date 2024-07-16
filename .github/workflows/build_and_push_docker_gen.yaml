@@ -27,7 +27,7 @@ jobs:
           credentials_json: ${{ secrets.BASE64_SAKEY_DSPFIELDENG_GARPUSHER }}
 
       - name: Configure Docker to use the Google Artifact Registry
-        run: gcloud auth configure-docker us-central1-docker.pkg.dev
+        run: gcloud auth configure-docker us-east4-docker.pkg.dev
 
       - name: Build and Push General Docker Image
         run: |
