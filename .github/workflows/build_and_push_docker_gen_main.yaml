@@ -1,4 +1,4 @@
-name: Build and Publish Dev Images for scripts/general
+name: Build and Publish Latest Images for scripts/general
 on:
   pull_request_target:
     types:
