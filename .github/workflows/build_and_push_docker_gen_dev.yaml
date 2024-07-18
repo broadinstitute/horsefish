@@ -1,0 +1,40 @@
+name: Build and Publish Dev Images for scripts/general
+on:
+  push:
+    branches-ignore: [main]
+    paths:
+      - scripts/general/**
+      - .github/workflows/**
+env:
+  GCP_PROJECT_ID: dsp-fieldeng-dev
+  GCP_REPOSITORY_GENERAL: horsefish
+  GITHUB_SHA: ${{ github.sha }}
+
+jobs:
+  build-and-push-dev-images:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Login to GCP
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.BASE64_SAKEY_DSPFIELDENG_GARPUSHER }}
+
+      - name: Configure Docker to use the Google Artifact Registry
+        run: gcloud auth configure-docker us-east4-docker.pkg.dev
+
+      - name: Build and Push General Docker Image
+        run: |
+          docker build -t us-east4-docker.pkg.dev/$GCP_PROJECT_ID/$GCP_REPOSITORY_GENERAL/general_python:$GITHUB_SHA -f scripts/general/Dockerfile scripts/general
+          docker push us-east4-docker.pkg.dev/$GCP_PROJECT_ID/$GCP_REPOSITORY_GENERAL/general_python:$GITHUB_SHA
+
+      - name: Set image tag to 'dev'
+        run: |
+          docker tag us-east4-docker.pkg.dev/$GCP_PROJECT_ID/$GCP_REPOSITORY_GENERAL/general_python:$GITHUB_SHA us-east4-docker.pkg.dev/$GCP_PROJECT_ID/$GCP_REPOSITORY_GENERAL/general_python:dev
+          docker push us-east4-docker.pkg.dev/$GCP_PROJECT_ID/$GCP_REPOSITORY_GENERAL/general_python:dev
