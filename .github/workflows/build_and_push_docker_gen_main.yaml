@@ -39,5 +39,5 @@ jobs:
 
       - name: Set image tag to 'latest'
         run: |
-          docker tag us-east4-docker.pkg.dev/$GCP_PROJECT_ID/$GCP_REPOSITORY_GENERAL/general_python:$GITHUB_SHA us-east4-docker.pkg.dev/$GCP_PROJECT_ID/$GCP_REPOSITORY_GENERAL/general_python:dev
+          docker tag us-east4-docker.pkg.dev/$GCP_PROJECT_ID/$GCP_REPOSITORY_GENERAL/general_python:$GITHUB_SHA us-east4-docker.pkg.dev/$GCP_PROJECT_ID/$GCP_REPOSITORY_GENERAL/general_python:latest
           docker push us-east4-docker.pkg.dev/$GCP_PROJECT_ID/$GCP_REPOSITORY_GENERAL/general_python:latest
