@@ -3,9 +3,5 @@
 # source venv/bin/activate
 # pip install -r requirements.txt
 
-os
-sys
-json
 requests
-subprocess
 google-auth
