@@ -1,0 +1,629 @@
+
+    "tables": [
+      {
+        "name": "Culture",
+        "columns": [
+          {
+            "name": "culture_id",
+            "datatype": "string",
+            "array_of": false,
+            "required": true
+          },
+          {
+            "name": "organism",
+            "datatype": "string",
+            "array_of": false,
+            "required": false
+          }
+        ],
+        "primaryKey": [
+          "culture_id"
+        ],
+        "partitionMode": "none",
+        "datePartitionOptions": null,
+        "intPartitionOptions": null,
+        "rowCount": null
+      },
+      {
+        "name": "plate_swipe",
+        "columns": [
+          {
+            "name": "plate_swipe_id",
+            "datatype": "string",
+            "array_of": false,
+            "required": true
+          },
+          {
+            "name": "amrfinderplus_all_report",
+            "datatype": "float",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "amrfinderplus_amr_classes",
+            "datatype": "float",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "amrfinderplus_amr_core_genes",
+            "datatype": "float",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "amrfinderplus_amr_plus_genes",
+            "datatype": "float",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "amrfinderplus_amr_report",
+            "datatype": "float",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "amrfinderplus_amr_subclasses",
+            "datatype": "float",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "amrfinderplus_db_version",
+            "datatype": "float",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "amrfinderplus_stress_genes",
+            "datatype": "float",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "amrfinderplus_stress_report",
+            "datatype": "float",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "amrfinderplus_version",
+            "datatype": "float",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "amrfinderplus_virulence_genes",
+            "datatype": "float",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "amrfinderplus_virulence_report",
+            "datatype": "float",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "analysis_date",
+            "datatype": "string",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "assembly_fasta",
+            "datatype": "float",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "assembly_length",
+            "datatype": "float",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "assembly_mean_coverage",
+            "datatype": "float",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "average_read_length",
+            "datatype": "float",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "bakta_gbff",
+            "datatype": "float",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "bakta_gff3",
+            "datatype": "float",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "bakta_summary",
+            "datatype": "float",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "bakta_tsv",
+            "datatype": "float",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "bakta_version",
+            "datatype": "float",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "bbduk_docker",
+            "datatype": "string",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "bedtools_docker",
+            "datatype": "float",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "bedtools_version",
+            "datatype": "float",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "bracken_report",
+            "datatype": "string",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "matched_isolate_genera",
+            "datatype": "string",
+            "array_of": false,
+            "required": false
+          }
+        ],
+        "primaryKey": [
+          "plate_swipe_id"
+        ],
+        "partitionMode": "none",
+        "datePartitionOptions": null,
+        "intPartitionOptions": null,
+        "rowCount": null
+      },
+      {
+        "name": "Swab",
+        "columns": [
+          {
+            "name": "swab_id",
+            "datatype": "string",
+            "array_of": false,
+            "required": true
+          },
+          {
+            "name": "site",
+            "datatype": "string",
+            "array_of": false,
+            "required": false
+          }
+        ],
+        "primaryKey": [
+          "swab_id"
+        ],
+        "partitionMode": "none",
+        "datePartitionOptions": null,
+        "intPartitionOptions": null,
+        "rowCount": null
+      },
+      {
+        "name": "Sample",
+        "columns": [
+          {
+            "name": "sample_id",
+            "datatype": "string",
+            "array_of": false,
+            "required": true
+          },
+          {
+            "name": "sent_to_broad",
+            "datatype": "boolean",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "broad_ship_date",
+            "datatype": "string",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "sent_to_dzd_pre_p01",
+            "datatype": "boolean",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "dzd_pre_p01_ship_date",
+            "datatype": "string",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "sent_to_dzd_for_p01",
+            "datatype": "boolean",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "uci_regrowth",
+            "datatype": "boolean",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "uci_regrowth_outcome",
+            "datatype": "string",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "uci_id",
+            "datatype": "integer",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "raw_reads1",
+            "datatype": "string",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "raw_reads2",
+            "datatype": "string",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "dzd_plate",
+            "datatype": "string",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "dzd_batch",
+            "datatype": "string",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "dzd_id",
+            "datatype": "string",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "dzd_rack",
+            "datatype": "string",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "dzd_rack_row",
+            "datatype": "string",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "mbs",
+            "datatype": "float",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "duplication_rate",
+            "datatype": "float",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "gc",
+            "datatype": "float",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "fail_mb",
+            "datatype": "boolean",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "fail_contam",
+            "datatype": "boolean",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "dzd_rack_column",
+            "datatype": "string",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "dzd_rack_position",
+            "datatype": "string",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "dzd_glycerol_rack_code",
+            "datatype": "string",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "stock_id",
+            "datatype": "string",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "culture_id",
+            "datatype": "string",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "swab_id",
+            "datatype": "string",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "resident_id",
+            "datatype": "string",
+            "array_of": false,
+            "required": false
+          }
+        ],
+        "primaryKey": [
+          "sample_id"
+        ],
+        "partitionMode": "none",
+        "datePartitionOptions": null,
+        "intPartitionOptions": null,
+        "rowCount": null
+      },
+      {
+        "name": "Stock",
+        "columns": [
+          {
+            "name": "stock_id",
+            "datatype": "string",
+            "array_of": false,
+            "required": true
+          },
+          {
+            "name": "species",
+            "datatype": "string",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "morphotype_indicator",
+            "datatype": "string",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "freezer_box_name",
+            "datatype": "string",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "freezer_box_number",
+            "datatype": "integer",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "freezer_box_column",
+            "datatype": "integer",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "freezer_box_row",
+            "datatype": "string",
+            "array_of": false,
+            "required": false
+          }
+        ],
+        "primaryKey": [
+          "stock_id"
+        ],
+        "partitionMode": "none",
+        "datePartitionOptions": null,
+        "intPartitionOptions": null,
+        "rowCount": null
+      },
+      {
+        "name": "isolate",
+        "columns": [
+          {
+            "name": "raw_reads1",
+            "datatype": "float",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "dzd_id",
+            "datatype": "string",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "raw_reads2",
+            "datatype": "float",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "read1_clean",
+            "datatype": "float",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "read2_clean",
+            "datatype": "float",
+            "array_of": false,
+            "required": false
+          }
+        ],
+        "primaryKey": [],
+        "partitionMode": "none",
+        "datePartitionOptions": null,
+        "intPartitionOptions": null,
+        "rowCount": null
+      },
+      {
+        "name": "Resident",
+        "columns": [
+          {
+            "name": "resident_id",
+            "datatype": "string",
+            "array_of": false,
+            "required": true
+          },
+          {
+            "name": "record_id",
+            "datatype": "string",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "project",
+            "datatype": "string",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "nh_code",
+            "datatype": "string",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "room_bed",
+            "datatype": "string",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "CLEAN_object_code",
+            "datatype": "string",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "room_type",
+            "datatype": "string",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "CLEAN_phase",
+            "datatype": "integer",
+            "array_of": false,
+            "required": false
+          },
+          {
+            "name": "CLEAN_sweep",
+            "datatype": "integer",
+            "array_of": false,
+            "required": false
+          }
+        ],
+        "primaryKey": [
+          "resident_id"
+        ],
+        "partitionMode": "none",
+        "datePartitionOptions": null,
+        "intPartitionOptions": null,
+        "rowCount": null
+      }
+    ],
+    "relationships": [
+      {
+        "name": "culture_id",
+        "from": {
+          "table": "Culture",
+          "column": "culture_id"
+        },
+        "to": {
+          "table": "Sample",
+          "column": "culture_id"
+        }
+      },
+      {
+        "name": "swab_id",
+        "from": {
+          "table": "Sample",
+          "column": "swab_id"
+        },
+        "to": {
+          "table": "Swab",
+          "column": "swab_id"
+        }
+      },
+      {
+        "name": "stock_id",
+        "from": {
+          "table": "Sample",
+          "column": "stock_id"
+        },
+        "to": {
+          "table": "Stock",
+          "column": "stock_id"
+        }
+      },
+      {
+        "name": "resident_id",
+        "from": {
+          "table": "Sample",
+          "column": "resident_id"
+        },
+        "to": {
+          "table": "Resident",
+          "column": "resident_id"
+        }
+      },
+      {
+        "name": "matched_isolate_genera_ dzd_id",
+        "from": {
+          "table": "Sample",
+          "column": "dzd_id"
+        },
+        "to": {
+          "table": "plate_swipe",
+          "column": "matched_isolate_genera"
+        }
+      }
+    ]
+    
