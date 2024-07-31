@@ -4,4 +4,5 @@
 # pip install -r requirements.txt
 
 requests
+google-cloud
 google-auth
