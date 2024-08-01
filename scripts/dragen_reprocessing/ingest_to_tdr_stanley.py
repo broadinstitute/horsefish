@@ -162,6 +162,14 @@ class Terra:
             str(sample_dict[entity_id]) for sample_dict in data_set_metadata
         ]
 
+    # TODO: delete this later
+    def get_data_set_sample_id_and_sample_alias(self, dataset_id: str, target_table_name: str, entity_id: str) -> dict:
+        """Get existing ids from dataset."""
+        data_set_metadata = self._yield_data_set_metrics(dataset_id=dataset_id, target_table_name=target_table_name)
+        return {
+            str(sample_dict[entity_id]): sample_dict["collaborator_sample_id"] for sample_dict in data_set_metadata
+        }
+
 
 class ReformatMetricsForIngest:
     def __init__(self, sample_metrics: list[dict]):
@@ -218,17 +226,26 @@ class FilterOutSampleIdsAlreadyInDataset:
     def run(self) -> list[dict]:
         # Get all sample ids that already exist in dataset
         logging.info(f"Getting all sample ids that already exist in dataset {self.dataset_id}")
-        data_set_sample_ids = self.terra.get_data_set_sample_ids(
-            dataset_id=self.dataset_id,
-            target_table_name=self.target_table_name,
-            entity_id=self.filter_entity_id
+        # TODO: delete this later
+        data_set_metrics = self.terra.get_data_set_sample_id_and_sample_alias(
+            dataset_id=self.dataset_id, target_table_name=self.target_table_name, entity_id=self.filter_entity_id
         )
+
+        #data_set_sample_ids = self.terra.get_data_set_sample_ids(
+        #    dataset_id=self.dataset_id,
+        #    target_table_name=self.target_table_name,
+        #    entity_id=self.filter_entity_id
+        #)
         # Filter out rows that already exist in dataset
         filtered_workspace_metrics = [
             row
             for row in self.workspace_metrics
-            if str(row[filter_entity_id]) not in data_set_sample_ids
+            if str(row[filter_entity_id]) not in data_set_metrics
+               # TODO: delete this later
+                # Check if collab sample id is different, if so ingest
+               and data_set_metrics[str(row[filter_entity_id])] != row["collaborator_sample_id"]
         ]
+        logging.info("Checking this working")
         if len(filtered_workspace_metrics) < len(self.workspace_metrics):
             logging.info(f"Filtered out {len(self.workspace_metrics) - len(filtered_workspace_metrics)} rows that already exist in dataset")
             if filtered_workspace_metrics:
