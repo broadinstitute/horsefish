@@ -345,7 +345,7 @@ if __name__ == "__main__":
     if not dataset_id:
         dataset_id = RP_TO_DATASET_ID.get(rp)
 
-    load_tag_prefix = f"{BILLING_PROJECT}.{WORKSPACE_NAME}"
+    load_tag_prefix = f"{dataset_id}.{target_table_name}"
 
     # Read input tsv
     with open(input_tsv) as f:
