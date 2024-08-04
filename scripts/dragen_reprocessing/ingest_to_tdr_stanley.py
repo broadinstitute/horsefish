@@ -7,7 +7,8 @@ from argparse import ArgumentParser, Namespace
 import logging
 import time
 import backoff
-from datetime import datetime
+import httplib2
+from datetime import datetime, timedelta
 from typing import Union, Any
 from oauth2client.client import GoogleCredentials
 import sys
@@ -39,6 +40,34 @@ MAX_RETRIES = 1
 INGEST_CHECK_INTERVAL = 120
 
 
+class Token:
+    def __init__(self):
+        self.cloud = 'gcp'
+        self.expiry = None
+        self.token_string = None
+        self.credentials = GoogleCredentials.get_application_default()
+        self.credentials = self.credentials.create_scoped(
+            [
+                "https://www.googleapis.com/auth/userinfo.profile",
+                "https://www.googleapis.com/auth/userinfo.email",
+                "https://www.googleapis.com/auth/devstorage.full_control"
+            ]
+        )
+
+    def get_gcp_token(self) -> str:
+        # Refresh token if it has not been set or if it is expired or close to expiry
+        if not self.token_string or not self.expiry or self.expiry < datetime.now(pytz.UTC) + timedelta(minutes=5):
+            http = httplib2.Http()
+            self.credentials.refresh(http)
+            self.token_string = self.credentials.get_access_token().access_token
+            # Set expiry to use UTC since google uses that timezone
+            self.expiry = self.credentials.token_expiry.replace(tzinfo=pytz.UTC)
+            # Convert expiry time to EST for logging
+            est_expiry = self.expiry.astimezone(pytz.timezone('US/Eastern'))
+            logging.info(f"New token expires at {est_expiry} EST")
+        return self.token_string
+
+
 class Terra:
     ACCEPTABLE_STATUS_CODES = [200, 202]
     TDR_LINK = "https://data.terra.bio/api/repository/v1"
@@ -51,18 +80,11 @@ class Terra:
     def __init__(self, max_retries: int, max_backoff_time: int):
         self.max_retries = max_retries
         self.max_backoff_time = max_backoff_time
-
-    def _get_access_token(self):
-        """Get access token."""
-        scopes = ["https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/userinfo.email"]
-        credentials = GoogleCredentials.get_application_default()
-        credentials = credentials.create_scoped(scopes)
-
-        return credentials.get_access_token().access_token
+        self.token = Token()
 
     def _create_headers(self, content_type: str = None) -> dict:
         """Create headers for API calls."""
-        headers = {"Authorization": f"Bearer {self._get_access_token()}", "accept": "application/json"}
+        headers = {"Authorization": f"Bearer {self.token.get_gcp_token()}", "accept": "application/json"}
         if content_type:
             headers["Content-Type"] = content_type
         return headers
@@ -162,14 +184,6 @@ class Terra:
             str(sample_dict[entity_id]) for sample_dict in data_set_metadata
         ]
 
-    # TODO: delete this later
-    def get_data_set_sample_id_and_sample_alias(self, dataset_id: str, target_table_name: str, entity_id: str) -> dict:
-        """Get existing ids from dataset."""
-        data_set_metadata = self._yield_data_set_metrics(dataset_id=dataset_id, target_table_name=target_table_name)
-        return {
-            str(sample_dict[entity_id]): sample_dict["collaborator_sample_id"] for sample_dict in data_set_metadata
-        }
-
 
 class ReformatMetricsForIngest:
     def __init__(self, sample_metrics: list[dict]):
@@ -226,24 +240,17 @@ class FilterOutSampleIdsAlreadyInDataset:
     def run(self) -> list[dict]:
         # Get all sample ids that already exist in dataset
         logging.info(f"Getting all sample ids that already exist in dataset {self.dataset_id}")
-        # TODO: delete this later
-        data_set_metrics = self.terra.get_data_set_sample_id_and_sample_alias(
-            dataset_id=self.dataset_id, target_table_name=self.target_table_name, entity_id=self.filter_entity_id
-        )
 
-        #data_set_sample_ids = self.terra.get_data_set_sample_ids(
-        #    dataset_id=self.dataset_id,
-        #    target_table_name=self.target_table_name,
-        #    entity_id=self.filter_entity_id
-        #)
+        data_set_sample_ids = self.terra.get_data_set_sample_ids(
+            dataset_id=self.dataset_id,
+            target_table_name=self.target_table_name,
+            entity_id=self.filter_entity_id
+        )
         # Filter out rows that already exist in dataset
         filtered_workspace_metrics = [
             row
             for row in self.workspace_metrics
-            if str(row[filter_entity_id]) not in data_set_metrics
-               # TODO: delete this later
-                # Check if collab sample id is different, if so ingest
-               and data_set_metrics[str(row[filter_entity_id])] != row["collaborator_sample_id"]
+            if str(row[filter_entity_id]) not in data_set_sample_ids
         ]
         logging.info("Checking this working")
         if len(filtered_workspace_metrics) < len(self.workspace_metrics):

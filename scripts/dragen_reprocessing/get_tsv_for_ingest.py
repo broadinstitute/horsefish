@@ -94,7 +94,8 @@ class ConvertSampleMetadataToTsv:
         
     def _convert_to_tdr_dict(self, sample_dict: dict) -> dict:
         """Convert sample metadata to TDR format."""
-        file_path_prefix = os.path.join(sample_dict['output_path'], str(sample_dict['collaborator_sample_id']))
+        safe_sample_str = sample_dict['collaborator_sample_id'].replace(' ', '_')
+        file_path_prefix = os.path.join(sample_dict['output_path'], safe_sample_str)
         return {
             "analysis_date": sample_dict["last_attempt"],
             "collaborator_participant_id": str(sample_dict["collaborator_participant_id"]),
