@@ -4,8 +4,9 @@ This was originally a bash script written by Samantha Velasquez\
 which was written to copy files from a TDR snapshot to an Azure bucket.\
 Bobbie then translated to python using CoPilot.\
 [copy_from_tdr_to_gcs.py](copy_from_tdr_to_gcs.py) \
-**This script is not yet tested.**
 
+Set up:
+gcloud auth login
 
 ## TODO
 - [ ] fix requirements.txt as needed

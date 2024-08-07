@@ -17,6 +17,8 @@ STAGING_AREA_BUCKETS = {
         "TEST": "gs://broad-dsp-monster-hca-prod-ebi-storage/broad_test_dataset"
 }
 
+# TODO change prints to logging
+
 def setup_cli_logging_format() -> None:
     logging.basicConfig(level=logging.INFO, format='%(message)s', stream=sys.stdout)
 
@@ -53,7 +55,7 @@ def find_project_id_in_str(s: str) -> str:
 
     return str(project_ids[0])
 
-def _sanitize_gs_path(path: str) -> str:
+def _sanitize_staging_gs_path(path: str) -> str:
     return path.strip().strip("/")
 
 def _parse_csv(csv_path:str):
@@ -64,7 +66,7 @@ def _parse_csv(csv_path:str):
     Attribution:
     https://github.com/DataBiosphere/hca-ingest/blob/main/orchestration/hca_manage/manifest.py
     """
-    gs_paths = set()
+    staging_gs_paths = set()
     project_ids = set()
     with open(csv_path, "r") as f:
         reader = csv.reader(f)
@@ -79,7 +81,7 @@ def _parse_csv(csv_path:str):
 
             project_ids.add(project_id)
 
-            gs_path = None
+            staging_gs_path = None
             if institution not in STAGING_AREA_BUCKETS:
                 raise Exception(f"Unknown institution {institution} found")
 
@@ -87,15 +89,15 @@ def _parse_csv(csv_path:str):
             path = institution_bucket + "/" + project_id
 
             # sanitize and dedupe
-            path = _sanitize_gs_path(path)
+            path = _sanitize_staging_gs_path(path)
             assert path.startswith("gs://"), "Staging area path must start with gs:// scheme"
-            gs_path = path
+            staging_gs_path = path
 
-            gs_paths.add(gs_path)
+            staging_gs_paths.add(staging_gs_path)
 
-        # print(f"These are the parsed gs_paths {gs_paths}")
+        # print(f"These are the parsed staging_gs_paths {staging_gs_paths}")
         # print(f"These are the parsed project_ids {project_ids}")
-        return gs_paths, project_ids
+        return staging_gs_paths, project_ids
 
 
 def _get_target_snapshot_ids(project_ids: set[str]) -> set[str]:
@@ -120,27 +122,65 @@ def get_access_token():
     return access_token
 
 
-def _get_latest_snapshot(target_snapshots: set[str], access_token: str):
+def _get_latest_snapshots(target_snapshots: set[str], access_token: str):
+    latest_snapshots = []
     for snapshot_name in target_snapshots:
-        response = requests.get(f'https://data.terra.bio/api/repository/v1/snapshots?sort=createdDate,'
-                                f'desc&limit=1&filter={snapshot_name}',
-                                headers={'accept': 'application/json', 'Authorization': f'Bearer {access_token}'})
-        response.raise_for_status()
-        with open(f"response_{snapshot_name}.json", 'w') as outfile:
-            json.dump(response.json(), outfile)
+        snapshot_response = requests.get(
+            f'https://data.terra.bio/api/repository/v1/snapshots?offset=0&limit=10&sort=created_date&direction=desc&filter={snapshot_name}',
+            headers={'accept': 'application/json', 'Authorization': f'Bearer {access_token}'}
+        )
+        snapshot_response.raise_for_status()
+        # with open(f"response_{snapshot_name}.json", 'w') as outfile:
+        #     # not sure that I need to dump this? - not sure I need to write an output file at all actually
+        #     json.dump(snapshot_response.json(), outfile)
+        latest_snapshot_id = snapshot_response.json()['items'][0]['id']
+        latest_snapshots.append(latest_snapshot_id)
+    return latest_snapshots
 
-# TODO 8/1/24 - got a 400 for invalid filter - yay!
-# need to add note that you need to gcloud auth to run this.
-#
-#     # Extract file details from the JSON file and append them to a text file
-#     with open(f"response_{snapshot}.json", 'r') as json_file:
-#         data = json.load(json_file)
-#         with open("list_of_access_urls.txt", 'a') as outfile:
-#             for item in data:
-#                 outfile.write(item['fileDetail']['accessUrl'] + '\n')
-#
-#
+# then for each snapshot get access url and add to a list of access urls for that snapshot
+def get_access_urls(latest_snapshot_ids: list[str], access_token: str):
+    for snapshot in latest_snapshot_ids:
+        files_response = requests.get(
+            f'https://data.terra.bio/api/repository/v1/snapshots/{snapshot}/files?offset=0',
+            headers={'accept': 'application/json', 'Authorization': f'Bearer {access_token}'}
+        )
+        files_response.raise_for_status()
+        # TODO - don't need?
+        # with open(f"response_{snapshot}.json", 'w') as outfile:
+        #     json.dump(files_response.json(), outfile)
+
+        # Extract file details from the JSON file and append them to a text file
+        list_of_access_urls = []
+        data = files_response.json()
+        for item in data:
+            list_of_access_urls.append(item['fileDetail']['accessUrl'])
+        return list_of_access_urls
+
+
+        # with open(f"response_{snapshot}.json", 'r') as json_file:
+        #     data = json.load(json_file)
+        #     with open("list_of_access_urls.txt", 'a') as outfile:
+        #         for item in data:
+        #             outfile.write(item['fileDetail']['accessUrl'] + '\n')
+
+def copy_tdr_to_staging(access_urls: list[str], staging_gs_paths: set[str]):
+    # TODO this will need to be modified to work one by one - see nesting below
+    for staging_dir in staging_gs_paths:
+        staging_data_dir = staging_dir + '/data/'
+        # output = subprocess.run(['gcloud', 'storage', 'ls', staging_data_dir], capture_output=True, text=True)
+        # TODO FIX THIS - it's not actually stopping if it's not empty - and it won't be entirely empty... need another method
+        # if output.stdout.strip() != '':
+        #     print(f"Staging area {staging_data_dir} is not empty")
+        #     print(output.stdout.strip())
+        # else:
+        #     print(f"Staging area {staging_data_dir} is empty - copying files now")
+        for access_url in access_urls:
+            print(f"Copying {access_url} to {staging_data_dir}")
+            subprocess.run(['gcloud', 'storage', 'cp', access_url, staging_data_dir])
+            # HM... why is copy hard? does it need /. at the end? or is it the access url that's wrong?
+
 # # Read the list of files from list_of_filepaths.txt and copy them using gcloud storage cp
+# we should make sure the staging/data dir is empty before running this
 # with open("list_of_access_urls.txt", 'r') as file:
 #     access_urls = file.read().splitlines()
 
@@ -167,13 +207,26 @@ def main():
     access_token = get_access_token()
     csv_path = sys.argv[1]
     validate_input(csv_path)
-    gs_paths = _parse_csv(csv_path)[0]
-    print(f"gs_paths are {gs_paths}")
+    staging_gs_paths = _parse_csv(csv_path)[0]
+    print(f"staging_gs_paths are {staging_gs_paths}")
     project_ids = _parse_csv(csv_path)[1]
     print(f"project_ids are {project_ids}")
     target_snapshots = _get_target_snapshot_ids(project_ids)
     print(f"target snapshot ids are {target_snapshots}")
-    tdr_data_path = _get_latest_snapshot(target_snapshots, access_token)
+    latest_snapshot_ids = _get_latest_snapshots(target_snapshots, access_token)
+    print(f"latest_snapshots_ids are {latest_snapshot_ids}")
+    access_urls = get_access_urls(latest_snapshot_ids, access_token)
+    print(f"access_urls are {access_urls}")
+    copy_tdr_to_staging(access_urls, staging_gs_paths)
+
+    # ultimately
+    # for each project_id in project_ids
+    #   get the staging gs path
+    #   get the snapshot name
+    #   get the latest snapshot id
+    #   get the access url for each file in the snapshot
+    #   for each file in the snapshot
+    #       copy the file from the access to the staging area
 
 
 if __name__ == '__main__':
