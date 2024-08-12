@@ -3,7 +3,7 @@ import pandas as pd
 
 
 def join_tsvs(tsvs):
-    'Create a combined metadata file from individual metadata files to use as input for Nexststrain augur workflow.'
+    'Create a combined metadata file from individual metadata files.'
     # read each file in input list as a dataframe and add to list
     df_list = []
     for file in tsvs:
