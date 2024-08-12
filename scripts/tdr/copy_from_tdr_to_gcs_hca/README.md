@@ -7,7 +7,6 @@ Bobbie then translated to python using CoPilot.\
 
 Set up:
 gcloud auth login
-
 ## TODO
 - [ ] fix requirements.txt as needed
 - [ ] update the script to copy to staging /data bucket

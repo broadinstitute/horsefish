@@ -2,7 +2,6 @@ import os
 import sys
 import csv
 import logging
-import json
 import re
 import requests
 import google.auth
@@ -19,10 +18,12 @@ STAGING_AREA_BUCKETS = {
 
 # TODO change prints to logging
 
+
 def setup_cli_logging_format() -> None:
     logging.basicConfig(level=logging.INFO, format='%(message)s', stream=sys.stdout)
 
-def validate_input(csv_path:str):
+
+def validate_input(csv_path: str):
     """
     input should be a manifest csv of those projects that need data copied back
     format is <institution>,<project_id>
@@ -38,10 +39,11 @@ def validate_input(csv_path:str):
     else:
         return csv_path
 
+
 def find_project_id_in_str(s: str) -> str:
     """
     The selected function find_project_id_in_str(s: str) -> str:
-    is used to extract a UUID (Universally Unique Identifier) from a given string s.
+    is used to extract a valid UUID (Universally Unique Identifier) from a given string s.
     :param s:
     :return:
     Attribution:
@@ -55,8 +57,10 @@ def find_project_id_in_str(s: str) -> str:
 
     return str(project_ids[0])
 
+
 def _sanitize_staging_gs_path(path: str) -> str:
     return path.strip().strip("/")
+
 
 def _parse_csv(csv_path:str):
     """
@@ -81,9 +85,9 @@ def _parse_csv(csv_path:str):
 
             project_ids.add(project_id)
 
-            staging_gs_path = None
             if institution not in STAGING_AREA_BUCKETS:
-                raise Exception(f"Unknown institution {institution} found")
+                raise Exception(f"Unknown institution {institution} found. "
+                                f"Make sure the institution is in the list of staging area buckets and is in all caps")
 
             institution_bucket = STAGING_AREA_BUCKETS[institution]
             path = institution_bucket + "/" + project_id
@@ -95,8 +99,6 @@ def _parse_csv(csv_path:str):
 
             staging_gs_paths.add(staging_gs_path)
 
-        # print(f"These are the parsed staging_gs_paths {staging_gs_paths}")
-        # print(f"These are the parsed project_ids {project_ids}")
         return staging_gs_paths, project_ids
 
 
@@ -130,14 +132,12 @@ def _get_latest_snapshots(target_snapshots: set[str], access_token: str):
             headers={'accept': 'application/json', 'Authorization': f'Bearer {access_token}'}
         )
         snapshot_response.raise_for_status()
-        # with open(f"response_{snapshot_name}.json", 'w') as outfile:
-        #     # not sure that I need to dump this? - not sure I need to write an output file at all actually
-        #     json.dump(snapshot_response.json(), outfile)
         latest_snapshot_id = snapshot_response.json()['items'][0]['id']
         latest_snapshots.append(latest_snapshot_id)
     return latest_snapshots
 
-# then for each snapshot get access url and add to a list of access urls for that snapshot
+
+# for each snapshot get access url and add to a list of access urls for that snapshot
 def get_access_urls(latest_snapshot_ids: list[str], access_token: str):
     for snapshot in latest_snapshot_ids:
         files_response = requests.get(
@@ -145,11 +145,8 @@ def get_access_urls(latest_snapshot_ids: list[str], access_token: str):
             headers={'accept': 'application/json', 'Authorization': f'Bearer {access_token}'}
         )
         files_response.raise_for_status()
-        # TODO - don't need?
-        # with open(f"response_{snapshot}.json", 'w') as outfile:
-        #     json.dump(files_response.json(), outfile)
 
-        # Extract file details from the JSON file and append them to a text file
+        # Extract file details from the JSON file and add them to a list
         list_of_access_urls = []
         data = files_response.json()
         for item in data:
@@ -157,43 +154,28 @@ def get_access_urls(latest_snapshot_ids: list[str], access_token: str):
         return list_of_access_urls
 
 
-        # with open(f"response_{snapshot}.json", 'r') as json_file:
-        #     data = json.load(json_file)
-        #     with open("list_of_access_urls.txt", 'a') as outfile:
-        #         for item in data:
-        #             outfile.write(item['fileDetail']['accessUrl'] + '\n')
-
 def copy_tdr_to_staging(access_urls: list[str], staging_gs_paths: set[str]):
-    # TODO this will need to be modified to work one by one - see nesting below
     for staging_dir in staging_gs_paths:
         staging_data_dir = staging_dir + '/data/'
-        # output = subprocess.run(['gcloud', 'storage', 'ls', staging_data_dir], capture_output=True, text=True)
-        # TODO FIX THIS - it's not actually stopping if it's not empty - and it won't be entirely empty... need another method
-        # if output.stdout.strip() != '':
-        #     print(f"Staging area {staging_data_dir} is not empty")
-        #     print(output.stdout.strip())
-        # else:
-        #     print(f"Staging area {staging_data_dir} is empty - copying files now")
+        logging.info(f'staging_data_dir is {staging_data_dir}')
+        # using gsutil as output is cleaner & faster
+        output = subprocess.run(['gsutil', 'ls', staging_data_dir], capture_output=True)
+        stdout = output.stdout.strip()
+        files = stdout.decode('utf-8').split('\n')
+        if len(files) > 1:
+            logging.error(f"Staging area {staging_data_dir} is not empty")
+            logging.info(f"files in staging area are: {files}")
+            continue
+    else:
+        logging.info(f"Staging area {staging_data_dir} is empty - copying files now")
         for access_url in access_urls:
-            print(f"Copying {access_url} to {staging_data_dir}")
-            subprocess.run(['gcloud', 'storage', 'cp', access_url, staging_data_dir])
-            # HM... why is copy hard? does it need /. at the end? or is it the access url that's wrong?
-
-# # Read the list of files from list_of_filepaths.txt and copy them using gcloud storage cp
-# we should make sure the staging/data dir is empty before running this
-# with open("list_of_access_urls.txt", 'r') as file:
-#     access_urls = file.read().splitlines()
-
-# # TODO
-# # copy command will look something like\
-# # gcloud storage cp gs://datarepo-4bcb4408-bucket/2e2aac27-3bf5-4a89-b466-e563cf99aef2/07a78be1-c75f-4463-a1a4-d4f7f9771ca5/SRR3562314_2.fastq.gz gs://broad-dsp-monster-hca-prod-ebi-storage/broad_test_dataset/07e5ebc0-1386-4a33-8ce4-3007705adad8/data/.
-# # Also need to construct the staging/data gs:// path from the manifest.csv
-# # "EBI": "gs://broad-dsp-monster-hca-prod-ebi-storage/prod",
-# # "UCSC": "gs://broad-dsp-monster-hca-prod-ebi-storage/prod",
-# # "LANTERN": "gs://broad-dsp-monster-hca-prod-lantern",
-# #  "LATTICE": "gs://broad-dsp-monster-hca-prod-lattice/staging",
-# for access_url in access_urls:
-#     subprocess.run(['gcloud storage', 'cp', access_url, "<INSERT STAGING /DATA url>"])
+            try:
+                # strip the filename from the access url because gcp is not a file system - it's all objects
+                filename = access_url.split('/')[-1]
+                print(f"Copying {access_url} to {staging_data_dir}{filename}")
+                subprocess.run(['gcloud', 'storage', 'cp', access_url, staging_data_dir + filename])
+            except Exception as e:
+                logging.error(f"Error copying {access_url} to {staging_data_dir}{filename}: {e}")
 
 
 def main():
@@ -205,28 +187,29 @@ def main():
     """
     setup_cli_logging_format()
     access_token = get_access_token()
+
+    # read in the manifest and parse out the staging gs paths and project ids
     csv_path = sys.argv[1]
     validate_input(csv_path)
     staging_gs_paths = _parse_csv(csv_path)[0]
-    print(f"staging_gs_paths are {staging_gs_paths}")
+    logging.info(f"staging_gs_paths are {staging_gs_paths}")
     project_ids = _parse_csv(csv_path)[1]
-    print(f"project_ids are {project_ids}")
+    logging.info(f"project_ids are {project_ids}")
+
+    # get the target snapshot ids, based on standard HCA ingest naming conventions
     target_snapshots = _get_target_snapshot_ids(project_ids)
-    print(f"target snapshot ids are {target_snapshots}")
+    logging.info(f"target snapshot ids are {target_snapshots}")
+
+    # get the latest snapshot ids for each target snapshot
     latest_snapshot_ids = _get_latest_snapshots(target_snapshots, access_token)
-    print(f"latest_snapshots_ids are {latest_snapshot_ids}")
+    logging.info(f"latest_snapshots_ids are {latest_snapshot_ids}")
+
+    # get the access urls for each file in the snapshot
     access_urls = get_access_urls(latest_snapshot_ids, access_token)
     print(f"access_urls are {access_urls}")
-    copy_tdr_to_staging(access_urls, staging_gs_paths)
 
-    # ultimately
-    # for each project_id in project_ids
-    #   get the staging gs path
-    #   get the snapshot name
-    #   get the latest snapshot id
-    #   get the access url for each file in the snapshot
-    #   for each file in the snapshot
-    #       copy the file from the access to the staging area
+    # copy the files from the TDR project bucket to the staging area bucket
+    copy_tdr_to_staging(access_urls, staging_gs_paths)
 
 
 if __name__ == '__main__':
