@@ -29,7 +29,7 @@ jobs:
       - name: Configure Docker to use the Google Artifact Registry
         run: gcloud auth configure-docker us-east4-docker.pkg.dev
 
-      - name: Build and Push General Docker Image
+      - name: Build and Push copy_from_tdr_to_gcs_hca Docker Image
         run: |
           docker build -t us-east4-docker.pkg.dev/$GCP_PROJECT_ID/$GCP_REPOSITORY/copy_from_tdr_to_gcs_hca:$GITHUB_SHA -f scripts/tdr/copy_from_tdr_to_gcs_hca/Dockerfile scripts/copy_from_tdr_to_gcs_hca
           docker push us-east4-docker.pkg.dev/$GCP_PROJECT_ID/$GCP_REPOSITORY/copy_from_tdr_to_gcs_hca:$GITHUB_SHA
