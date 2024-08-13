@@ -7,7 +7,7 @@ on:
       - main
     paths:
       - scripts/tdr/copy_from_tdr_to_gcs_hca/**
-      - .github/workflows/**
+      - .github/workflows/build_and_push_docker_copy_from_tdr_to_gcs_hca_main.yaml
 env:
   GCP_PROJECT_ID: dsp-fieldeng-dev
   GCP_REPOSITORY: horsefish

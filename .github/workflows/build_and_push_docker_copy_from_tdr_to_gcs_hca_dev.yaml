@@ -4,7 +4,7 @@ on:
     branches-ignore: [main]
     paths:
       - scripts/copy_from_tdr_to_gcs_hca/**
-      - .github/workflows/**
+      - .github/workflows/build_and_push_docker_copy_from_tdr_to_gcs_hca_dev.yaml
 env:
   GCP_PROJECT_ID: dsp-fieldeng-dev
   GCP_REPOSITORY: horsefish
