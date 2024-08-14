@@ -32,18 +32,3 @@ RUN pip install -r requirements.txt
 
 ENV PYTHONPATH "/scripts:${PYTHONPATH}"
 CMD ["/bin/bash"]
-
-# builds with GitHub Action "Main Validation and Release" ../.github/workflows/build-and-push_docker_main.yaml and ../.github/workflows/build-and-push_docker_dev.yaml
-# tags = us-east4-docker.pkg.dev/$GCP_PROJECT_ID/$GCP_REPOSITORY/copy_from_tdr_to_gcs_hca:$GITHUB_SHA, us-east4-docker.pkg.dev/$GCP_PROJECT_ID/$GCP_REPOSITORY/copy_from_tdr_to_gcs_hca:latest
-
-# To manually build and run locally
-# docker build -t us-east4-docker.pkg.dev/dsp-fieldeng-dev/horsefish/copy_from_tdr_to_gcs_hca:<new_version> .
-# docker run --rm -it us-east4-docker.pkg.dev/dsp-fieldeng-dev/horsefish/copy_from_tdr_to_gcs_hca:<new_version>
-
-# to build and push to Artifact Registry
-# make sure you are logged in to gcloud and that application default credentials are set
-# gcloud auth login
-# gcloud config set project dsp-fieldeng-dev
-# gcloud auth application-default login
-# set the <new_version> before building and pushing
-# docker push us-east4-docker.pkg.dev/dsp-fieldeng-dev/horsefish/copy_from_tdr_to_gcs_hca:<new_version>
