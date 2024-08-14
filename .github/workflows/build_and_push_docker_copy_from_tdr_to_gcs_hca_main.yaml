@@ -1,0 +1,43 @@
+name: Build and Publish Latest Images for scripts/tdr/copy_from_tdr_to_gcs_hca
+on:
+  pull_request_target:
+    types:
+      - closed
+    branches:
+      - main
+    paths:
+      - scripts/tdr/copy_from_tdr_to_gcs_hca/**
+      - .github/workflows/build_and_push_docker_copy_from_tdr_to_gcs_hca_main.yaml
+env:
+  GCP_PROJECT_ID: dsp-fieldeng-dev
+  GCP_REPOSITORY: horsefish
+  GITHUB_SHA: ${{ github.sha }}
+
+jobs:
+  build-and-push-dev-images:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Login to GCP
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.BASE64_SAKEY_DSPFIELDENG_GARPUSHER }}
+
+      - name: Configure Docker to use the Google Artifact Registry
+        run: gcloud auth configure-docker us-east4-docker.pkg.dev
+
+      - name: Build and Push copy_from_tdr_to_gcs_hca Docker Image
+        run: |
+          docker build -t us-east4-docker.pkg.dev/$GCP_PROJECT_ID/$GCP_REPOSITORY/copy_from_tdr_to_gcs_hca:$GITHUB_SHA -f scripts/tdr/copy_from_tdr_to_gcs_hca/Dockerfile scripts/tdr/copy_from_tdr_to_gcs_hca
+          docker push us-east4-docker.pkg.dev/$GCP_PROJECT_ID/$GCP_REPOSITORY/copy_from_tdr_to_gcs_hca:$GITHUB_SHA
+
+      - name: Set image tag to 'latest'
+        run: |
+          docker tag us-east4-docker.pkg.dev/$GCP_PROJECT_ID/$GCP_REPOSITORY/copy_from_tdr_to_gcs_hca:$GITHUB_SHA us-east4-docker.pkg.dev/$GCP_PROJECT_ID/$GCP_REPOSITORY/copy_from_tdr_to_gcs_hca:latest
+          docker push us-east4-docker.pkg.dev/$GCP_PROJECT_ID/$GCP_REPOSITORY/copy_from_tdr_to_gcs_hca:latest

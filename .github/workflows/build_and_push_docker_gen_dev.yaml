@@ -4,7 +4,7 @@ on:
     branches-ignore: [main]
     paths:
       - scripts/general/**
-      - .github/workflows/**
+      - .github/workflows/build_and_push_docker_gen_dev.yaml
 env:
   GCP_PROJECT_ID: dsp-fieldeng-dev
   GCP_REPOSITORY_GENERAL: horsefish

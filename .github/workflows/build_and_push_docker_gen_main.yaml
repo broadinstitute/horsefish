@@ -7,7 +7,7 @@ on:
       - main
     paths:
       - scripts/general/**
-      - .github/workflows/**
+      - .github/workflows/build_and_push_docker_gen_main.yaml
 env:
   GCP_PROJECT_ID: dsp-fieldeng-dev
   GCP_REPOSITORY_GENERAL: horsefish
