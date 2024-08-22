@@ -65,7 +65,7 @@ done < <(cut -d "," -f1 $CSVIN | tail -n +2)
 
 # we need to use a service account to set requester pays since the command runs in a loop and we can't authenticate with our regular firecloud account
 # get key
-vault read --format=json secret/dsde/prod/common/requester-pays.json | jq .data > rp-key.json
+gcloud secrets versions access latest --project="broad-dsde-prod" --secret="requester-pays-sa" > rp-key.json
 # authenticate as service account
 if ! gcloud auth activate-service-account ${SERVICE_ACCOUNT} --project="broad-dsde-prod" --key-file=rp-key.json; then
   echo "Error authenticating service account."
