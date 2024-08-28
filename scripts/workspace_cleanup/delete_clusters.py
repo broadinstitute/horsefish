@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 """Delete all Terra clusters listed in a csv.
 
-Usage: > python3 delete_clusters.py --path PATH_TO_FILE --project PROJECT --token $(gcloud auth print-identity-token)"""
+Usage: > python3 delete_clusters.py --path PATH_TO_FILE"""
 
 import argparse
 import requests
@@ -18,7 +18,13 @@ def get_access_token():
     return credentials.get_access_token().access_token
 
 
-def delete_cluster(cluster, project, access_token, retry=0):
+def delete_cluster_wrapper(cluster_proj_string):
+    split_items = cluster_proj_string.split(',')
+    cluster = split_items[0]
+    project = split_items[1]
+    return delete_cluster(cluster, project)
+
+def delete_cluster(cluster, project, retry=0):
     # don't retry too much
     if retry > 3:
         print(f"WARNING: internal errors not resolved by retries. cluster {project}/{cluster} was NOT deleted.")
@@ -64,10 +70,14 @@ def delete_cluster(cluster, project, access_token, retry=0):
         return delete_cluster(cluster, project, incremented_retry)
 
 
-def main(filepath, project, access_token):
+def main(filepath):
     # load csv
-    with open(filepath, "r") as infile:
-        data = infile.readlines()
+    with open(filepath, "r") as csvin:
+        headers = csvin.readline().rstrip('\n')
+        if headers != 'cluster,project':
+            print(f"ERROR: incorrect headers. Please ensure the headers of your file are: cluster,project. Received {headers}.")
+            exit(1)
+        data = csvin.readlines()
 
     # pull out list of clusters
     cluster_list = [row.rstrip('\n') for row in data if len(row) > 0]
@@ -76,8 +86,8 @@ def main(filepath, project, access_token):
 
     # loop through list of clusters and delete them
     n_deleted = 0
-    for cluster in cluster_list:
-        success = delete_cluster(cluster, project, access_token)
+    for cluster_proj_str in cluster_list:
+        success = delete_cluster_wrapper(cluster_proj_str)
         n_deleted += success
 
     print(f"Deleted {n_deleted} out of {len(cluster_list)} clusters.")
@@ -87,9 +97,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='')
 
     parser.add_argument('--path', type=str, required=True, help='path to file containing clusters to delete')
-    parser.add_argument('--project', type=str, required=True, help='Terra project in which the clusters reside')
-    parser.add_argument('--token', type=str, required=True, help='user access token - use $(gcloud auth print-identity-token)')
 
     args = parser.parse_args()
 
-    main(args.path, args.project, args.token)
+    main(args.path)
