@@ -9,6 +9,7 @@ workflow IngestToTDR {
     File samples
     String tdrid
     String instance_type
+    Boolean verbose = False
   }
   
   call Ingest {
@@ -16,6 +17,7 @@ workflow IngestToTDR {
       path = samples,
       tdrid = tdrid,
       instance_type = instance_type
+      verbose = verbose
   }
   output{
     File err = Ingest.message
@@ -28,10 +30,11 @@ task Ingest {
     File path
     String tdrid
     String instance_type
+    Boolean verbose
   }
   
   command {
-      python3 /scripts/bacterial_genomics/ingest.py  -f ${path} -d ${tdrid} -i ${instance_type}
+      python3 /scripts/bacterial_genomics/ingest.py  -f ${path} -d ${tdrid} -i ${instance_type} -v ${verbose}
   }
   output{
      File message = read_string(stderr())
