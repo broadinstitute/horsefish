@@ -39,7 +39,7 @@ This section outlines the steps to update the schema for your application. Schem
 2. Data Model Reflection in data_models.py:
 
 &nbsp;&nbsp;&nbsp;&nbsp; Once the schema update is confirmed on the server-side (or by the relevant service), reflect these changes in your application's data_models.py file. This file typically defines the data structures used by your code to represent the schema. For example:
-<p> If a new table needs to be updated for every ingest, add the new table under the :</p>
+<p> If a new table needs to be updated for every ingest, add the new table under the <code>tables</code> variable :</p>
 
  
  ```
@@ -67,7 +67,7 @@ table =[
  ```
 
  Adding a new table:
- <p> To add a table, update data_models.py, import the instance and add a logical if statement in ingest.py</p>
+ <p> To add a table, update <code>data_models.py</code>, import the instance and add a logical if statement in <code>ingest.py</code></p>
 
  ```
  // data_models.py
@@ -81,16 +81,14 @@ table =[
    }
 ]
 
- ```
- then in ingest.py, add the instance name as an acceptable argument in variable, instance_types.
-
- ```
+// ingest.py
 # Acceptable data models types
 instance_types = ["plate_swipe", "isolate", < new model name from data_models.py>]
+
  ```
 
- After all changes have been made, update the docker tag by udating variable docker_version. Then run update_docker_image.sh to update the image to the latest version. 
- Although ingest.wdl isn't used in production, the runtime should be updated so it reflects prod and can be used for local developement. Then update
+ After all changes have been made, update the docker tag by updating variable <code>docker_version</code> in <code>ingest.py</code>. Then run <code>update_docker_image.sh</code> to update the image to the latest version. 
+ Although <code>ingest.wdl</code> isn't used in production, the runtime should be updated so it reflects prod and can be used for local developement. Then update
 
 
  
