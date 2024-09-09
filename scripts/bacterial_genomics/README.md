@@ -39,35 +39,54 @@ This section outlines the steps to update the schema for your application. Schem
 2. Data Model Reflection in data_models.py:
 
 &nbsp;&nbsp;&nbsp;&nbsp; Once the schema update is confirmed on the server-side (or by the relevant service), reflect these changes in your application's data_models.py file. This file typically defines the data structures used by your code to represent the schema. For example:
-<p>Adding a table to the isolate instance:</p>
+<p> If a new table needs to be updated for every ingest, add the new table under the :</p>
 
+ 
  ```
- isolates_instance = {
-    ...
+  // data_models.py
+table =[ 
+           {
+            "name": "< New table name >",
+            "columns": [ "<column name>", " <column name>"],
+            "rename": { "entity:sample_id": "< new column name>"},
+            # optional primary key value
+            "pk": '<primary key>'
+        },    
+]
+ ```
 
-    < TableName> : [< column values that are command separated>]
- }
- ```
  Adding a an additional column:
+
  ```
+  // data_models.py
  isolates_instance= {
     ...
 
     "Culture": ["culture_id", "organism", "new_column", "<new_column_name>"]
  }
  ```
- Adding a new instance:
- <p> To add a new instance, update data_models.py, import the instance and add a logical if statement in ingest.py</p>
+
+ Adding a new table:
+ <p> To add a table, update data_models.py, import the instance and add a logical if statement in ingest.py</p>
+
  ```
  // data_models.py
- <instance_name>_instance = {
-    <table name> : [< column names>],
-    <table 2 name>: [<table 2 column names>]
- }
+< model name > = [
+   {
+            "name": "< table name >",
+            "columns": [ "<column name>", " <column name>"],
+            "rename": { "entity:sample_id": "< new column name>"},
+            # optional primary key value
+            "pk": '<primary key>'
+   }
+]
+
  ```
  then in ingest.py, add the instance name as an acceptable argument in variable, instance_types.
+
  ```
- #TODO add code
+# Acceptable data models types
+instance_types = ["plate_swipe", "isolate", < new model name from data_models.py>]
  ```
 
  After all changes have been made, update the docker tag by udating variable docker_version. Then run update_docker_image.sh to update the image to the latest version. 

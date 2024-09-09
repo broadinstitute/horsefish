@@ -13,7 +13,7 @@ from firecloud import api as fapi
 # DEVELOPER: update this field anytime you make a new docker image and update changelog
 docker_version = "1.0.09-alpha"
 
-# Acceptable instance types
+# Acceptable data models types
 instance_types = ["plate_swipe", "isolate"]
 boolean_values = ['true', 'false']
 
