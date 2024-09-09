@@ -1,6 +1,7 @@
 # imports and environment variables
 from ingest_to_tdr import call_ingest_dataset
-from data_models import isolates_instance, plate_swipes_instance
+from data_models import tables, plate_swipes_model, isolate_swipe_model
+import traceback
 
 
 import argparse
@@ -10,14 +11,15 @@ from firecloud import api as fapi
 
 
 # DEVELOPER: update this field anytime you make a new docker image and update changelog
-docker_version = "1.0.29-beta"
+docker_version = "1.0.09-alpha"
 
 # Acceptable instance types
-instance_types = ["isolate", "plate_swipe"]
+instance_types = ["plate_swipe", "isolate"]
+boolean_values = ['true', 'false']
 
 
 
-def df_to_col_dicts_chunked(df, instance_type_metadata):
+def df_to_col_dicts_chunked(df, instance_type):
     """
     Efficiently creates multiple dictionaries from a large DataFrame,
     using chunking for memory management. Each dictionary contains specific
@@ -36,25 +38,34 @@ def df_to_col_dicts_chunked(df, instance_type_metadata):
               and values are dictionaries containing the selected columns.
               {< Table name > : [{column -> value}, … , {column -> value}]}
     """
-    tables = instance_type_metadata["tables"]
 
     # Initialize a dictionary where { < table name > : []}
     results= {table["name"]: [] for table in tables}
-    print(f"results: {results}") 
+    # print(f"results: {results}") 
     for chunk in df:
         for table in tables:
+            new_df = chunk.dropna(axis=1, how='all').copy()
+            new_df.fillna("")
+            # print(new_df)
             table_name = table["name"]
-            column_names = table["columns"]
-            print(f"Column names are: {column_names}")
-            table_data = chunk[column_names]
+            table_column_names = table["columns"]
+            # print(type(table_column_names))
+            primary_key = table["pk"]
+            chunk_columns = new_df.columns.tolist()
+            column_names = set(chunk_columns) & set(table_column_names)
+
+            table_data = new_df[list(column_names)] 
+            table_data.fillna("''")
             if "rename" in table:
                 table_data = update_columns_names(table_data.copy(), table["rename"]) 
-            table_data.fillna("", inplace=True)
-            print(f"dataframe after NA replaced with empty values are: {table_data}")
+            table_data.drop_duplicates(subset = [primary_key], keep = 'first', inplace = True)
+            # print(f"{table_data}")
+            # print(f"dataframe after NA replaced with empty values are: {table_data}")
             # print(f"the dictionary for {table_name} is: {col_dicts[table_name]}")
+            # print(table_data.to_dict(orient='records'))
             results[table_name].extend(table_data.to_dict(orient='records'))
+            
     return results
-
 
 def update_columns_names(df, new_names):
     """
@@ -72,31 +83,7 @@ def update_columns_names(df, new_names):
     df.rename(columns=new_names, inplace=True) 
     return df
 
-# def select_grouped_columns(df, col_groupings):
-#     """
-#     Selects specific columns from a DataFrame chunk based on grouping definitions.
-
-#     Args:
-#         df (pandas.DataFrame): The DataFrame being processed.
-#         col_groupings (dict): A dictionary specifying column combinations.
-#             Keys are desired names for the dictionaries, and values are lists
-#             containing column names for each dictionary.
-
-#     Returns:
-#         dict ({ string:pandas.DataFrame } ): A dictionary where keys are the table name and values are
-#               DataFrames containing only the selected columns for each table as defined
-#               in data_models.py. { < table name >: < Table Data> }
-#     """
-
-#     group_cols = {}
-#     for name, cols in col_groupings.items():
-#         # Regular loop to select columns for each group
-#         # Select columns using list of column names
-#         group_cols[name] = df[cols]
-#     return group_cols
-
-
-def ingest_to_tdr(tsv_path, dataset_id, instance_type):
+def ingest_to_tdr(tsv_path, dataset_id, instance_type, debug='false'):
     """
     Ingest dataset, given by a tsv path, to TDR
 
@@ -106,23 +93,24 @@ def ingest_to_tdr(tsv_path, dataset_id, instance_type):
         entity_name (string): Name of datamodel that defines table
 
     """
+    if debug.lower() not in boolean_values:
+        raise NameError(f" Acceptable debug values are  {boolean_values} \n")
     if instance_type not in instance_types:
-        raise NameError(f"instance_type must be one of these options {instance_types}")
-
-    if instance_type == "plate_swipe":
-        instance_type_metadata = plate_swipes_instance
-    if instance_type == "isolate":
-        instance_type_metadata = isolates_instance
-
+        raise NameError(f"instance_type must be one of these options {instance_types} \n")
+    if instance_type == "plate_swipe":    
+        tables.append(plate_swipes_model)
+    elif instance_type == "isolate":
+        tables.append(isolate_swipe_model)
     df = pd.read_csv(tsv_path, header=0,
-                     iterator=True, sep='\t', chunksize=100)
-    result = df_to_col_dicts_chunked(df, instance_type_metadata)
-    print(f"All tables and data to be ingested looks like: {result}")
-    # for table_name, table_data in result_dicts.items():
-    #     # print(f"{table_name} data that will be ingested is: {table_data}")
-    #     # Only ingest tables that have data in them
-    #     if table_data:
-    #         call_ingest_dataset(table_data, table_name, dataset_id)
+                     iterator=True, sep='\t', chunksize=100,  na_values=['NA', 'N/A'], dtype=str, keep_default_na=False)
+    result = df_to_col_dicts_chunked(df, instance_type)
+    # print(f"All tables and data to be ingested looks like: {result}")
+    for table_name, table_data in result.items():
+        print(f"Starting process to ingest table {table_name} for {instance_type} \n")
+        # Only ingest tables that have data in them
+        if table_data:
+            # print(table_data)
+            call_ingest_dataset(table_data, table_name, dataset_id, debug=debug.lower())
 
 
 if __name__ == '__main__':
@@ -134,6 +122,12 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--dataset_id', required=True, type=str,
                         help='id of TDR dataset for destination of outputs')
     parser.add_argument('-i', '--instance_type', required=True, choices= instance_types)
+    parser.add_argument('-v', '--verbose', type=str, required=False, default='false', help='Add debugging to stdout')
 
     args = parser.parse_args()
-    ingest_to_tdr(args.tsv, args.dataset_id, args.instance_type)
+    try:
+        ingest_to_tdr(args.tsv, args.dataset_id, args.instance_type, args.verbose)
+    except Exception as e:
+        print("An unexpected error occurred:", e)
+        traceback.print_exc()
+        
