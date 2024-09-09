@@ -34,7 +34,7 @@ Install dependencies using pip3 install -r requirements.txt
 This section outlines the steps to update the schema for your application. Schema changes typically involve modifications to the data structure used by your application. To ensure consistency and proper reflection in your code, follow these guidelines:
 
 1. API Endpoint Invocation:
-&nbsp;<p>Handle schema modifications by intiating a request to the [https://data.terra.bio/swagger-ui.html#/datasets/updateSchema](updateSchema API endpoint). An example is provided in the swagger page. Updats should be tested in the dev environment, bacterial_genomics_dev, before making updates in prod </p>
+&nbsp;<p>Handle schema modifications by intiating a request to the [updateSchema API endpoint](https://data.terra.bio/swagger-ui.html#/datasets/updateSchema). An example is provided in the swagger page. Updats should be tested in the dev environment, bacterial_genomics_dev, before making updates in prod </p>
 
 2. Data Model Reflection in data_models.py:
 
