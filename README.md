@@ -1,5 +1,7 @@
 # horsefish
 
+### This repo is no longer maintained. If there is functionality you need from here please reach out in slack in #ops-terra-utils or look in [ops-terra-utils](https://github.com/broadinstitute/ops-terra-utils) 
+
 To run a script using the Docker, pull and run the image that corresponds to the script. \
 For example:
 [scripts/tdr/create_snapshot_from_submission_failures](scripts/tdr/create_snapshot_from_submission_failures) \
