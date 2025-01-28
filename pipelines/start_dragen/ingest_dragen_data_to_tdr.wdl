@@ -78,7 +78,7 @@ task ingest_to_tdr {
                                                  --max_retries ~{max_retries} \
                                                  --max_backoff_time ~{max_backoff_time} \
                                                  --waiting_time_to_poll ~{waiting_time_to_poll} \
-                                                 ~{"--data_set_id " + data_set_id} \
+                                                 ~{"--dataset_id " + data_set_id} \
                                                  ~{if bulk_mode then "--bulk_mode" else ""} \
                                                  ~{if filter_entity_already_in_dataset then "--filter_entity_already_in_dataset" else ""}
         }
