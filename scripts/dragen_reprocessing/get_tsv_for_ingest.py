@@ -11,6 +11,8 @@ logging.basicConfig(
 
 DRAGEN_VERSION = "07.021.604.3.7.8"
 
+BILLING_PROJECT = "sc-genetics-global"
+WORKSPACE_NAME = "QIMR_Whiteman_Controls_Dragen"
 
 class GetTerraEntity:
     def __init__(self, billing_project: str, workspace_name: str):
@@ -156,8 +158,8 @@ def get_args() -> Namespace:
     argparser = ArgumentParser(description=__doc__)
     argparser.add_argument("--sample_set", "-s", required=True)
     argparser.add_argument("--output_tsv", "-o", required=True)
-    argparser.add_argument("--billing_project", "-b")
-    argparser.add_argument("--workspace_name", "-w")
+    argparser.add_argument("--billing_project", "-b", default=BILLING_PROJECT)
+    argparser.add_argument("--workspace_name", "-w", default=WORKSPACE_NAME)
     return argparser.parse_args()
 
 
