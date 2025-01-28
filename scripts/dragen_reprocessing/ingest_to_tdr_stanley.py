@@ -24,7 +24,8 @@ RP_TO_DATASET_ID = {
     "RP-2720": "dbfdcd34-2937-4781-96c2-5bf0c22fddec",
     "RP-2856": "d21a6291-3a5e-45c5-9ede-33b127142b79",
     "RP-3026": "667bf107-fb59-4649-803b-8e302630eef9",
-    "RP-2065": "4aadfeb1-734d-4c72-ac9b-ac6d513d4d7f"
+    "RP-2065": "4aadfeb1-734d-4c72-ac9b-ac6d513d4d7f",
+    "RP-2643": "550debf9-7df1-4049-ba9b-14573a6cd4dc",
 }
 
 KEYS_THAT_ARE_STRING = [
@@ -32,8 +33,6 @@ KEYS_THAT_ARE_STRING = [
     "collaborator_participant_id",
     "collaborator_sample_id",
 ]
-BILLING_PROJECT = 'sc-bge-reprocessing'
-WORKSPACE_NAME = 'SC_BGE_reprocessing_area'
 ONE_DAY_IN_SECONDS = 86400
 MAX_BACKOFF_TIME = 600
 MAX_RETRIES = 1

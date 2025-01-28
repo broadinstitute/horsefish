@@ -9,15 +9,13 @@ logging.basicConfig(
     format="%(levelname)s: %(asctime)s : %(message)s", level=logging.INFO
 )
 
-BILLING_PROJECT = "sc-bge-reprocessing"
-WORKSPACE_NAME = "SC_BGE_reprocessing_area"
 DRAGEN_VERSION = "07.021.604.3.7.8"
 
 
 class GetTerraEntity:
-    def __init__(self):
-        self.billing_project = BILLING_PROJECT
-        self.workspace_name = WORKSPACE_NAME
+    def __init__(self, billing_project: str, workspace_name: str):
+        self.billing_project = billing_project
+        self.workspace_name = workspace_name
 
     def _yield_all_entity_metrics(self, entity, total_entities_per_page=40000):
         session = requests.Session()
@@ -59,12 +57,16 @@ class GetTerraEntity:
 
 
 class GetSampleInfo:
-    def __init__(self, sample_set: str):
+    def __init__(self, sample_set: str, billing_project: str, workspace_name: str):
         self.sample_set = sample_set
+        self.terra_entity = GetTerraEntity(
+            billing_project=billing_project,
+            workspace_name=workspace_name
+        )
 
     def _get_sample_ids(self) -> list[str]:
         """Get sample ids from only specific sample set"""
-        sample_set_metadata = GetTerraEntity().get_metrics(entity_type="sample_set")
+        sample_set_metadata = self.terra_entity.get_metrics(entity_type="sample_set")
         for sample_set_dict in sample_set_metadata:
             if sample_set_dict['name'] == self.sample_set:
                 return [
@@ -74,7 +76,7 @@ class GetSampleInfo:
 
     def _get_sample_metadata(self, sample_ids: list[str]) -> list[dict]:
         """Get sample metadata for specific sample ids"""
-        sample_metadata = GetTerraEntity().get_metrics(entity_type="sample")
+        sample_metadata = self.terra_entity.get_metrics(entity_type="sample")
         return [
             sample_dict['attributes']
             for sample_dict in sample_metadata
@@ -154,11 +156,18 @@ def get_args() -> Namespace:
     argparser = ArgumentParser(description=__doc__)
     argparser.add_argument("--sample_set", "-s", required=True)
     argparser.add_argument("--output_tsv", "-o", required=True)
+    argparser.add_argument("--billing_project", "-b")
+    argparser.add_argument("--workspace_name", "-w")
     return argparser.parse_args()
 
 
 if __name__ == "__main__":
     args = get_args()
     sample_set, output_tsv = args.sample_set, args.output_tsv
-    sample_metadata = GetSampleInfo(sample_set=sample_set).run()
+    billing_project, workspace_name = args.billing_project, args.workspace_name
+    sample_metadata = GetSampleInfo(
+        sample_set=sample_set,
+        billing_project=billing_project,
+        workspace_name=workspace_name
+    ).run()
     ConvertSampleMetadataToTsv(sample_metadata=sample_metadata, output_tsv=output_tsv).create_tsv()

@@ -17,6 +17,8 @@ workflow ingest_dragen_data_to_tdr {
         Int      max_backoff_time = 300
         Int      waiting_time_to_poll = 60
         String   update_strategy = "append" # append or merge
+        String   billing_project
+        String   workspace_name
     }
 
     String  docker = select_first([docker_name, "us-central1-docker.pkg.dev/dsp-cloud-dragen-stanley/wdl-images/parse_dragen_metrics:v1"])
@@ -24,7 +26,9 @@ workflow ingest_dragen_data_to_tdr {
     call create_ingest_tsv {
         input:
             sample_set = sample_set,
-            docker_name = docker
+            docker_name = docker,
+            billing_project = billing_project,
+            workspace_name = workspace_name
     }
 
     call ingest_to_tdr {
@@ -93,11 +97,13 @@ task create_ingest_tsv {
     input {
         String  sample_set
         String  docker_name
+        String  billing_project
+        String  workspace_name
     }
 
     command {
 
-        python3 /scripts/get_tsv_for_ingest.py -s ~{sample_set} -o ingest.tsv
+        python3 /scripts/get_tsv_for_ingest.py -s ~{sample_set} -o ingest.tsv -b ~{billing_project} -w ~{workspace_name}
 
     }
 
