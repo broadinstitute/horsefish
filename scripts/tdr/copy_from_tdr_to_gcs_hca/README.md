@@ -34,7 +34,7 @@ Next you will want to authenticate with gcloud using your Broad credentials.\
 `gcloud auth login`\
 `gcloud config set project dsp-fieldeng-dev`* \
 `gcloud auth application-default login` \
-If you are not in dsp-fieldeng-dev
+If you are not in dsp-fieldeng-dev contact Field Eng to get access. \
 Then run the script using the following command syntax:\
 `python3 copy_from_tdr_to_gcs_hca.py <manifest_file>'`
 

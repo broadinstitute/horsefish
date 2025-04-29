@@ -146,7 +146,7 @@ def check_staging_is_empty(staging_gs_paths: set[str]):
         output = subprocess.run(['gsutil', 'ls', staging_data_dir], capture_output=True)
         stdout = output.stdout.strip()
         files = stdout.decode('utf-8').split('\n')
-        if len(files) > 1:
+        if len(files) > 0:
             logging.error(f"Staging area {staging_data_dir} is not empty")
             logging.info(f"files in staging area are: {files}")
             nonempty_staging_areas.append(staging_data_dir)
