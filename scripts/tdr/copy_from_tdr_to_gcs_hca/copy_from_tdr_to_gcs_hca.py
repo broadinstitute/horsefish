@@ -122,18 +122,21 @@ def get_latest_snapshot(target_snapshot: str, access_token: str):
 # for each snapshot get access url and add to a list of access urls for that snapshot
 def get_access_urls(snapshot: str, access_token: str):
     list_of_access_urls = []
-    # for snapshot in latest_snapshot_ids:
+    offset = 0
+    limit = 1000
     logging.info(f"getting access urls for snapshot {snapshot}")
-    files_response = requests.get(
-        f'https://data.terra.bio/api/repository/v1/snapshots/{snapshot}/files?offset=0',
-        headers={'accept': 'application/json', 'Authorization': f'Bearer {access_token}'}
-    )
-    files_response.raise_for_status()
-
-    # Extract file details from the JSON file and add them to a list
-    data = files_response.json()
-    for item in data:
-        list_of_access_urls.append(item['fileDetail']['accessUrl'])
+    while True:
+        files_response = requests.get(
+            f'https://data.terra.bio/api/repository/v1/snapshots/{snapshot}/files?offset={offset}&limit={limit}',
+            headers={'accept': 'application/json', 'Authorization': f'Bearer {access_token}'}
+        )
+        files_response.raise_for_status()
+        data = files_response.json()
+        if not data:
+            break
+        for item in data:
+            list_of_access_urls.append(item['fileDetail']['accessUrl'])
+        offset += limit
     return list_of_access_urls
 
 
@@ -146,6 +149,8 @@ def check_staging_is_empty(staging_gs_paths: set[str]):
         output = subprocess.run(['gsutil', 'ls', staging_data_dir], capture_output=True)
         stdout = output.stdout.strip()
         files = stdout.decode('utf-8').split('\n')
+        # in some cases the wranglers may have placed a metadata xslx file in the staging area
+        # if so, set check for > 1, after confirming with the wranglers
         if len(files) > 0:
             logging.error(f"Staging area {staging_data_dir} is not empty")
             logging.info(f"files in staging area are: {files}")
@@ -166,6 +171,11 @@ def copy_tdr_to_staging(tuple_list: list[tuple[str, str]], access_token: str):
         logging.info(f'latest snapshot id for project {project_id} is {latest_snapshot_id}')
         access_urls = get_access_urls(latest_snapshot_id, access_token)
         num_access_urls = len(access_urls)
+        # for debugging and maybe we want a manifest?
+        # logging.info(f'number of access urls for snapshot {latest_snapshot_id} is {num_access_urls}')
+        # with open('access_urls_dcp49.txt', 'w') as f:
+        #     for access_url in access_urls:
+        #         f.write(f'{access_url}\n')
         staging_gs_path = [x[0] for x in tuple_list if x[1] == project_id][0]
         staging_data_dir = staging_gs_path + '/data/'
         logging.info(f'Copying {num_access_urls} files from snapshot {latest_snapshot_id} to staging area {staging_data_dir}')

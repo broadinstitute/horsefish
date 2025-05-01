@@ -42,10 +42,10 @@ Contact Field Eng for any issues that arise. \
 _*or the monster hca prod project - mystical-slate-284720_
 
 ## Building the Docker Image
-The image builds with the GitHub Action "Main Validation and Release" ../.github/workflows/build-and-push_docker_copy_from_tdr_to_gcs_hca_main.yaml 
-and ../.github/workflows/build-and-push_docker_copy_from_tdr_to_gcs_hca_dev.yaml
-tags = us-east4-docker.pkg.dev/$GCP_PROJECT_ID/$GCP_REPOSITORY/copy_from_tdr_to_gcs_hca:$GITHUB_SHA, 
-us-east4-docker.pkg.dev/$GCP_PROJECT_ID/$GCP_REPOSITORY/copy_from_tdr_to_gcs_hca:latest
+The image builds with the GitHub Action "Main Validation and Release" `../.github/workflows/build-and-push_docker_copy_from_tdr_to_gcs_hca_main.yaml` 
+and `../.github/workflows/build-and-push_docker_copy_from_tdr_to_gcs_hca_dev.yaml` \
+tags = `us-east4-docker.pkg.dev/$GCP_PROJECT_ID/$GCP_REPOSITORY/copy_from_tdr_to_gcs_hca:$GITHUB_SHA`, 
+`us-east4-docker.pkg.dev/$GCP_PROJECT_ID/$GCP_REPOSITORY/copy_from_tdr_to_gcs_hca:latest`
 
 ### To manually build and run locally
 `docker build -t us-east4-docker.pkg.dev/dsp-fieldeng-dev/horsefish/copy_from_tdr_to_gcs_hca:<new_version> .` \
