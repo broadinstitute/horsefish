@@ -42,10 +42,10 @@ Contact Field Eng for any issues that arise. \
 _*or the monster hca prod project - mystical-slate-284720_
 
 ## Building the Docker Image
-The image builds with the GitHub Action "Main Validation and Release" ../.github/workflows/build-and-push_docker_copy_from_tdr_to_gcs_hca_main.yaml 
-and ../.github/workflows/build-and-push_docker_copy_from_tdr_to_gcs_hca_dev.yaml
-tags = us-east4-docker.pkg.dev/$GCP_PROJECT_ID/$GCP_REPOSITORY/copy_from_tdr_to_gcs_hca:$GITHUB_SHA, 
-us-east4-docker.pkg.dev/$GCP_PROJECT_ID/$GCP_REPOSITORY/copy_from_tdr_to_gcs_hca:latest
+The image builds with the GitHub Action "Main Validation and Release" `../.github/workflows/build-and-push_docker_copy_from_tdr_to_gcs_hca_main.yaml` 
+and `../.github/workflows/build-and-push_docker_copy_from_tdr_to_gcs_hca_dev.yaml` \
+tags = `us-east4-docker.pkg.dev/$GCP_PROJECT_ID/$GCP_REPOSITORY/copy_from_tdr_to_gcs_hca:$GITHUB_SHA`, 
+`us-east4-docker.pkg.dev/$GCP_PROJECT_ID/$GCP_REPOSITORY/copy_from_tdr_to_gcs_hca:latest`
 
 ### To manually build and run locally
 `docker build -t us-east4-docker.pkg.dev/dsp-fieldeng-dev/horsefish/copy_from_tdr_to_gcs_hca:<new_version> .` \
@@ -64,7 +64,9 @@ us-east4-docker.pkg.dev/$GCP_PROJECT_ID/$GCP_REPOSITORY/copy_from_tdr_to_gcs_hca
 - update the script with conditional logic to accept a snapshot ID and destination instead
 - update the script check lower case institution against lower case institution keys - see ~line 86
 - update the script to merge `validate_input()` and `_parse_csv()` into one function
-- Consider adding a copy manifest to this command, so instead you validating number of files copied (line 187), you can specifically highlight the files not copied successfully.
+- Consider adding a copy manifest to this command, so instead you validating number of files copied (line 187), you can specifically highlight the files not copied successfully
+- If there is a manifest, we could restart from the last file copied, instead of starting from the beginning
+- Might want to be able to specify the file type to copy or to exclude.
 
 *this is likely to be used only rarely and mostly by the author, as a stop gap until partial updates have been implemented.
 As such, we are attempting to keep this as light as possible, so as not to introduce unnecessary complexity.
