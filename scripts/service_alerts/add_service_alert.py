@@ -8,6 +8,7 @@ import uuid
 DEFAULT_TITLE = "Service Incident"
 DEFAULT_MESSAGE = "We are currently investigating an issue impacting the platform. Information about this incident will be made available here."
 DEFAULT_LINK = "https://support.terra.bio/hc/en-us/sections/4415104213787"
+DEFAULT_SEVERITY = "critical"
 
 
 if __name__ == '__main__':
@@ -22,6 +23,10 @@ if __name__ == '__main__':
                         help='custom message for service banner')
     parser.add_argument('--link', required=False, default=DEFAULT_LINK,
                         help='custom link to service incident alerts page')
+    parser.add_argument(
+        '--severity', required=False, default=DEFAULT_SEVERITY,choices=['blocker', 'critical', 'minor'],
+        help='custom severity for service banner (choices: blocker, critical, minor)'
+    )
 
     args = parser.parse_args()
 
@@ -32,6 +37,8 @@ if __name__ == '__main__':
         args.message = DEFAULT_MESSAGE
     if args.link == '':
         args.link = DEFAULT_LINK
+    if args.severity == '':
+        args.severity = DEFAULT_SEVERITY
 
     incident_id = str(uuid.uuid4())
 
@@ -39,7 +46,7 @@ if __name__ == '__main__':
 
     print(f"Publishing incident banner for incident ID {incident_id}")
 
-    new_banner_entry = utils.build_service_banner_json(args.title, args.message, args.link, incident_id)
+    new_banner_entry = utils.build_service_banner_json(args.title, args.message, args.link, args.severity, incident_id)
 
     existing_banner.append(new_banner_entry)
 
