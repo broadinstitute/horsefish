@@ -15,7 +15,7 @@ or the [Field Eng group](https://groups.google.com/a/broadinstitute.org/g/dsp-fi
 You will want to clone the whole horsefish repo, if you have not done so already.
 
 You will also need a manifest file to run the script.\
-The format of this manifest is identical to the one use for [HCA ingest](https://docs.google.com/document/d/1NQCDlvLgmkkveD4twX5KGv6SZUl8yaIBgz_l1EcrHdA/edit#heading=h.cg8d8o5kklql).
+The format of this manifest is identical to the one used for [HCA ingest](https://docs.google.com/document/d/1NQCDlvLgmkkveD4twX5KGv6SZUl8yaIBgz_l1EcrHdA/edit#heading=h.cg8d8o5kklql).
 A sample manifest is provided in the project directory - dcpTEST_manifest.csv.\
 (Note that this is a test manifest and you will have to first load the data into TDR to use it - see the HCA ingest Ops manual linked above).\
 It's probably easiest to copy out the rows from the original ingest manifest into a new manifest, 
@@ -36,7 +36,13 @@ Next you will want to authenticate with gcloud using your Broad credentials.\
 `gcloud auth application-default login` \
 If you are not in dsp-fieldeng-dev contact Field Eng to get access. \
 Then run the script using the following command syntax:\
-`python3 copy_from_tdr_to_gcs_hca.py <manifest_file>'`
+`python3 copy_from_tdr_to_gcs_hca.py <manifest_file> --dry-run --allow-override'` \
+If you are notified that there are files in the staging area (IE it is non-empty), reach out to the wranglers to \
+determine if the files should be deleted or can be left in the staging area. \
+Run the script again with the appropriate response to the prompt. \
+Once you have the list of files (access_urls_filenames_sorted.txt, in your local project directory), \
+verify that those are the files the wranglers want copied to GCS. \
+If so, run the script again with the `--dry-run` flag removed.
 
 Contact Field Eng for any issues that arise. \
 _*or the monster hca prod project - mystical-slate-284720_
