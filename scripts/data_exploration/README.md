@@ -8,13 +8,13 @@ we are reporting on the contents of the data to determine if the data can be com
 ## Steps to generate the data exploration report:
 1) Navigate to the Data directory for the lab you are working on. \
    e.g. https://drive.google.com/drive/u/0/folders/1PFlmawunwgqJD5kvV2PpOzMoUTfWXQej \
-   2) In that directory there should be a file with information about the data and how to access it.\
+   1) In that directory there should be a file with information about the data and how to access it.\
       _NOTE that data location and format is lab dependent._
 2) Set up the environment
    1) Make sure you have Python 3.10 or later installed.
-   2) Install the required packages using `pip install -r requirements.txt`.
-   3) If you are using a virtual environment, activate it.
-   4) If you are using Docker, ensure you have the Docker image built and running.
+   2) If you are using a virtual environment, activate it.
+   3) If you are using Docker, ensure you have the Docker image built and running.
+   4) Install the required packages using `pip install -r requirements.txt`.
 3) Download the data file \
    (currently this is hardcoded for the Macosko lab - make a new script or update this one to handle other data sources)
    1) `python download_from_gcs.py`
@@ -35,3 +35,7 @@ we are reporting on the contents of the data to determine if the data can be com
         - If you are keeping the reports in Google Docs, you can copy the markdown into a new Google Doc and format it 
         there or upload the markdown and then open in Google Docs to auto convert.
       - review and edit the report to ensure it is accurate and complete.
+      - add a short to the report to the [Data Report directory](https://drive.google.com/drive/folders/1TeBPgQac7oqaP18NEd_e46lT3VJGIQyG) 
+
+## Contributing
+If you have suggestions for improvements or additional features, please feel free to contribute by creating a pull request or opening an issue in the repository.
