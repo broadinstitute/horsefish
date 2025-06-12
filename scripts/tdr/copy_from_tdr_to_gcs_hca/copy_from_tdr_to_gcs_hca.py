@@ -12,11 +12,17 @@ import google.auth.transport.requests
 import subprocess
 
 STAGING_AREA_BUCKETS = {
+    "prod": {
         "EBI": "gs://broad-dsp-monster-hca-prod-ebi-storage/prod",
         "UCSC": "gs://broad-dsp-monster-hca-prod-ebi-storage/prod",
         "LANTERN": "gs://broad-dsp-monster-hca-prod-lantern",
         "LATTICE": "gs://broad-dsp-monster-hca-prod-lattice/staging",
         "TEST": "gs://broad-dsp-monster-hca-prod-ebi-storage/broad_test_dataset"
+        },
+    "dev": {
+        "EBI": "gs://broad-dsp-monster-hca-dev-ebi-staging/dev",
+        "UCSC": "gs://broad-dsp-monster-hca-dev-ebi-staging/dev"
+        },
 }
 
 
