@@ -36,13 +36,14 @@ Next you will want to authenticate with gcloud using your Broad credentials.\
 `gcloud auth application-default login` \
 If you are not in dsp-fieldeng-dev contact Field Eng to get access. \
 Then run the script using the following command syntax:\
-`python3 copy_from_tdr_to_gcs_hca.py <manifest_file> --dry-run --allow-override'` \
+`python3 copy_from_tdr_to_gcs_hca.py <manifest_file> --env <env> --dry-run --allow-override'` \
 If you are notified that there are files in the staging area (IE it is non-empty), reach out to the wranglers to \
 determine if the files should be deleted or can be left in the staging area. \
 Run the script again with the appropriate response to the prompt. \
 Once you have the list of files (access_urls_filenames_sorted.txt, in your local project directory), \
 verify that those are the files the wranglers want copied to GCS. \
-If so, run the script again with the `--dry-run` flag removed.
+If so, run the script again with the `--dry-run` flag removed. \
+If you want to run without the file validation use the `--skip-integrity-check` flag.
 
 Contact Field Eng for any issues that arise. \
 _*or the monster hca prod project - mystical-slate-284720_
@@ -69,10 +70,11 @@ tags = `us-east4-docker.pkg.dev/$GCP_PROJECT_ID/$GCP_REPOSITORY/copy_from_tdr_to
 ## Possible improvements*
 - update the script with conditional logic to accept a snapshot ID and destination instead
 - update the script check lower case institution against lower case institution keys - see ~line 86
-- update the script to merge `validate_input()` and `_parse_csv()` into one function
-- Consider adding a copy manifest to this command, so instead you validating number of files copied (line 187), you can specifically highlight the files not copied successfully
-- If there is a manifest, we could restart from the last file copied, instead of starting from the beginning
 - Might want to be able to specify the file type to copy or to exclude.
+- update with retry logic, if that becomes an issue
+- add config yaml rather than setting batch sizes and base_urls...etc in the script itself
+- add a progress bar
+- if we run this a bunch, a summary report might be nice, rather than individual files.
 
 *this is likely to be used only rarely and mostly by the author, as a stop gap until partial updates have been implemented.
 As such, we are attempting to keep this as light as possible, so as not to introduce unnecessary complexity.
