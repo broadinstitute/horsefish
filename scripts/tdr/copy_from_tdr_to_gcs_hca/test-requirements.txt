@@ -1,0 +1,5 @@
+# Test dependencies for copy_from_tdr_to_gcs_hca.py
+pytest>=7.0.0
+pytest-mock>=3.6.0
+pytest-cov>=4.0.0
+pytest-xdist>=2.5.0  # For parallel test execution

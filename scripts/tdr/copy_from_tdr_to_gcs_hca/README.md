@@ -48,6 +48,53 @@ If you want to run without the file validation use the `--skip-integrity-check` 
 Contact Field Eng for any issues that arise. \
 _*or the monster hca prod project - mystical-slate-284720_
 
+## Testing
+
+The script includes a comprehensive pytest test suite that covers unit tests for individual functions and integration tests for main workflows.
+
+### Running Tests
+
+Install test dependencies:
+```bash
+pip install -r test-requirements.txt
+```
+
+Run all tests:
+```bash
+pytest
+```
+
+Run tests with coverage:
+```bash
+pytest --cov=copy_from_tdr_to_gcs_hca --cov-report=html
+```
+
+Run specific test categories:
+```bash
+# Unit tests only
+pytest -m unit
+
+# Integration tests only  
+pytest -m integration
+
+# Run tests in parallel
+pytest -n auto
+```
+
+### Test Structure
+
+- `test_copy_from_tdr_to_gcs_hca.py` - Main test file containing:
+  - Unit tests for individual functions
+  - Integration tests for workflows
+  - Mock-based testing for external dependencies
+  - Edge case and error condition testing
+
+The tests mock external dependencies like:
+- Google Cloud authentication
+- HTTP requests to Terra Data Repository
+- Subprocess calls (gsutil, gcloud)
+- File system operations
+
 ## Building the Docker Image
 The image builds with the GitHub Action "Main Validation and Release" `../.github/workflows/build-and-push_docker_copy_from_tdr_to_gcs_hca_main.yaml` 
 and `../.github/workflows/build-and-push_docker_copy_from_tdr_to_gcs_hca_dev.yaml` \
