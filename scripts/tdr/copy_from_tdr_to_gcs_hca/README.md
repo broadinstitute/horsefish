@@ -39,8 +39,13 @@ Then run the script using the following command syntax:\
 `python3 copy_from_tdr_to_gcs_hca.py <manifest_file> --env <env> --dry-run --allow-override'` \
 If you are notified that there are files in the staging area (IE it is non-empty), reach out to the wranglers to \
 determine if the files should be deleted or can be left in the staging area. \
+It may be helpful to provide them with a diff of the files in TDR vs staging \
+Use `compare_files_in_tdr_to_files_in_staging.py` or prompt an agent with something like: \
+"Compare these two files and tell me report back as to which files are not in both
+for instance, SRR6373869_10hr_MissingLibrary_1_H7LFLBCXY_bamtofastq_S1_L002_R3_001.fastq.gz is in both files" & provide the access urls and nonempty (staging) files as input.
+
 Run the script again with the appropriate response to the prompt. \
-Once you have the list of files (access_urls_filenames_sorted.txt, in your local project directory), \
+Once you have the list of files (`{basename}_all_access_urls_by_bucket.txt`, in your local project directory), \
 verify that those are the files the wranglers want copied to GCS. \
 If so, run the script again with the `--dry-run` flag removed. \
 If you want to run without the file validation use the `--skip-integrity-check` flag.
