@@ -28,6 +28,7 @@ from copy_from_tdr_to_gcs_hca import (
     compare_checksums,
     verify_file_integrity,
     _write_output_files,
+    generate_timestamped_basename,
     STAGING_AREA_BUCKETS
 )
 
@@ -104,6 +105,56 @@ class TestSanitizeStagingGsPath:
         """Test path that doesn't need sanitization"""
         result = _sanitize_staging_gs_path("gs://bucket/path")
         assert result == "gs://bucket/path"
+
+
+class TestGenerateTimestampedBasename:
+    """Test cases for generate_timestamped_basename function"""
+    
+    @pytest.mark.unit
+    @patch('copy_from_tdr_to_gcs_hca.datetime')
+    def test_generate_timestamped_basename_with_manifest_suffix(self, mock_datetime):
+        """Test basename generation with _manifest suffix"""
+        # Mock datetime to return a specific timestamp
+        mock_datetime.now.return_value.strftime.return_value = "062425-1400"
+        
+        result = generate_timestamped_basename("HCADevRefresh_May2025_manifest.csv")
+        assert result == "HCADevRefresh_May2025-062425-1400"
+    
+    @pytest.mark.unit
+    @patch('copy_from_tdr_to_gcs_hca.datetime')
+    def test_generate_timestamped_basename_without_manifest_suffix(self, mock_datetime):
+        """Test basename generation without _manifest suffix"""
+        mock_datetime.now.return_value.strftime.return_value = "062425-1400"
+        
+        result = generate_timestamped_basename("test_file.csv")
+        assert result == "test_file-062425-1400"
+    
+    @pytest.mark.unit
+    @patch('copy_from_tdr_to_gcs_hca.datetime')
+    def test_generate_timestamped_basename_with_path(self, mock_datetime):
+        """Test basename generation with full file path"""
+        mock_datetime.now.return_value.strftime.return_value = "062425-1400"
+        
+        result = generate_timestamped_basename("/path/to/HCA_prod_manifest.csv")
+        assert result == "HCA_prod-062425-1400"
+    
+    @pytest.mark.unit
+    @patch('copy_from_tdr_to_gcs_hca.datetime')
+    def test_generate_timestamped_basename_simple_filename(self, mock_datetime):
+        """Test basename generation with simple filename"""
+        mock_datetime.now.return_value.strftime.return_value = "062425-1400"
+        
+        result = generate_timestamped_basename("simple.csv")
+        assert result == "simple-062425-1400"
+    
+    @pytest.mark.unit
+    def test_generate_timestamped_basename_real_timestamp(self):
+        """Test basename generation with real timestamp (format validation)"""
+        result = generate_timestamped_basename("test_manifest.csv")
+        # Should be in format: test-MMDDYY-HHMM
+        import re
+        pattern = r"test-\d{6}-\d{4}"
+        assert re.match(pattern, result), f"Result '{result}' doesn't match expected pattern"
 
 
 class TestParseCsv:
@@ -223,6 +274,28 @@ class TestGetAccessUrls:
         
         assert result == ['gs://bucket/file1.txt', 'gs://bucket/file2.txt']
         assert mock_file.call_count == 2  # Two files written
+    
+    @patch('copy_from_tdr_to_gcs_hca.requests.get')
+    @patch('builtins.open', new_callable=mock_open)
+    def test_get_access_urls_with_basename(self, mock_file, mock_get):
+        """Test access URL retrieval with custom output basename"""
+        # Mock response
+        mock_response1 = Mock()
+        mock_response1.json.return_value = [
+            {'fileDetail': {'accessUrl': 'gs://bucket/file1.txt'}}
+        ]
+        
+        mock_response2 = Mock()
+        mock_response2.json.return_value = []
+        
+        mock_get.side_effect = [mock_response1, mock_response2]
+        
+        result = get_access_urls("test-snapshot", "test-token", "test-basename-062425-1400")
+        
+        assert result == ['gs://bucket/file1.txt']
+        # Should write to files with custom basename
+        mock_file.assert_any_call('test-basename-062425-1400_access_urls.txt', 'w')
+        mock_file.assert_any_call('test-basename-062425-1400_access_urls_filenames_sorted.txt', 'w')
 
 
 class TestCheckSingleStagingArea:
@@ -410,6 +483,20 @@ class TestWriteOutputFiles:
         
         # Verify that files were opened for writing
         assert mock_file.called
+    
+    @patch('builtins.open', new_callable=mock_open)
+    def test_write_output_files_with_basename(self, mock_file):
+        """Test writing output files with custom basename"""
+        failed_urls = [
+            {'project_id': 'proj1', 'url': 'gs://bucket/file1.txt', 'error': 'Error 1'}
+        ]
+        integrity_failed = []
+        access_urls = []
+        
+        _write_output_files(failed_urls, integrity_failed, access_urls, "test-basename-062425-1400")
+        
+        # Verify that files were opened with custom basename
+        mock_file.assert_called_with('test-basename-062425-1400_failed_access_urls.txt', 'w')
     
     @patch('builtins.open', new_callable=mock_open)
     def test_write_output_files_with_integrity_failures(self, mock_file):

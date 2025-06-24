@@ -14,6 +14,7 @@ import concurrent.futures
 from functools import partial
 import gc
 import argparse
+from datetime import datetime
 
 STAGING_AREA_BUCKETS = {
     "prod": {
@@ -30,10 +31,36 @@ STAGING_AREA_BUCKETS = {
 }
 
 
-def setup_cli_logging_format() -> None:
+def generate_timestamped_basename(csv_path: str) -> str:
+    """Generate timestamped base filename from CSV manifest path.
+    
+    Extracts the base filename, strips '_manifest' if present, and adds timestamp.
+    Format: basename_MMDDYY-HHMM
+    
+    Args:
+        csv_path: Path to the CSV manifest file
+        
+    Returns:
+        str: Timestamped base filename (e.g., 'HCADevRefresh_May2025-070325-1400')
+    """
+    # Get base filename without extension
+    base_filename = os.path.splitext(os.path.basename(csv_path))[0]
+    
+    # Strip '_manifest' suffix if present
+    if base_filename.endswith('_manifest'):
+        base_filename = base_filename[:-9]  # Remove '_manifest'
+    
+    # Generate timestamp in MMDDYY-HHMM format
+    timestamp = datetime.now().strftime('%m%d%y-%H%M')
+    
+    # Combine base filename with timestamp
+    return f"{base_filename}-{timestamp}"
+
+
+def setup_cli_logging_format(log_filename: str = 'copy_tdr_to_gcs_hca.log') -> None:
     # Create handlers for both console and file output
     console_handler = logging.StreamHandler(sys.stdout)
-    file_handler = logging.FileHandler('copy_tdr_to_gcs_hca.log', mode='w')
+    file_handler = logging.FileHandler(log_filename, mode='w')
     
     # Set format
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
@@ -151,13 +178,14 @@ def get_latest_snapshot(target_snapshot: str, access_token: str):
     return latest_snapshot_id
 
 
-def get_access_urls(snapshot: str, access_token: str):
+def get_access_urls(snapshot: str, access_token: str, output_basename: str = None):
     """
     Retrieves access URLs for files in a given snapshot from the Terra Data Repository (TDR).
     Also writes the access URLs and filenames to a file for debugging and verification purposes.
     If there are more than 150 files or there are a mix of sequence and analysis files, check with the wranglers before copying.
     :param snapshot:
     :param access_token:
+    :param output_basename: Base filename for output files (optional)
     :return:
     """
 
@@ -181,13 +209,18 @@ def get_access_urls(snapshot: str, access_token: str):
 
     # for debugging and maybe we want a manifest?
     logging.info(f'number of access urls for snapshot {snapshot} is {num_access_urls}')
-    with open('access_urls.txt', 'w') as f:
+    
+    # Use provided basename or default filenames
+    access_urls_filename = f'{output_basename}_access_urls.txt' if output_basename else 'access_urls.txt'
+    sorted_filenames_file = f'{output_basename}_access_urls_filenames_sorted.txt' if output_basename else 'access_urls_filenames_sorted.txt'
+    
+    with open(access_urls_filename, 'w') as f:
         for access_url in list_of_access_urls:
             f.write(f'{access_url}\n')
     # Extract filenames, sort them, and write to a different file
     filenames = [access_url.split('/')[-1] for access_url in list_of_access_urls]
     filenames.sort()
-    with open('access_urls_filenames_sorted.txt', 'w') as f:
+    with open(sorted_filenames_file, 'w') as f:
         for filename in filenames:
             f.write(f'{filename}\n')
 
@@ -216,11 +249,11 @@ def check_single_staging_area(staging_dir: str) -> dict:
             'files': files
         }
     else:
-        logging.info(f"Staging area {staging_data_dir} is empty")
+        logging.info(f"Staging area {staging_data_dir} is empty or does not exist")
         return {}
 
 
-def check_staging_areas_batch(staging_gs_paths: set[str], allow_override: bool = False) -> dict:
+def check_staging_areas_batch(staging_gs_paths: set[str], allow_override: bool = False, output_basename: str = None) -> dict:
     """Check multiple staging areas in parallel and handle non-empty areas"""
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
         future_to_path = {
@@ -245,7 +278,8 @@ def check_staging_areas_batch(staging_gs_paths: set[str], allow_override: bool =
         
         # Write non-empty staging areas to file
         if len(nonempty_staging_details) > 0:
-            with open('nonempty_staging_areas.txt', 'w') as f:
+            nonempty_filename = f'{output_basename}_nonempty_staging_areas.txt' if output_basename else 'nonempty_staging_areas.txt'
+            with open(nonempty_filename, 'w') as f:
                 f.write("Non-empty staging areas report\n")
                 f.write("=" * 50 + "\n\n")
                 for detail in nonempty_staging_details:
@@ -261,7 +295,7 @@ def check_staging_areas_batch(staging_gs_paths: set[str], allow_override: bool =
             nonempty_areas = [detail['staging_dir'] for detail in nonempty_staging_details]
             logging.error("One or more staging areas are not empty.")
             logging.info(f"Non-empty staging areas are: {nonempty_areas}")
-            logging.info("Details written to nonempty_staging_areas.txt")
+            logging.info(f"Details written to {nonempty_filename}")
             
             if allow_override:
                 user_input = input("Would you like to proceed anyway? (y/n): ")
@@ -277,7 +311,7 @@ def check_staging_areas_batch(staging_gs_paths: set[str], allow_override: bool =
         return results
 
 
-def process_projects_streaming(tuple_list: list[tuple[str, str]], access_token: str, dry_run: bool = False, verify_integrity: bool = True):
+def process_projects_streaming(tuple_list: list[tuple[str, str]], access_token: str, dry_run: bool = False, verify_integrity: bool = True, output_basename: str = None):
     """
     Stream-process projects one at a time to reduce memory usage while maintaining parallel file copying.
     This approach processes each project individually and cleans up memory between projects.
@@ -303,7 +337,7 @@ def process_projects_streaming(tuple_list: list[tuple[str, str]], access_token: 
             logging.info(f'Latest snapshot id for project {project_id} is {latest_snapshot_id}')
             
             # Get access URLs for this project
-            access_urls = get_access_urls(latest_snapshot_id, access_token)
+            access_urls = get_access_urls(latest_snapshot_id, access_token, output_basename)
             num_access_urls = len(access_urls)
             
             # Add to comprehensive list with project info
@@ -385,16 +419,21 @@ def process_projects_streaming(tuple_list: list[tuple[str, str]], access_token: 
         logging.debug(f"Completed processing project {i}/{total_projects}: {project_id}")
     
     # Write all output files at the end
-    _write_output_files(cumulative_failed_urls, cumulative_integrity_failed_files, cumulative_access_urls_for_file)
+    _write_output_files(cumulative_failed_urls, cumulative_integrity_failed_files, cumulative_access_urls_for_file, output_basename)
     
     logging.info(f"Completed streaming processing of all {total_projects} projects")
 
 
-def _write_output_files(all_failed_urls, integrity_failed_files, all_access_urls_for_file):
+def _write_output_files(all_failed_urls, integrity_failed_files, all_access_urls_for_file, output_basename: str = None):
     """Helper function to write all output files"""
+    # Use provided basename or default filenames
+    failed_urls_filename = f'{output_basename}_failed_access_urls.txt' if output_basename else 'failed_access_urls.txt'
+    integrity_failed_filename = f'{output_basename}_integrity_verification_failed.txt' if output_basename else 'integrity_verification_failed.txt'
+    all_urls_filename = f'{output_basename}_all_access_urls_by_bucket.txt' if output_basename else 'all_access_urls_by_bucket.txt'
+    
     # Write failed URLs to file
     if all_failed_urls:
-        with open('failed_access_urls.txt', 'w') as f:
+        with open(failed_urls_filename, 'w') as f:
             f.write("Failed Access URLs Report\n")
             f.write("=" * 40 + "\n\n")
             for failed in all_failed_urls:
@@ -402,14 +441,14 @@ def _write_output_files(all_failed_urls, integrity_failed_files, all_access_urls
                 f.write(f"URL: {failed['url']}\n")
                 f.write(f"Error: {failed['error']}\n")
                 f.write("-" * 40 + "\n")
-        logging.info(f"Failed URLs written to failed_access_urls.txt ({len(all_failed_urls)} failed)")
+        logging.info(f"Failed URLs written to {failed_urls_filename} ({len(all_failed_urls)} failed)")
     
     # Write integrity verification failed files to separate file
     if integrity_failed_files:
         # Sort by bucket, then by project_id, then by URL
         integrity_failed_files.sort(key=lambda x: (x['bucket'], x['project_id'], x['url']))
         
-        with open('integrity_verification_failed.txt', 'w') as f:
+        with open(integrity_failed_filename, 'w') as f:
             f.write("Integrity Verification Failed Files Grouped by Bucket\n")
             f.write("=" * 60 + "\n\n")
             current_bucket = None
@@ -421,14 +460,14 @@ def _write_output_files(all_failed_urls, integrity_failed_files, all_access_urls
                     f.write("-" * 40 + "\n")
                     current_bucket = item['bucket']
                 f.write(f"Project: {item['project_id']} | {item['url']}\n")
-        logging.info(f"Integrity verification failed files written to integrity_verification_failed.txt ({len(integrity_failed_files)} files)")
+        logging.info(f"Integrity verification failed files written to {integrity_failed_filename} ({len(integrity_failed_files)} files)")
     
     # Write comprehensive access URLs file, sorted and grouped by bucket
     if all_access_urls_for_file:
         # Sort by bucket, then by project_id, then by URL
         all_access_urls_for_file.sort(key=lambda x: (x['bucket'], x['project_id'], x['url']))
         
-        with open('all_access_urls_by_bucket.txt', 'w') as f:
+        with open(all_urls_filename, 'w') as f:
             f.write("All Access URLs Grouped by Bucket\n")
             f.write("=" * 50 + "\n\n")
             current_bucket = None
@@ -440,7 +479,7 @@ def _write_output_files(all_failed_urls, integrity_failed_files, all_access_urls
                     f.write("-" * 30 + "\n")
                     current_bucket = item['bucket']
                 f.write(f"Project: {item['project_id']} | {item['url']}\n")
-        logging.info(f"All access URLs written to all_access_urls_by_bucket.txt ({len(all_access_urls_for_file)} total)")
+        logging.info(f"All access URLs written to {all_urls_filename} ({len(all_access_urls_for_file)} total)")
 
 def copy_single_file(access_url: str, staging_data_dir: str, project_id: str, verify_integrity: bool = True) -> dict:
     """Copy a single file and return result info with optional integrity verification"""
@@ -554,10 +593,7 @@ def main():
     """
     import argparse
 
-    setup_cli_logging_format()
-    access_token = get_access_token()
-
-    # Set up argument parser
+    # Set up argument parser first to get csv_path for basename generation
     parser = argparse.ArgumentParser(description='Copy data from TDR to GCS for HCA projects.')
     parser.add_argument('csv_path', help='Path to CSV file with institution and project ID')
     parser.add_argument('--env', required=True, choices=['prod', 'dev'], 
@@ -571,9 +607,18 @@ def main():
     # Parse arguments
     args = parser.parse_args()
 
+    # Generate timestamped basename from CSV filename
+    output_basename = generate_timestamped_basename(args.csv_path)
+    log_filename = f'{output_basename}_copy_tdr_to_gcs_hca.log'
+
+    # Set up logging with timestamped filename
+    setup_cli_logging_format(log_filename)
+    access_token = get_access_token()
+
     # Validate input
     validate_input(args.csv_path)
     logging.info(f"Using environment: {args.env}")
+    logging.info(f"Output basename: {output_basename}")
     tuple_list = _parse_csv(args.csv_path, args.env)
     logging.info(f"staging_gs_paths and project id tuple list is {tuple_list}")
 
@@ -581,25 +626,40 @@ def main():
     staging_gs_paths = set([x[0] for x in tuple_list])
 
     # check if the staging areas are empty (in parallel)
-    check_staging_areas_batch(staging_gs_paths, args.allow_override)
+    check_staging_areas_batch(staging_gs_paths, args.allow_override, output_basename)
     # copy the files from the TDR project bucket to the staging area bucket using streaming approach
-    process_projects_streaming(tuple_list, access_token, args.dry_run, verify_integrity=not args.skip_integrity_check)
+    process_projects_streaming(tuple_list, access_token, args.dry_run, verify_integrity=not args.skip_integrity_check, output_basename=output_basename)
     
     # Log information about output files
     logging.info("Script execution completed. Output files created:")
-    logging.info("- copy_tdr_to_gcs_hca.log: Complete log of all operations")
-    if os.path.exists('failed_access_urls.txt'):
-        logging.info("- failed_access_urls.txt: List of URLs that failed to copy")
-    if os.path.exists('integrity_verification_failed.txt'):
-        logging.info("- integrity_verification_failed.txt: List of files that failed integrity verification")
-    if os.path.exists('all_access_urls_by_bucket.txt'):
-        logging.info("- all_access_urls_by_bucket.txt: All access URLs sorted and grouped by bucket")
-    if os.path.exists('nonempty_staging_areas.txt'):
-        logging.info("- nonempty_staging_areas.txt: Report of staging areas that were not empty")
-    if os.path.exists('access_urls.txt'):
-        logging.info("- access_urls.txt: Raw access URLs (from get_access_urls function)")
-    if os.path.exists('access_urls_filenames_sorted.txt'):
-        logging.info("- access_urls_filenames_sorted.txt: Sorted filenames (from get_access_urls function)")
+    logging.info(f"- {log_filename}: Complete log of all operations")
+    
+    # Check for files with the timestamped basename
+    failed_urls_file = f'{output_basename}_failed_access_urls.txt'
+    if os.path.exists(failed_urls_file):
+        logging.info(f"- {failed_urls_file}: List of URLs that failed to copy")
+    
+    integrity_failed_file = f'{output_basename}_integrity_verification_failed.txt'
+    if os.path.exists(integrity_failed_file):
+        logging.info(f"- {integrity_failed_file}: List of files that failed integrity verification")
+    
+    all_urls_file = f'{output_basename}_all_access_urls_by_bucket.txt'
+    if os.path.exists(all_urls_file):
+        logging.info(f"- {all_urls_file}: All access URLs sorted and grouped by bucket")
+    
+    nonempty_staging_file = f'{output_basename}_nonempty_staging_areas.txt'
+    if os.path.exists(nonempty_staging_file):
+        logging.info(f"- {nonempty_staging_file}: Report of staging areas that were not empty")
+    
+    access_urls_file = f'{output_basename}_access_urls.txt'
+    if os.path.exists(access_urls_file):
+        logging.info(f"- {access_urls_file}: Raw access URLs (from get_access_urls function)")
+    
+    sorted_filenames_file = f'{output_basename}_access_urls_filenames_sorted.txt'
+    if os.path.exists(sorted_filenames_file):
+        logging.info(f"- {sorted_filenames_file}: Sorted filenames (from get_access_urls function)")
+    
+    
 
 
 if __name__ == '__main__':

@@ -48,6 +48,20 @@ If you want to run without the file validation use the `--skip-integrity-check` 
 Contact Field Eng for any issues that arise. \
 _*or the monster hca prod project - mystical-slate-284720_
 
+## Output Files
+
+The script generates timestamped output files based on the input CSV manifest filename. If the manifest is named `HCADevRefresh_May2025_manifest.csv`, all output files will have the prefix `HCADevRefresh_May2025-MMDDYY-HHMM` (e.g., `HCADevRefresh_May2025-062425-1400`).
+
+### Generated Files
+
+- **`{basename}_copy_tdr_to_gcs_hca.log`** - Complete log of all operations
+- **`{basename}_failed_access_urls.txt`** - List of URLs that failed to copy (if any failures occur)
+- **`{basename}_integrity_verification_failed.txt`** - List of files that failed integrity verification (if any failures occur)
+- **`{basename}_all_access_urls_by_bucket.txt`** - All access URLs sorted and grouped by bucket
+- **`{basename}_nonempty_staging_areas.txt`** - Report of staging areas that were not empty (if any found)
+- **`{basename}_access_urls.txt`** - Raw access URLs from TDR API
+- **`{basename}_access_urls_filenames_sorted.txt`** - Sorted list of filenames to be copied
+
 ## Testing
 
 The script includes a comprehensive pytest test suite that covers unit tests for individual functions and integration tests for main workflows.
