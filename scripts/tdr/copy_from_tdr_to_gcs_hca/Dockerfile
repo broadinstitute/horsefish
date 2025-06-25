@@ -25,10 +25,18 @@ VOLUME ["/root/.config"]
 
 WORKDIR /scripts/tdr/copy_from_tdr_to_gcs_hca
 
-# copy the contents of /scripts/tdr/copy_from_tdr_to_gcs_hca to the WORKDIR
-COPY * .
+# Copy the project structure
+COPY /src/ ./src/
+COPY /config/ ./config/
+COPY /scripts/ ./scripts/
+COPY /tests/ ./tests/
+COPY /docs/ ./docs/
+COPY /requirements.txt ./
 
 RUN pip install -r requirements.txt
+
+# Set Python path to include src
+ENV PYTHONPATH="/scripts/tdr/copy_from_tdr_to_gcs_hca/src:${PYTHONPATH}"
 
 ENV PYTHONPATH "/scripts:${PYTHONPATH}"
 CMD ["/bin/bash"]

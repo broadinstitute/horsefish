@@ -12,7 +12,12 @@ import csv
 import tempfile
 import subprocess
 import json
+import sys
 from unittest.mock import Mock, patch, mock_open, MagicMock
+
+# Add the src directory to the path to import the module
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+
 from copy_from_tdr_to_gcs_hca import (
     validate_input,
     find_project_id_in_str,
@@ -29,6 +34,7 @@ from copy_from_tdr_to_gcs_hca import (
     verify_file_integrity,
     _write_output_files,
     generate_timestamped_basename,
+    get_output_directory,
     STAGING_AREA_BUCKETS
 )
 

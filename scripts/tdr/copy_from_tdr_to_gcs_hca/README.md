@@ -1,51 +1,99 @@
 # Copy from TDR to GCS
+
 This was originally a bash script written by Samantha Velasquez\
-[get_snapshot_files_and_transfer.sh](get_snapshot_files_and_transfer.sh) \
+[scripts/get_snapshot_files_and_transfer.sh](scripts/get_snapshot_files_and_transfer.sh) \
 which was written to copy files from a TDR snapshot to an Azure bucket. \
 Bobbie then translated to python using CoPilot and it ballooned from there. \
-[copy_from_tdr_to_gcs.py](copy_from_tdr_to_gcs.py) \
+[src/copy_from_tdr_to_gcs_hca.py](src/copy_from_tdr_to_gcs_hca.py) \
 The bash script is now just here for posterity as it previously only lived in Slack. 
 It has not been tested in the Docker image created for the Python script.
 
+## Project Structure
+
+```
+copy_from_tdr_to_gcs_hca/
+├── README.md                    # This file
+├── requirements.txt             # Python dependencies
+├── .gitignore                   # Git ignore patterns
+├── src/                         # Source code
+│   ├── copy_from_tdr_to_gcs_hca.py
+│   └── compare_files_in_tdr_to_files_in_staging.py
+├── config/                      # Configuration files
+│   ├── manifests/              # CSV manifest files - add yours here to run
+│   │   └── dcpTEST_manifest.csv
+│   └── docker/                 # Docker configuration
+│       ├── Dockerfile
+│       └── docker-compose.yaml
+├── scripts/                     # Utility scripts
+│   └── get_snapshot_files_and_transfer.sh
+├── runs/                        # Run outputs (gitignored)
+│   └── <timestamped-runs>/     # Individual run results
+├── tests/                       # Test files
+│   ├── test_copy_from_tdr_to_gcs_hca.py
+│   ├── smoke_test.py
+│   ├── pytest.ini
+│   ├── run_tests.sh
+│   └── test-requirements.txt
+└── .docs/                        # context for agents
+    └── STREAMING_OPTIMIZATION_CHANGELOG.md
+```
+
 ## Running the Script
-**IMPPORTANT**\
+
+**IMPORTANT**\
 You will need to be in either the [Monster Group](https://groups.google.com/a/broadinstitute.org/g/monster) 
 or the [Field Eng group](https://groups.google.com/a/broadinstitute.org/g/dsp-fieldeng) to run this script.
 
 You will want to clone the whole horsefish repo, if you have not done so already.
 
-You will also need a manifest file to run the script.\
+### Manifest Files
+
+You will need a manifest file to run the script.\
 The format of this manifest is identical to the one used for [HCA ingest](https://docs.google.com/document/d/1NQCDlvLgmkkveD4twX5KGv6SZUl8yaIBgz_l1EcrHdA/edit#heading=h.cg8d8o5kklql).
-A sample manifest is provided in the project directory - dcpTEST_manifest.csv.\
-(Note that this is a test manifest and you will have to first load the data into TDR to use it - see the HCA ingest Ops manual linked above).\
+Sample manifests are provided in the `config/manifests/` directory.\
+(Note that test manifests require you to first load the data into TDR to use them - see the HCA ingest Ops manual linked above).\
 It's probably easiest to copy out the rows from the original ingest manifest into a new manifest, 
-then move that file into this project directory, so that it is picked up by compose.
+then save that file in the `config/manifests/` directory.
+
+### Docker Setup
 
 If you are not already logged in to gcloud/docker, you will need to do so before running the Docker compose command.\
 `gcloud auth application-default login` \
 `gcloud auth configure-docker us-east4-docker.pkg.dev`
 
 To start up the run/dev Docker compose env \
-`docker compose run app bash`\
+`docker compose -f docker-compose.yaml run app bash`\
 This will pull the latest image from Artifact Registry, start up the container, and mount the project dir, 
 so changes in your local project dir will be reflected in the container.
+
+### Authentication
 
 Next you will want to authenticate with gcloud using your Broad credentials.\
 `gcloud auth login`\
 `gcloud config set project dsp-fieldeng-dev`* \
 `gcloud auth application-default login` \
-If you are not in dsp-fieldeng-dev contact Field Eng to get access. \
+If you are not in dsp-fieldeng-dev contact Field Eng to get access.
+
+### Running the Script
+
 Then run the script using the following command syntax:\
-`python3 copy_from_tdr_to_gcs_hca.py <manifest_file> --env <env> --dry-run --allow-override'` \
+`python3 src/copy_from_tdr_to_gcs_hca.py config/manifests/<manifest_file> --env <env> --dry-run --allow-override`
+
+All output files are automatically organized into timestamped directories in `runs/`.
+
+#### File Comparison
+
 If you are notified that there are files in the staging area (IE it is non-empty), reach out to the wranglers to \
 determine if the files should be deleted or can be left in the staging area. \
-It may be helpful to provide them with a diff of the files in TDR vs staging \
-Use `compare_files_in_tdr_to_files_in_staging.py` or prompt an agent with something like: \
+It may be helpful to provide them with a diff of the files in TDR vs staging using: \
+`python3 src/compare_files_in_tdr_to_files_in_staging.py runs/<run-dir>/<basename>_access_urls_filenames_sorted.txt runs/<run-dir>/<basename>_nonempty_staging_areas.txt`
+
+Or prompt an agent with: \
 "Compare these two files and tell me report back as to which files are not in both
 for instance, SRR6373869_10hr_MissingLibrary_1_H7LFLBCXY_bamtofastq_S1_L002_R3_001.fastq.gz is in both files" & provide the access urls and nonempty (staging) files as input.
 
 Run the script again with the appropriate response to the prompt. \
-Once you have the list of files (`{basename}_all_access_urls_by_bucket.txt`, in your local project directory), \
+Once you have the list of files (`runs/<run-dir>/<basename>_all_access_urls_by_bucket.txt`), \
 verify that those are the files the wranglers want copied to GCS. \
 If so, run the script again with the `--dry-run` flag removed. \
 If you want to run without the file validation use the `--skip-integrity-check` flag.
@@ -73,7 +121,7 @@ The script includes a comprehensive pytest test suite that covers unit tests for
 
 ### Running Tests
 
-Install test dependencies:
+From the /tests dir - install test dependencies:
 ```bash
 pip install -r test-requirements.txt
 ```

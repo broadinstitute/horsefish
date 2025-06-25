@@ -7,8 +7,8 @@ This script performs basic import and functionality tests.
 import sys
 import os
 
-# Add the current directory to the path to import the module
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Add the src directory to the path to import the module
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 def test_imports():
     """Test that all required functions can be imported"""

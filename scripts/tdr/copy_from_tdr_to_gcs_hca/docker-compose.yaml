@@ -3,7 +3,7 @@ services:
     # for dev
     # build: .
     # or specify your dev sha or local image
-    image: us-east4-docker.pkg.dev/dsp-fieldeng-dev/horsefish/copy_from_tdr_to_gcs_hca:latest
+    image: us-east4-docker.pkg.dev/dsp-fieldeng-dev/horsefish/copy_from_tdr_to_gcs_hca:test
     container_name: copy_from_tdr_to_gcs_hca
     command: bin/bash --reload
     volumes:

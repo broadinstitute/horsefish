@@ -57,7 +57,41 @@ def generate_timestamped_basename(csv_path: str) -> str:
     return f"{base_filename}-{timestamp}"
 
 
-def setup_cli_logging_format(log_filename: str = 'copy_tdr_to_gcs_hca.log') -> None:
+def get_output_directory(csv_path: str) -> str:
+    """Create and return the output directory for the current run.
+    
+    Creates a timestamped directory in runs/ for storing all output files.
+    
+    Args:
+        csv_path: Path to the CSV manifest file
+        
+    Returns:
+        str: Path to the output directory
+    """
+    # Get the directory of this script file
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    # Go up one level to project root
+    project_root = os.path.dirname(script_dir)
+    
+    # Create runs directory if it doesn't exist
+    runs_dir = os.path.join(project_root, 'runs')
+    os.makedirs(runs_dir, exist_ok=True)
+    
+    # Generate timestamped basename
+    basename = generate_timestamped_basename(csv_path)
+    
+    # Create run-specific directory
+    output_dir = os.path.join(runs_dir, basename)
+    os.makedirs(output_dir, exist_ok=True)
+    
+    return output_dir
+
+
+def setup_cli_logging_format(log_filename: str) -> None:    
+    # Clear any existing handlers
+    root_logger = logging.getLogger()
+    root_logger.handlers.clear()
+    
     # Create handlers for both console and file output
     console_handler = logging.StreamHandler(sys.stdout)
     file_handler = logging.FileHandler(log_filename, mode='w')
@@ -69,12 +103,10 @@ def setup_cli_logging_format(log_filename: str = 'copy_tdr_to_gcs_hca.log') -> N
     console_handler.setFormatter(console_formatter)
     file_handler.setFormatter(formatter)
     
-    # Configure root logger
-    logging.basicConfig(
-        level=logging.INFO,
-        handlers=[console_handler, file_handler]
-    )
-
+    # Configure root logger directly instead of using basicConfig
+    root_logger.setLevel(logging.DEBUG)
+    root_logger.addHandler(console_handler)
+    root_logger.addHandler(file_handler)
 
 def validate_input(csv_path: str):
     """
@@ -82,11 +114,11 @@ def validate_input(csv_path: str):
     format is <institution>,<project_id>
     """
     if not os.path.isfile(csv_path):
-        logging.debug(f"{csv_path} not found")
+        logging.info(f"{csv_path} not found")
         sys.exit(1)
 
     if not csv_path.endswith('.csv'):
-        logging.debug(f"{csv_path} is not a csv file")
+        logging.info(f"{csv_path} is not a csv file")
         sys.exit(1)
 
     else:
@@ -129,6 +161,15 @@ def _parse_csv(csv_path: str, env: str):
     
     env_buckets = STAGING_AREA_BUCKETS[env]
     tuple_list = []
+    
+    # Handle relative paths from the project root
+    if not os.path.isabs(csv_path):
+        # Get the directory of this script file
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        # Go up one level to project root, then construct path
+        project_root = os.path.dirname(script_dir)
+        csv_path = os.path.join(project_root, csv_path)
+    
     with open(csv_path, "r") as f:
         reader = csv.reader(f)
         for row in reader:
@@ -174,7 +215,6 @@ def get_latest_snapshot(target_snapshot: str, access_token: str):
     )
     snapshot_response.raise_for_status()
     latest_snapshot_id = snapshot_response.json()['items'][0]['id']
-    print(latest_snapshot_id)
     return latest_snapshot_id
 
 
@@ -416,7 +456,7 @@ def process_projects_streaming(tuple_list: list[tuple[str, str]], access_token: 
         
         # Force garbage collection between projects
         gc.collect()
-        logging.debug(f"Completed processing project {i}/{total_projects}: {project_id}")
+        logging.info(f"Completed processing project {i}/{total_projects}: {project_id}")
     
     # Write all output files at the end
     _write_output_files(cumulative_failed_urls, cumulative_integrity_failed_files, cumulative_access_urls_for_file, output_basename)
@@ -607,20 +647,25 @@ def main():
     # Parse arguments
     args = parser.parse_args()
 
-    # Generate timestamped basename from CSV filename
+    # Create output directory and get paths
+    output_dir = get_output_directory(args.csv_path)
     output_basename = generate_timestamped_basename(args.csv_path)
-    log_filename = f'{output_basename}_copy_tdr_to_gcs_hca.log'
-
-    # Set up logging with timestamped filename
-    setup_cli_logging_format(log_filename)
-    access_token = get_access_token()
+    log_filename = os.path.join(output_dir, f'{output_basename}_copy_tdr_to_gcs_hca.log')
 
     # Validate input
     validate_input(args.csv_path)
     logging.info(f"Using environment: {args.env}")
     logging.info(f"Output basename: {output_basename}")
     tuple_list = _parse_csv(args.csv_path, args.env)
-    logging.info(f"staging_gs_paths and project id tuple list is {tuple_list}")
+    logging.debug(f"staging_gs_paths and project id tuple list is {tuple_list}")
+
+    # Change to output directory for file operations
+    original_cwd = os.getcwd()
+    os.chdir(output_dir)
+
+    # Set up logging with timestamped filename
+    setup_cli_logging_format(log_filename)
+    access_token = get_access_token()
 
     # staging dir is the first element in each tuple
     staging_gs_paths = set([x[0] for x in tuple_list])
@@ -659,6 +704,9 @@ def main():
     if os.path.exists(sorted_filenames_file):
         logging.info(f"- {sorted_filenames_file}: Sorted filenames (from get_access_urls function)")
     
+    # Restore original working directory
+    os.chdir(original_cwd)
+    logging.info(f"All output files written to: {output_dir}")
     
 
 

@@ -5,6 +5,10 @@
 
 set -e
 
+# Get the directory of this script
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -13,6 +17,11 @@ NC='\033[0m' # No Color
 
 echo -e "${GREEN}TDR to GCS HCA Copy Script Test Suite${NC}"
 echo "=========================================="
+echo "Project root: $PROJECT_ROOT"
+echo "Test directory: $SCRIPT_DIR"
+
+# Add src to PYTHONPATH
+export PYTHONPATH="${PROJECT_ROOT}/src:${PYTHONPATH}"
 
 # Check if pytest is installed
 if ! command -v pytest &> /dev/null; then
