@@ -1,0 +1,17 @@
+{
+    "project_name": "gp-tim",
+    "dataset_name": "gp_tim_demo_v5",
+    "description": "developing a TIM-like schema for GP projects",
+    "data_model_file": "datamodel_v5.csv",
+    "region": "us-central1",
+    "billing_profile": "4fa657f0-0984-4a15-98c5-dc931d4fb865",
+    "enableSecureMonitoring": false,
+    "shareWith": {
+        "steward": [
+            "candace@broadinstitute.org"
+        ],
+        "custodian": [
+            "gp_lims_tdr@firecloud.org"
+        ]
+    }
+}
