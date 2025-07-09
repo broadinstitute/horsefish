@@ -30,7 +30,7 @@ COPY /src/ ./src/
 COPY /config/ ./config/
 COPY /scripts/ ./scripts/
 COPY /tests/ ./tests/
-COPY /docs/ ./docs/
+COPY /.docs/ ./docs/
 COPY /requirements.txt ./
 
 RUN pip install -r requirements.txt
