@@ -7,7 +7,7 @@ This script compares filenames from two sources:
 2. Filenames extracted from a staging area report
 
 Usage:
-    python compare_files_in_tdr_to_files_in_staging.py <access_urls_file> <staging_areas_file>
+    python compare_files_in_tdr_to_files_in_staging.py <access_urls_filenames_sorted_file> <nonempty_staging_areas_file>
 """
 
 import sys

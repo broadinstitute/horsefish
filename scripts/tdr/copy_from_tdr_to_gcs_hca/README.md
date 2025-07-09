@@ -77,7 +77,9 @@ If you are not in dsp-fieldeng-dev contact Field Eng to get access.
 ### Running the Script
 
 Then run the script using the following command syntax:\
-`python3 src/copy_from_tdr_to_gcs_hca.py config/manifests/<manifest_file> --env <env> --dry-run --allow-override`
+`python3 src/copy_from_tdr_to_gcs_hca.py config/manifests/<manifest_file> --staging-env <staging_env> --dry-run --allow-override`
+
+Where `<staging_env>` is either `prod` or `dev` (refers to staging bucket environment only - data is always sourced from production TDR).
 
 All output files are automatically organized into timestamped directories in `runs/`.
 

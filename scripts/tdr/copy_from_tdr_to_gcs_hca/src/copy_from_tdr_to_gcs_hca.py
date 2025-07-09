@@ -1,4 +1,5 @@
-# Description: This script copies data from Terra Data Repository (TDR) HCA project buckets to HCA staging area buckets.
+# Description: This script copies data from Prod Terra Data Repository (TDR) HCA project buckets to HCA staging area buckets.
+# Data is always sourced from PRODUCTION TDR and copied to the specified staging environment (prod or dev staging buckets).
 # It is based on the bash script get_snapshot_files_and_transfer.sh, written by Samantha Velasquez.
 
 import os
@@ -16,6 +17,7 @@ import gc
 import argparse
 from datetime import datetime
 
+# Staging bucket configurations - data is always copied FROM production TDR TO these staging buckets
 STAGING_AREA_BUCKETS = {
     "prod": {
         "EBI": "gs://broad-dsp-monster-hca-prod-ebi-storage/prod",
@@ -147,19 +149,20 @@ def _sanitize_staging_gs_path(path: str) -> str:
     return path.strip().strip("/")
 
 
-def _parse_csv(csv_path: str, env: str):
+def _parse_csv(csv_path: str, staging_env: str):
     """
-    Parses the csv file and returns a list of staging areas
+    Parses the csv file and returns a list of staging areas.
+    Data is always copied FROM production TDR TO the specified staging environment buckets.
     :param csv_path:
-    :param env: Environment to use ('prod' or 'dev')
+    :param staging_env: Staging environment to copy to ('prod' or 'dev') - this refers to staging buckets only, TDR is always production
     :return:
     Attribution:
     https://github.com/DataBiosphere/hca-ingest/blob/main/orchestration/hca_manage/manifest.py
     """
-    if env not in STAGING_AREA_BUCKETS:
-        raise Exception(f"Unknown environment '{env}'. Must be one of: {list(STAGING_AREA_BUCKETS.keys())}")
+    if staging_env not in STAGING_AREA_BUCKETS:
+        raise Exception(f"Unknown staging environment '{staging_env}'. Must be one of: {list(STAGING_AREA_BUCKETS.keys())}")
     
-    env_buckets = STAGING_AREA_BUCKETS[env]
+    env_buckets = STAGING_AREA_BUCKETS[staging_env]
     tuple_list = []
     
     # Handle relative paths from the project root
@@ -182,9 +185,9 @@ def _parse_csv(csv_path: str, env: str):
             project_id = find_project_id_in_str(row[1])
 
             if institution not in env_buckets:
-                raise Exception(f"Unknown institution {institution} found for environment '{env}'. "
+                raise Exception(f"Unknown institution {institution} found for staging environment '{staging_env}'. "
                                 f"Make sure the institution is in the list of staging area buckets and is in all caps. "
-                                f"Available institutions for {env}: {list(env_buckets.keys())}")
+                                f"Available institutions for {staging_env}: {list(env_buckets.keys())}")
 
             institution_bucket = env_buckets[institution]
             path = institution_bucket + "/" + project_id
@@ -208,6 +211,7 @@ def get_access_token():
 
 
 def get_latest_snapshot(target_snapshot: str, access_token: str):
+    # Note: Always queries production TDR regardless of staging environment setting
     snapshot_response = requests.get(
         f'https://data.terra.bio/api/repository/v1/snapshots?offset=0&limit=10&sort=created_date&direction=desc&filter='
         f'{target_snapshot}',
@@ -223,6 +227,9 @@ def get_access_urls(snapshot: str, access_token: str, output_basename: str = Non
     Retrieves access URLs for files in a given snapshot from the Terra Data Repository (TDR).
     Also writes the access URLs and filenames to a file for debugging and verification purposes.
     If there are more than 150 files or there are a mix of sequence and analysis files, check with the wranglers before copying.
+    
+    Note: Always queries production TDR regardless of staging environment setting.
+    
     :param snapshot:
     :param access_token:
     :param output_basename: Base filename for output files (optional)
@@ -621,11 +628,11 @@ def verify_file_integrity(source_url: str, dest_path: str) -> bool:
 def main():
     """Parse command-line arguments and run specified tool.
 
-    Usage: python copy_from_tdr_to_gcs_hca.py <csv_path> --env <env> [--dry-run] [--allow-override] [--skip-integrity-check]
+    Usage: python copy_from_tdr_to_gcs_hca.py <csv_path> --staging-env <staging_env> [--dry-run] [--allow-override] [--skip-integrity-check]
 
     Args:
         csv_path: Path to a CSV file with institution and project ID.
-        --env: Environment to copy to ('prod' or 'dev').
+        --staging-env: Staging environment to copy to ('prod' or 'dev'). Data is always copied FROM production TDR TO these staging buckets.
         --dry-run: Optional flag. If present, only access URLs will be displayed without copying files.
         --allow-override: Optional flag. If present, user will be prompted whether to continue
                         when non-empty staging areas are found.
@@ -634,10 +641,10 @@ def main():
     import argparse
 
     # Set up argument parser first to get csv_path for basename generation
-    parser = argparse.ArgumentParser(description='Copy data from TDR to GCS for HCA projects.')
+    parser = argparse.ArgumentParser(description='Copy data from Prod TDR to GCS for HCA projects.')
     parser.add_argument('csv_path', help='Path to CSV file with institution and project ID')
-    parser.add_argument('--env', required=True, choices=['prod', 'dev'], 
-                        help='Environment to copy to (prod or dev)')
+    parser.add_argument('--staging-env', required=True, choices=['prod', 'dev'], 
+                        help='Staging environment to copy to (prod or dev). Data is always copied FROM production TDR TO these staging buckets.')
     parser.add_argument('--dry-run', action='store_true', help='Only display access URLs without copying files')
     parser.add_argument('--allow-override', action='store_true',
                         help='When non-empty staging areas are found, prompt user whether to continue')
@@ -654,9 +661,9 @@ def main():
 
     # Validate input
     validate_input(args.csv_path)
-    logging.info(f"Using environment: {args.env}")
+    logging.info(f"Using staging environment: {args.staging_env}")
     logging.info(f"Output basename: {output_basename}")
-    tuple_list = _parse_csv(args.csv_path, args.env)
+    tuple_list = _parse_csv(args.csv_path, args.staging_env)
     logging.debug(f"staging_gs_paths and project id tuple list is {tuple_list}")
 
     # Change to output directory for file operations
