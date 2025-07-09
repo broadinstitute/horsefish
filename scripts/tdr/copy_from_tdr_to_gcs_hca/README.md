@@ -184,6 +184,7 @@ tags = `us-east4-docker.pkg.dev/$GCP_PROJECT_ID/$GCP_REPOSITORY/copy_from_tdr_to
 
 
 ## Possible improvements*
+- Add a GitHub action to run the pytests
 - update the script with conditional logic to accept a snapshot ID and destination instead
 - update the script check lower case institution against lower case institution keys - see ~line 86
 - Might want to be able to specify the file type to copy or to exclude.
