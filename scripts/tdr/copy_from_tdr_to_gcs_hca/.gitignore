@@ -1,5 +1,5 @@
 # Ignore run outputs
-# runs/
+runs/
 
 # Python cache and temp files
 __pycache__/
