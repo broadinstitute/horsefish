@@ -1,0 +1,81 @@
+@startuml Data Exploration Report Generation Workflow
+
+title Data Exploration Report Generation Workflow
+!theme blueprint
+
+start
+
+:Navigate to Data directory for target lab;
+note right
+  e.g. https://drive.google.com/drive/u/0/folders/1PFlmawunwgqJD5kvV2PpOzMoUTfWXQej
+  This should be provided by the PjM
+  Find file with data information and access details
+  (NOTE: data location and format is lab dependent)
+end note
+
+:Set up environment;
+split
+  :Make sure Python 3.10+ is installed;
+split again
+  :Activate virtual environment (if using);
+split again
+  :Ensure Docker is built and running (if using);
+split again
+  :Install required packages;
+  note right: pip install -r requirements.txt
+end split
+
+:Download data file;
+note right
+  Run python download_from_gcs.py
+  Downloads data file from Google Cloud Storage to local machine
+  
+  (Currently hardcoded for Macosko lab
+  Need to create new script or update for other data sources)
+end note
+
+:Run data exploration script;
+note right
+  Run python dataframe_exploration.py
+  Prints out report on dataframe contents
+  
+  (This script was created for Macosko lab data
+  Can be adapted for other labs or create new scripts)
+end note
+
+:Copy previous Data Report template;
+note right
+  e.g. https://docs.google.com/document/d/1lur8R3lzO0qRvXdUQ-PVn_brBdK7VuewtKcpa4pVNEE
+end note
+
+:Download template report as markdown;
+:Add template to current directory;
+
+:Generate new report using AI agent;
+note right
+  Provide context:
+  - template report as markdown
+  - data exploration report findings
+  
+  Example prompt: "Using 'Chen U01' markdown file as template,
+  generate new markdown file containing data from
+  dataframe_exploration_report.txt"
+end note
+
+if (Keeping reports in Google Docs?) then (yes)
+  :Copy markdown into new Google Doc;
+  :Format in Google Docs;
+  note right: Or upload markdown and open in Google Docs to auto convert
+else (no)
+  :Keep as markdown file;
+endif
+
+:Review and edit report;
+note right: Ensure accuracy and completeness
+
+:Add short link to Data Report directory;
+note right: https://drive.google.com/drive/folders/1TeBPgQac7oqaP18NEd_e46lT3VJGIQyG
+
+stop
+
+@enduml
