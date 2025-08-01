@@ -55,7 +55,7 @@ def get_job_status(job_id):
     return status_code, response_json
 
 
-def ingest_dataset(dataset_id, data):
+def ingest_dataset(target_table_name, dataset_id, data):
     """Load data into TDR with ingestDataset."""
 
     uri = f"https://data.terra.bio/api/repository/v1/datasets/{dataset_id}/ingest"
@@ -63,20 +63,20 @@ def ingest_dataset(dataset_id, data):
     headers = {"Authorization": "Bearer " + get_access_token(),
                "accept": "application/json",
                "Content-Type": "application/json"}
-
+    print(f"Attempting upload data to table: {target_table_name}")
     response = requests.post(uri, headers=headers, data=data)
     status_code = response.status_code
 
     if status_code != 202:  # if ingest start-up fails
-        raise ValueError(response.text)
-
+        raise ValueError(f"Error uploading table {target_table_name}: \n: {response.text}")
     # if ingest start-up succeeds
     return json.loads(response.text)
 
 
 def create_ingest_dataset_request(ingest_records, target_table_name, load_tag=None):
     """Create the ingestDataset request body."""
-
+    print(f" Creating request for {target_table_name} \n")
+    # print(ingest_records)
     load_dict = {"format": "array",
                  "records": ingest_records,
                  "table": target_table_name,
@@ -86,20 +86,19 @@ def create_ingest_dataset_request(ingest_records, target_table_name, load_tag=No
     # if user provides a load_tag, add it to request body
     if load_tag:
         load_dict["load_tag"] = load_tag
-    print(load_dict)
+    # print(load_dict)
     load_json = json.dumps(load_dict) # dict -> json
 
     return load_json
 
 
-def call_ingest_dataset(recoded_row_dicts, target_table_name, dataset_id, load_tag=None):
+def call_ingest_dataset(recoded_row_dicts, target_table_name, dataset_id, load_tag=None, debug='false'):
     """Create the ingestDataset API json request body and call API."""
-
     ingest_dataset_request = create_ingest_dataset_request(recoded_row_dicts, target_table_name, load_tag) # create request for ingestDataset
-    print(f"ingestDataset request body: \n {ingest_dataset_request} \n")
+    if debug == 'true':
+        print(f"IngestDataset request body for {target_table_name}: \n {ingest_dataset_request} \n")
 
-    ingest_response = ingest_dataset(dataset_id, ingest_dataset_request) # call ingestDataset
-    print(f"ingestDataset response body: \n {ingest_response} \n")
+    ingest_response = ingest_dataset(target_table_name, dataset_id, ingest_dataset_request) # call ingestDataset
 
     ingest_job_id = ingest_response["id"] # check for presence of id in ingest_dataset()
     ingest_status_code = ingest_response["status_code"]
@@ -118,11 +117,13 @@ def call_ingest_dataset(recoded_row_dicts, target_table_name, dataset_id, load_t
         print(f"{ingest_job_id} --> failed")
         # if failed, get the resulting error message
         job_result_code, job_result_response = get_job_result(ingest_job_id)
-        raise ValueError(job_result_response)    
+        ingest_request_err = f"Ingest response: \n {ingest_response}"
+        raise ValueError(f"Received non 200 response, {job_result_code} for ingesting data for table {target_table_name} : {job_result_response} \n {ingest_request_err}")
+        
 
     # job completes successfully
     # success_code is 200 and "job_status" =is"succeeded"
-    print(f"{ingest_job_id} --> succeeded")
+    print(f"{ingest_job_id} --> succeeded \n")
     
     # write load tag to output file from final succeeded job result response
     job_result_code, job_result_response = get_job_result(ingest_job_id)
@@ -130,7 +131,7 @@ def call_ingest_dataset(recoded_row_dicts, target_table_name, dataset_id, load_t
     with open("load_tag.txt", "w") as loadfile:
         loadfile.write(result_load_tag)
 
-    print("File ingest to TDR dataset completed successfully.")
+    print(f"Table {target_table_name} file ingest into TDR dataset completed successfully.\n")
 
 
 def create_recoded_json(row_json):
@@ -203,16 +204,3 @@ def parse_json_outputs_file(input_tsv):
 
     return all_recoded_row_dicts, last_modified_date
 
-
-if __name__ == "__main__" :
-    parser = argparse.ArgumentParser(description='Push Arrays.wdl outputs to TDR dataset.')
-
-    parser.add_argument('-f', '--tsv', required=True, type=str, help='tsv file of files to ingest to TDR')
-    parser.add_argument('-d', '--dataset_id', required=True, type=str, help='id of TDR dataset for destination of outputs')
-    parser.add_argument('-t', '--target_table_name', required=True, type=str, help='name of target table in TDR dataset')
-    parser.add_argument('-l', '--load_tag', required=False, type=str, help="load tag to allow for ingest of duplicate files in separate ingest calls")
-
-    args = parser.parse_args()
-
-    all_recoded_row_dicts, last_modified_date = parse_json_outputs_file(args.tsv)
-    call_ingest_dataset(all_recoded_row_dicts, args.target_table_name, args.dataset_id, args.load_tag)

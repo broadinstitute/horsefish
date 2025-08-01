@@ -22,7 +22,7 @@ def my_before_sleep(retry_state):
                        [tn.wait_fixed(10)] +
                        [tn.wait_fixed(30)] +
                        [tn.wait_fixed(60)]),
-          stop=tn.stop_after_attempt(5),
+          stop=tn.stop_after_attempt(2),
           before_sleep=my_before_sleep)
 def call_fiss(fapifunc, okcode, *args, specialcodes=None, **kwargs):
     ''' call FISS (firecloud api), check for errors, return json response
@@ -53,13 +53,13 @@ def call_fiss(fapifunc, okcode, *args, specialcodes=None, **kwargs):
             codes = [okcode]
         else:
             codes = [okcode]+specialcodes
+    print(response.status_code )
+    print(codes)
     if response.status_code not in codes:
-        print(response.content)
         raise ferrors.FireCloudServerError(response.status_code, response.content)
     elif specialcodes is not None:
         return response
 
-    # return the json response if all goes well
     return response.json()
 
 

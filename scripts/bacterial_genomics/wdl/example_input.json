@@ -1,0 +1,6 @@
+{
+    "IngestToTDR.path" : "<path to real isolate or plate_swap data",
+    "IngestToTDR.tdr_id" : "<TDR_ID>",
+    "IngestToTDR.instance_type": "isolate"
+    
+}
